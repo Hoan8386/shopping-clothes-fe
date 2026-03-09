@@ -1,26 +1,101 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #111111;
+  --card: #ffffff;
+  --section-bg: #f5f5f5;
+  --accent: #e53637;
+  --accent-hover: #c82222;
+  --border: #e5e7eb;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: #f1f1f1;
+  --card: #141414;
+  --section-bg: #1a1a1a;
+  --accent: #e53637;
+  --accent-hover: #ff4b4b;
+  --border: #2a2a2a;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-section: var(--section-bg);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-subtle: var(--border);
+  --color-muted: var(--text-secondary);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+input, select, textarea {
+  background-color: var(--card);
+  color: var(--foreground);
+}
+
+#__next, html, body {
+  min-height: 100vh;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Shopper-style breadcrumb */
+.breadcrumb {
+  background: var(--section-bg);
+  padding: 30px 0;
+  text-align: center;
+}
+
+.breadcrumb h2 {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--foreground);
+  margin-bottom: 6px;
+}
+
+/* Shopper-style section heading */
+.section-title {
+  position: relative;
+  display: inline-block;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.section-title::after {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  left: 0;
+  width: 60px;
+  height: 3px;
+  background: var(--accent);
 }
