@@ -12,6 +12,7 @@ import {
   ResDanhGiaSanPhamDTO,
   PhieuNhap,
   ChiTietPhieuNhap,
+  ReqChiTietPhieuNhapDTO,
   RestResponse,
   ResultPaginationDTO,
   Role,
@@ -237,11 +238,17 @@ export const danhGiaService = {
     );
     return res.data.data;
   },
-  update: async (formData: FormData) => {
+  update: async (id: number, formData: FormData) => {
     const res = await apiClient.put<RestResponse<ResDanhGiaSanPhamDTO>>(
-      "/danh-gia-san-pham",
+      `/danh-gia-san-pham/${id}`,
       formData,
       { headers: { "Content-Type": "multipart/form-data" } }
+    );
+    return res.data.data;
+  },
+  getByChiTietDonHang: async (chiTietDonHangId: number) => {
+    const res = await apiClient.get<RestResponse<ResDanhGiaSanPhamDTO>>(
+      `/danh-gia-san-pham/chi-tiet-don-hang/${chiTietDonHangId}`
     );
     return res.data.data;
   },
@@ -305,11 +312,19 @@ export const permissionService = {
 
 // ============ PhieuNhap ============
 export interface PhieuNhapSearchParams {
-  cuaHangId?: number;
-  nhaCungCapId?: number;
+  tenPhieuNhap?: string;
   trangThai?: number;
+  tenCuaHang?: string;
+  tenNhaCungCap?: string;
+  ngayTaoTu?: string;
+  ngayTaoDen?: string;
+  ngayDatHangTu?: string;
+  ngayDatHangDen?: string;
+  ngayNhanHangTu?: string;
+  ngayNhanHangDen?: string;
   page?: number;
   size?: number;
+  sort?: string;
 }
 
 export interface ReqPhieuNhapDTO {
@@ -346,5 +361,50 @@ export const phieuNhapService = {
       {}
     );
     return res.data.data;
+  },
+  delete: async (id: number) => {
+    await apiClient.delete(`/phieu-nhap/${id}`);
+  },
+};
+
+// ============ ChiTietPhieuNhap ============
+export const chiTietPhieuNhapService = {
+  getAll: async () => {
+    const res = await apiClient.get<RestResponse<ChiTietPhieuNhap[]>>(
+      "/chi-tiet-phieu-nhap"
+    );
+    return res.data.data;
+  },
+  getById: async (id: number) => {
+    const res = await apiClient.get<RestResponse<ChiTietPhieuNhap>>(
+      `/chi-tiet-phieu-nhap/${id}`
+    );
+    return res.data.data;
+  },
+  getByPhieuNhap: async (phieuNhapId: number) => {
+    const res = await apiClient.get<RestResponse<ChiTietPhieuNhap[]>>(
+      `/chi-tiet-phieu-nhap/phieu-nhap/${phieuNhapId}`
+    );
+    return res.data.data;
+  },
+  create: async (data: Omit<ReqChiTietPhieuNhapDTO, "id">) => {
+    const res = await apiClient.post<RestResponse<ChiTietPhieuNhap>>(
+      "/chi-tiet-phieu-nhap",
+      data
+    );
+    return res.data.data;
+  },
+  update: async (data: ReqChiTietPhieuNhapDTO & { id: number }) => {
+    const res = await apiClient.put<RestResponse<ChiTietPhieuNhap>>(
+      "/chi-tiet-phieu-nhap",
+      data
+    );
+    return res.data.data;
+  },
+  delete: async (id: number) => {
+    const res = await apiClient.delete<RestResponse<void>>(
+      `/chi-tiet-phieu-nhap/${id}`
+    );
+    return res.data;
   },
 };

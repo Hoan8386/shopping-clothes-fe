@@ -93,77 +93,104 @@ export default function AdminSuppliersPage() {
   if (loading) return <Loading />;
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Quản lý nhà cung cấp</h1>
+    <div className="space-y-5">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Quản lý nhà cung cấp
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Danh sách các nhà cung cấp hàng hóa
+          </p>
+        </div>
         <button
           onClick={openCreate}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl hover:bg-indigo-700 transition shadow-sm font-medium text-sm"
         >
-          <FiPlus /> Thêm mới
+          <FiPlus size={16} /> Thêm mới
         </button>
       </div>
-      <div className="bg-white rounded-lg border overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-600">
-            <tr>
-              <th className="px-4 py-3 text-left">ID</th>
-              <th className="px-4 py-3 text-left">Tên NCC</th>
-              <th className="px-4 py-3 text-left">SĐT</th>
-              <th className="px-4 py-3 text-left">Email</th>
-              <th className="px-4 py-3 text-left">Địa chỉ</th>
-              <th className="px-4 py-3 text-left">Trạng thái</th>
-              <th className="px-4 py-3 text-center">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {items.map((item) => (
-              <tr key={item.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3">{item.id}</td>
-                <td className="px-4 py-3 font-medium">{item.tenNhaCungCap}</td>
-                <td className="px-4 py-3">{item.soDienThoai}</td>
-                <td className="px-4 py-3">{item.email}</td>
-                <td className="px-4 py-3 max-w-[200px] truncate">
-                  {item.diaChi}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs ${item.trangThai ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
-                  >
-                    {item.trangThai ? "Hoạt động" : "Ngưng"}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <div className="flex items-center justify-center gap-2">
-                    <button
-                      onClick={() => openEdit(item)}
-                      className="text-blue-500 hover:text-blue-700 p-1"
-                    >
-                      <FiEdit size={16} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(item.id)}
-                      className="text-red-500 hover:text-red-700 p-1"
-                    >
-                      <FiTrash2 size={16} />
-                    </button>
-                  </div>
-                </td>
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50/80 border-b border-gray-100">
+                <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  ID
+                </th>
+                <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Tên NCC
+                </th>
+                <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  SĐT
+                </th>
+                <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Email
+                </th>
+                <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Địa chỉ
+                </th>
+                <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Trạng thái
+                </th>
+                <th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Thao tác
+                </th>
               </tr>
-            ))}
-            {items.length === 0 && (
-              <tr>
-                <td colSpan={7} className="text-center py-8 text-gray-400">
-                  Không có dữ liệu
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {items.map((item) => (
+                <tr key={item.id} className="hover:bg-indigo-50/30 transition">
+                  <td className="px-5 py-3.5 text-gray-500">#{item.id}</td>
+                  <td className="px-5 py-3.5 font-medium text-gray-900">
+                    {item.tenNhaCungCap}
+                  </td>
+                  <td className="px-5 py-3.5 text-gray-600">
+                    {item.soDienThoai}
+                  </td>
+                  <td className="px-5 py-3.5 text-gray-600">{item.email}</td>
+                  <td className="px-5 py-3.5 text-gray-600 max-w-[200px] truncate">
+                    {item.diaChi}
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <span
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium ${item.trangThai ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}
+                    >
+                      {item.trangThai ? "Hoạt động" : "Ngưng"}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3.5 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        onClick={() => openEdit(item)}
+                        className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-50 transition"
+                      >
+                        <FiEdit size={15} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(item.id)}
+                        className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition"
+                      >
+                        <FiTrash2 size={15} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {items.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="text-center py-12 text-gray-400">
+                    Không có dữ liệu
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-lg p-6">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-xl">
             <h2 className="text-lg font-bold mb-4">
               {editing ? "Sửa" : "Thêm"} nhà cung cấp
             </h2>
@@ -178,7 +205,7 @@ export default function AdminSuppliersPage() {
                   onChange={(e) =>
                     setForm({ ...form, tenNhaCungCap: e.target.value })
                   }
-                  className="w-full border rounded-lg px-3 py-2"
+                  className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition"
                   required
                 />
               </div>
@@ -191,7 +218,7 @@ export default function AdminSuppliersPage() {
                     onChange={(e) =>
                       setForm({ ...form, soDienThoai: e.target.value })
                     }
-                    className="w-full border rounded-lg px-3 py-2"
+                    className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition"
                   />
                 </div>
                 <div>
@@ -204,7 +231,7 @@ export default function AdminSuppliersPage() {
                     onChange={(e) =>
                       setForm({ ...form, email: e.target.value })
                     }
-                    className="w-full border rounded-lg px-3 py-2"
+                    className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition"
                   />
                 </div>
               </div>
@@ -216,7 +243,7 @@ export default function AdminSuppliersPage() {
                   type="text"
                   value={form.diaChi}
                   onChange={(e) => setForm({ ...form, diaChi: e.target.value })}
-                  className="w-full border rounded-lg px-3 py-2"
+                  className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition"
                 />
               </div>
               <div>
@@ -227,20 +254,20 @@ export default function AdminSuppliersPage() {
                   value={form.ghiTru}
                   onChange={(e) => setForm({ ...form, ghiTru: e.target.value })}
                   rows={2}
-                  className="w-full border rounded-lg px-3 py-2"
+                  className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition"
                 />
               </div>
-              <div className="flex gap-3 justify-end">
+              <div className="flex gap-3 justify-end pt-2">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                  className="px-5 py-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition font-medium text-sm"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition shadow-sm font-medium text-sm"
                 >
                   {editing ? "Cập nhật" : "Thêm mới"}
                 </button>

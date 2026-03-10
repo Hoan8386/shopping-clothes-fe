@@ -59,59 +59,82 @@ export default function AdminReviewsPage() {
   );
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">Quản lý đánh giá</h1>
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Quản lý đánh giá</h1>
+        <p className="text-sm text-gray-500 mt-1">
+          Đánh giá sản phẩm từ khách hàng
+        </p>
+      </div>
 
       {loading ? (
         <Loading />
       ) : (
-        <div className="bg-white rounded-lg border overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-600">
-              <tr>
-                <th className="px-4 py-3 text-left">ID</th>
-                <th className="px-4 py-3 text-left">Sản phẩm</th>
-                <th className="px-4 py-3 text-left">Khách hàng</th>
-                <th className="px-4 py-3 text-left">Sao</th>
-                <th className="px-4 py-3 text-left">Bình luận</th>
-                <th className="px-4 py-3 text-left">Ngày</th>
-                <th className="px-4 py-3 text-center">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {reviews.map((r) => (
-                <tr key={r.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3">{r.id}</td>
-                  <td className="px-4 py-3 font-medium max-w-[200px] truncate">
-                    {r.tenSanPham || "—"}
-                  </td>
-                  <td className="px-4 py-3">{r.tenKhachHang || "—"}</td>
-                  <td className="px-4 py-3">{renderStars(r.soSao)}</td>
-                  <td className="px-4 py-3 max-w-[300px] truncate">
-                    {r.ghiChu}
-                  </td>
-                  <td className="px-4 py-3 text-gray-500">
-                    {formatDate(r.ngayTao)}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <button
-                      onClick={() => handleDelete(r.id)}
-                      className="text-red-500 hover:text-red-700 p-1"
-                    >
-                      <FiTrash2 size={16} />
-                    </button>
-                  </td>
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50/80 border-b border-gray-100">
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    ID
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Sản phẩm
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Khách hàng
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Sao
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Bình luận
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Ngày
+                  </th>
+                  <th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Thao tác
+                  </th>
                 </tr>
-              ))}
-              {reviews.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="text-center py-8 text-gray-400">
-                    Không có đánh giá
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {reviews.map((r) => (
+                  <tr key={r.id} className="hover:bg-indigo-50/30 transition">
+                    <td className="px-5 py-3.5 text-gray-500">#{r.id}</td>
+                    <td className="px-5 py-3.5 font-medium text-gray-900 max-w-[200px] truncate">
+                      {r.tenSanPham || "—"}
+                    </td>
+                    <td className="px-5 py-3.5 text-gray-600">
+                      {r.tenKhachHang || "—"}
+                    </td>
+                    <td className="px-5 py-3.5">{renderStars(r.soSao)}</td>
+                    <td className="px-5 py-3.5 text-gray-600 max-w-[300px] truncate">
+                      {r.ghiChu}
+                    </td>
+                    <td className="px-5 py-3.5 text-gray-500">
+                      {formatDate(r.ngayTao)}
+                    </td>
+                    <td className="px-5 py-3.5 text-center">
+                      <button
+                        onClick={() => handleDelete(r.id)}
+                        className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition"
+                      >
+                        <FiTrash2 size={15} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {reviews.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="text-center py-12 text-gray-400">
+                      Không có đánh giá
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

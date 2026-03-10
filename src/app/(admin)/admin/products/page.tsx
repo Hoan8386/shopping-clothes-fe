@@ -154,19 +154,24 @@ export default function AdminProductsPage() {
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Quản lý sản phẩm</h1>
+    <div className="space-y-5">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Quản lý sản phẩm</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Quản lý danh sách sản phẩm của cửa hàng
+          </p>
+        </div>
         <button
           onClick={openCreateModal}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl hover:bg-indigo-700 transition shadow-sm font-medium text-sm"
         >
-          <FiPlus /> Thêm mới
+          <FiPlus size={16} /> Thêm mới
         </button>
       </div>
 
       {/* Search */}
-      <div className="mb-4">
+      <div className="bg-white rounded-2xl border border-gray-100 p-4">
         <div className="relative max-w-md">
           <input
             type="text"
@@ -176,9 +181,12 @@ export default function AdminProductsPage() {
               setSearch(e.target.value);
               setPage(1);
             }}
-            className="w-full border rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-200 rounded-xl pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm transition"
           />
-          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <FiSearch
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            size={16}
+          />
         </div>
       </div>
 
@@ -186,67 +194,100 @@ export default function AdminProductsPage() {
       {loading ? (
         <Loading />
       ) : (
-        <div className="bg-white rounded-lg border overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-600">
-              <tr>
-                <th className="px-4 py-3 text-left">ID</th>
-                <th className="px-4 py-3 text-left">Hình</th>
-                <th className="px-4 py-3 text-left">Tên sản phẩm</th>
-                <th className="px-4 py-3 text-left">Giá bán</th>
-                <th className="px-4 py-3 text-left">Số lượng</th>
-                <th className="px-4 py-3 text-left">Kiểu</th>
-                <th className="px-4 py-3 text-left">Thương hiệu</th>
-                <th className="px-4 py-3 text-center">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {products.map((p) => (
-                <tr key={p.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3">{p.id}</td>
-                  <td className="px-4 py-3">
-                    <Image
-                      src={getImageUrl(p.hinhAnhChinh)}
-                      alt={p.tenSanPham}
-                      width={48}
-                      height={48}
-                      className="rounded object-cover"
-                    />
-                  </td>
-                  <td className="px-4 py-3 font-medium max-w-[200px] truncate">
-                    {p.tenSanPham}
-                  </td>
-                  <td className="px-4 py-3">{formatCurrency(p.giaBan)}</td>
-                  <td className="px-4 py-3">{p.soLuong}</td>
-                  <td className="px-4 py-3">{p.tenKieuSanPham}</td>
-                  <td className="px-4 py-3">{p.tenThuongHieu}</td>
-                  <td className="px-4 py-3 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <button
-                        onClick={() => openEditModal(p)}
-                        className="text-blue-500 hover:text-blue-700 p-1"
-                      >
-                        <FiEdit size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(p.id)}
-                        className="text-red-500 hover:text-red-700 p-1"
-                      >
-                        <FiTrash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50/80 border-b border-gray-100">
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    ID
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Hình
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Tên sản phẩm
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Giá bán
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Số lượng
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Kiểu
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Thương hiệu
+                  </th>
+                  <th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Thao tác
+                  </th>
                 </tr>
-              ))}
-              {products.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="text-center py-8 text-gray-400">
-                    Không có sản phẩm nào
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {products.map((p) => (
+                  <tr key={p.id} className="hover:bg-indigo-50/30 transition">
+                    <td className="px-5 py-3.5 text-gray-500">#{p.id}</td>
+                    <td className="px-5 py-3.5">
+                      <Image
+                        src={getImageUrl(p.hinhAnhChinh)}
+                        alt={p.tenSanPham}
+                        width={48}
+                        height={48}
+                        className="rounded-lg object-cover ring-1 ring-gray-100"
+                      />
+                    </td>
+                    <td className="px-5 py-3.5 font-medium text-gray-900 max-w-[200px] truncate">
+                      {p.tenSanPham}
+                    </td>
+                    <td className="px-5 py-3.5 font-semibold text-indigo-600">
+                      {formatCurrency(p.giaBan)}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${p.soLuong > 0 ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}
+                      >
+                        {p.soLuong}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-gray-600">
+                      {p.tenKieuSanPham}
+                    </td>
+                    <td className="px-5 py-3.5 text-gray-600">
+                      {p.tenThuongHieu}
+                    </td>
+                    <td className="px-5 py-3.5 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => openEditModal(p)}
+                          className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-50 transition"
+                          title="Sửa"
+                        >
+                          <FiEdit size={15} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(p.id)}
+                          className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition"
+                          title="Xóa"
+                        >
+                          <FiTrash2 size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {products.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="text-center py-12 text-gray-400">
+                      <FiBox className="mx-auto mb-2" size={24} />
+                      Không có sản phẩm nào
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -262,9 +303,9 @@ export default function AdminProductsPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
-            <h2 className="text-lg font-bold mb-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 shadow-xl">
+            <h2 className="text-lg font-bold mb-4 text-gray-900">
               {editing ? "Sửa sản phẩm" : "Thêm sản phẩm"}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">

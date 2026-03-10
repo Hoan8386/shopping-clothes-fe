@@ -16,10 +16,10 @@ const stats = [
 ];
 
 const colorMap: Record<string, string> = {
-  blue: "bg-blue-50 text-blue-600",
-  purple: "bg-purple-50 text-purple-600",
-  orange: "bg-orange-50 text-orange-600",
-  green: "bg-green-50 text-green-600",
+  blue: "bg-blue-500/10 text-blue-500",
+  purple: "bg-purple-500/10 text-purple-500",
+  orange: "bg-orange-500/10 text-orange-500",
+  green: "bg-green-500/10 text-green-500",
 };
 
 export default function StaffPage() {
@@ -28,10 +28,10 @@ export default function StaffPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">
+        <h1 className="text-2xl font-bold text-foreground">
           Xin chào, {session?.user?.name ?? "nhân viên"} 👋
         </h1>
-        <p className="text-gray-500 text-sm mt-1">
+        <p className="text-muted text-sm mt-1">
           Vai trò: {session?.user?.role?.name ?? "–"}
         </p>
       </div>
@@ -40,21 +40,21 @@ export default function StaffPage() {
         {stats.map((s) => (
           <div
             key={s.label}
-            className="bg-white rounded-xl shadow-sm p-5 flex items-center gap-4"
+            className="bg-card rounded-xl border border-subtle p-5 flex items-center gap-4"
           >
             <div className={`p-3 rounded-full ${colorMap[s.color]}`}>
               <s.icon size={22} />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-800">{s.value}</p>
-              <p className="text-sm text-gray-500">{s.label}</p>
+              <p className="text-2xl font-bold text-foreground">{s.value}</p>
+              <p className="text-sm text-muted">{s.label}</p>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <p className="text-gray-400 text-sm text-center">
+      <div className="bg-card rounded-xl border border-subtle p-6">
+        <p className="text-muted text-sm text-center">
           Chọn mục từ thanh bên để bắt đầu làm việc.
         </p>
       </div>

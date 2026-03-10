@@ -20,7 +20,19 @@ import Loading from "@/components/ui/Loading";
 import Pagination from "@/components/ui/Pagination";
 import toast from "react-hot-toast";
 import Link from "next/link";
-import { FiShoppingCart, FiStar, FiMinus, FiPlus } from "react-icons/fi";
+import {
+  FiShoppingCart,
+  FiStar,
+  FiMinus,
+  FiPlus,
+  FiMapPin,
+  FiBox,
+  FiChevronRight,
+  FiCheck,
+  FiTruck,
+  FiShield,
+  FiRefreshCw,
+} from "react-icons/fi";
 
 export default function ProductDetailPage() {
   const { id } = useParams();
@@ -39,6 +51,9 @@ export default function ProductDetailPage() {
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
   const [loading, setLoading] = useState(true);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [activeTab, setActiveTab] = useState<"description" | "reviews">(
+    "description",
+  );
 
   // Unique colors/sizes
   const uniqueColors = [...new Set(variants.map((v) => v.tenMauSac))];
@@ -99,6 +114,11 @@ export default function ProductDetailPage() {
       : product.giaBan
     : 0;
 
+  // Stores for the current color+size combination
+  const storesForVariant = variants.filter(
+    (v) => v.tenMauSac === selectedColor && v.tenKichThuoc === selectedSize,
+  );
+
   const handleAddToCart = async () => {
     if (!isAuthenticated) {
       toast.error("Vui lòng đăng nhập để thêm vào giỏ hàng");
@@ -132,7 +152,7 @@ export default function ProductDetailPage() {
   if (loading) return <Loading />;
   if (!product) {
     return (
-      <div className="text-center py-20 text-gray-500">
+      <div className="text-center py-20 text-muted">
         Không tìm thấy sản phẩm
       </div>
     );
@@ -142,47 +162,64 @@ export default function ProductDetailPage() {
     ? selectedVariant.hinhAnhUrls
     : [product.hinhAnhChinh];
 
+  const avgRating =
+    reviews.length > 0
+      ? reviews.reduce((sum, r) => sum + r.soSao, 0) / reviews.length
+      : 0;
+
   return (
     <>
       {/* Breadcrumb */}
-      <div className="bg-section py-8 text-center">
-        <h2 className="text-3xl font-extrabold text-foreground mb-1">
-          Chi tiết sản phẩm
-        </h2>
-        <p className="text-sm text-gray-400">
-          <Link href="/" className="hover:text-accent">
-            Trang chủ
-          </Link>
-          <span className="mx-2">/</span>
-          <Link href="/products" className="hover:text-accent">
-            Sản phẩm
-          </Link>
-          <span className="mx-2">/</span>
-          <span className="text-accent">{product.tenSanPham}</span>
-        </p>
+      <div className="bg-section border-b border-subtle">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center gap-2 text-sm text-muted">
+            <Link href="/" className="hover:text-accent transition-colors">
+              Trang chủ
+            </Link>
+            <FiChevronRight size={12} />
+            <Link
+              href="/products"
+              className="hover:text-accent transition-colors"
+            >
+              Sản phẩm
+            </Link>
+            <FiChevronRight size={12} />
+            <span className="text-foreground font-medium truncate max-w-50">
+              {product.tenSanPham}
+            </span>
+          </div>
+        </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-          {/* Images */}
-          <div>
-            <div className="aspect-square overflow-hidden bg-section mb-4">
+      <div className="max-w-7xl mx-auto px-4 py-8 lg:py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-14">
+          {/* ===== Images ===== */}
+          <div className="space-y-4">
+            {/* Main image */}
+            <div className="relative aspect-square overflow-hidden rounded-2xl bg-section border border-subtle">
               <img
                 src={getImageUrl(images[selectedImageIdx])}
                 alt={product.tenSanPham}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
               />
+              {product.giaGiam > 0 && (
+                <span className="absolute top-4 left-4 bg-accent text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-md">
+                  -{product.giaGiam}%
+                </span>
+              )}
             </div>
+
+            {/* Thumbnail strip */}
             {images.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto">
+              <div className="flex gap-3 overflow-x-auto pb-1">
                 {images.map((img, idx) => (
                   <button
                     key={idx}
                     onClick={() => setSelectedImageIdx(idx)}
-                    className={`w-20 h-20 overflow-hidden border-2 flex-shrink-0 ${
+                    className={`w-20 h-20 rounded-xl overflow-hidden shrink-0 border-2 transition-all duration-200 ${
                       idx === selectedImageIdx
-                        ? "border-foreground"
-                        : "border-subtle"
+                        ? "border-accent shadow-md ring-2 ring-accent/20"
+                        : "border-subtle hover:border-muted"
                     }`}
                   >
                     <img
@@ -196,50 +233,77 @@ export default function ProductDetailPage() {
             )}
           </div>
 
-          {/* Product Info */}
-          <div>
-            <h1 className="text-2xl font-extrabold text-foreground mb-2">
+          {/* ===== Product Info ===== */}
+          <div className="space-y-6">
+            {/* Brand + Category */}
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold uppercase tracking-wider text-accent bg-accent/10 px-3 py-1 rounded-full">
+                {product.tenThuongHieu}
+              </span>
+              <span className="text-xs font-medium uppercase tracking-wider text-muted bg-section px-3 py-1 rounded-full">
+                {product.tenKieuSanPham}
+              </span>
+            </div>
+
+            {/* Name */}
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground leading-tight">
               {product.tenSanPham}
             </h1>
 
-            <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-gray-400 mb-6">
-              <span>{product.tenThuongHieu}</span>
-              <span>|</span>
-              <span>{product.tenKieuSanPham}</span>
-            </div>
+            {/* Rating summary */}
+            {reviews.length > 0 && (
+              <div className="flex items-center gap-3">
+                <div className="flex gap-0.5">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <FiStar
+                      key={i}
+                      size={14}
+                      className={
+                        i < Math.round(avgRating)
+                          ? "text-amber-400 fill-amber-400"
+                          : "text-gray-300"
+                      }
+                    />
+                  ))}
+                </div>
+                <span className="text-sm text-muted">
+                  {avgRating.toFixed(1)} ({reviews.length} đánh giá)
+                </span>
+              </div>
+            )}
 
             {/* Price */}
-            <div className="flex items-center gap-3 mb-8">
-              <span className="text-2xl font-bold text-foreground">
+            <div className="flex items-baseline gap-3 pb-2">
+              <span className="text-3xl font-bold text-accent">
                 {formatCurrency(discountedPrice)}
               </span>
               {product.giaGiam > 0 && (
-                <>
-                  <span className="text-base text-gray-300 line-through">
-                    {formatCurrency(product.giaBan)}
-                  </span>
-                  <span className="bg-accent text-white text-xs font-bold px-2.5 py-1 uppercase tracking-wider">
-                    -{product.giaGiam}%
-                  </span>
-                </>
+                <span className="text-lg text-muted line-through">
+                  {formatCurrency(product.giaBan)}
+                </span>
               )}
             </div>
 
+            <div className="h-px bg-subtle" />
+
             {/* Color selection */}
             {uniqueColors.length > 0 && (
-              <div className="mb-5">
-                <label className="text-xs font-bold uppercase tracking-wider text-foreground mb-3 block">
-                  Màu sắc
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                  Màu sắc:
+                  <span className="font-normal text-muted">
+                    {selectedColor}
+                  </span>
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {uniqueColors.map((color) => (
                     <button
                       key={color}
                       onClick={() => setSelectedColor(color)}
-                      className={`px-4 py-2 border text-sm transition ${
+                      className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                         selectedColor === color
-                          ? "border-foreground bg-foreground text-white"
-                          : "border-subtle hover:border-foreground"
+                          ? "bg-foreground text-background shadow-md"
+                          : "bg-section border border-subtle text-foreground hover:border-foreground"
                       }`}
                     >
                       {color}
@@ -251,9 +315,10 @@ export default function ProductDetailPage() {
 
             {/* Size selection */}
             {uniqueSizes.length > 0 && (
-              <div className="mb-5">
-                <label className="text-xs font-bold uppercase tracking-wider text-foreground mb-3 block">
-                  Kích thước
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                  Kích thước:
+                  <span className="font-normal text-muted">{selectedSize}</span>
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {uniqueSizes.map((size) => {
@@ -268,12 +333,12 @@ export default function ProductDetailPage() {
                         key={size}
                         onClick={() => !outOfStock && setSelectedSize(size)}
                         disabled={outOfStock}
-                        className={`px-4 py-2 border text-sm transition ${
+                        className={`min-w-12 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                           selectedSize === size
-                            ? "border-foreground bg-foreground text-white"
+                            ? "bg-foreground text-background shadow-md"
                             : outOfStock
-                              ? "border-subtle text-gray-200 cursor-not-allowed line-through"
-                              : "border-subtle hover:border-foreground"
+                              ? "bg-section border border-subtle text-muted/40 cursor-not-allowed line-through"
+                              : "bg-section border border-subtle text-foreground hover:border-foreground"
                         }`}
                       >
                         {size}
@@ -284,30 +349,84 @@ export default function ProductDetailPage() {
               </div>
             )}
 
-            {/* Stock info */}
-            {selectedVariant && (
-              <p className="text-xs text-gray-400 mb-5 uppercase tracking-wider">
-                Còn lại:{" "}
-                <span className="font-bold text-foreground">
-                  {selectedVariant.soLuong}
-                </span>{" "}
-                sản phẩm
-              </p>
+            {/* Store availability */}
+            {selectedVariant && storesForVariant.length > 0 && (
+              <div className="bg-section rounded-xl p-4 border border-subtle">
+                <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <FiMapPin size={14} className="text-accent" />
+                  Có sẵn tại cửa hàng
+                </h4>
+                <div className="space-y-2">
+                  {storesForVariant.map((sv) => (
+                    <div
+                      key={sv.id}
+                      className={`flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors ${
+                        selectedVariant.id === sv.id
+                          ? "bg-accent/10 border border-accent/20"
+                          : "bg-card border border-subtle hover:border-muted cursor-pointer"
+                      }`}
+                      onClick={() => setSelectedVariant(sv)}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        {selectedVariant.id === sv.id && (
+                          <FiCheck size={14} className="text-accent shrink-0" />
+                        )}
+                        <span className="text-sm font-medium text-foreground">
+                          {sv.tenCuaHang}
+                        </span>
+                      </div>
+                      <span
+                        className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          sv.soLuong > 5
+                            ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                            : sv.soLuong > 0
+                              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                              : "bg-red-500/10 text-red-500"
+                        }`}
+                      >
+                        {sv.soLuong > 0 ? `Còn ${sv.soLuong} SP` : "Hết hàng"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
 
-            {/* Quantity */}
-            <div className="flex items-center gap-4 mb-8">
-              <label className="text-xs font-bold uppercase tracking-wider text-foreground">
-                Số lượng
-              </label>
-              <div className="flex items-center border border-subtle">
+            {/* Stock info */}
+            {selectedVariant && (
+              <div className="flex items-center gap-2">
+                <FiBox size={14} className="text-muted" />
+                <span className="text-sm text-muted">
+                  Tồn kho:{" "}
+                  <span
+                    className={`font-bold ${
+                      selectedVariant.soLuong > 5
+                        ? "text-green-600 dark:text-green-400"
+                        : selectedVariant.soLuong > 0
+                          ? "text-amber-600 dark:text-amber-400"
+                          : "text-red-500"
+                    }`}
+                  >
+                    {selectedVariant.soLuong > 0
+                      ? `${selectedVariant.soLuong} sản phẩm`
+                      : "Hết hàng"}
+                  </span>
+                </span>
+              </div>
+            )}
+
+            <div className="h-px bg-subtle" />
+
+            {/* Quantity + Add to cart */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className="flex items-center rounded-xl border border-subtle overflow-hidden">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="px-3 py-2.5 hover:bg-section transition"
+                  className="px-3.5 py-3 hover:bg-section transition-colors text-foreground"
                 >
                   <FiMinus size={14} />
                 </button>
-                <span className="px-4 py-2.5 min-w-[3rem] text-center text-sm font-bold border-x border-subtle">
+                <span className="px-5 py-3 min-w-14 text-center text-sm font-bold border-x border-subtle bg-card">
                   {quantity}
                 </span>
                 <button
@@ -316,95 +435,162 @@ export default function ProductDetailPage() {
                       Math.min(selectedVariant?.soLuong || 1, quantity + 1),
                     )
                   }
-                  className="px-3 py-2.5 hover:bg-section transition"
+                  className="px-3.5 py-3 hover:bg-section transition-colors text-foreground"
                 >
                   <FiPlus size={14} />
                 </button>
               </div>
+
+              <button
+                onClick={handleAddToCart}
+                disabled={
+                  addingToCart ||
+                  !selectedVariant ||
+                  selectedVariant.soLuong === 0
+                }
+                className="flex-1 w-full sm:w-auto bg-accent hover:bg-accent-hover text-white px-8 py-3.5 rounded-xl text-sm font-bold uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2.5 shadow-lg shadow-accent/20 hover:shadow-accent/30"
+              >
+                <FiShoppingCart size={16} />
+                {addingToCart ? "Đang thêm..." : "Thêm vào giỏ hàng"}
+              </button>
             </div>
 
-            {/* Add to cart */}
-            <button
-              onClick={handleAddToCart}
-              disabled={
-                addingToCart ||
-                !selectedVariant ||
-                selectedVariant.soLuong === 0
-              }
-              className="bg-foreground text-white px-10 py-3.5 text-xs font-bold uppercase tracking-wider hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
-            >
-              <FiShoppingCart size={16} />
-              {addingToCart ? "Đang thêm..." : "Thêm vào giỏ hàng"}
-            </button>
-
-            {/* Description */}
-            <div className="mt-10 border-t border-subtle pt-8">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-foreground mb-3">
-                Mô tả sản phẩm
-              </h3>
-              <p className="text-sm text-gray-500 leading-relaxed">
-                {product.moTa || "Chưa có mô tả"}
-              </p>
+            {/* Service badges */}
+            <div className="grid grid-cols-3 gap-3 pt-2">
+              <div className="flex flex-col items-center gap-1.5 text-center p-3 rounded-xl bg-section border border-subtle">
+                <FiTruck size={18} className="text-accent" />
+                <span className="text-[11px] font-medium text-muted">
+                  Giao hàng nhanh
+                </span>
+              </div>
+              <div className="flex flex-col items-center gap-1.5 text-center p-3 rounded-xl bg-section border border-subtle">
+                <FiShield size={18} className="text-accent" />
+                <span className="text-[11px] font-medium text-muted">
+                  Hàng chính hãng
+                </span>
+              </div>
+              <div className="flex flex-col items-center gap-1.5 text-center p-3 rounded-xl bg-section border border-subtle">
+                <FiRefreshCw size={18} className="text-accent" />
+                <span className="text-[11px] font-medium text-muted">
+                  Đổi trả 30 ngày
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Reviews Section */}
-        <section className="mt-14 border-t border-subtle pt-10">
-          <h2 className="text-xl font-extrabold text-foreground mb-1">
-            Đánh giá sản phẩm
-          </h2>
-          <div className="w-12 h-[3px] bg-accent mb-8"></div>
-          {reviews.length === 0 ? (
-            <p className="text-gray-400 text-sm">Chưa có đánh giá nào</p>
-          ) : (
-            <div className="space-y-4">
-              {reviews.map((rv) => (
-                <div
-                  key={rv.id}
-                  className="border border-subtle bg-card px-6 py-5"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <span className="font-bold text-sm text-foreground">
-                        {rv.tenKhachHang}
-                      </span>
-                      <div className="flex gap-0.5">
-                        {Array.from({ length: 5 }, (_, i) => (
-                          <FiStar
-                            key={i}
-                            size={12}
-                            className={
-                              i < rv.soSao
-                                ? "text-accent fill-accent"
-                                : "text-gray-200"
-                            }
-                          />
-                        ))}
-                      </div>
-                    </div>
-                    <span className="text-xs text-gray-300 uppercase tracking-wider">
-                      {new Date(rv.ngayTao).toLocaleDateString("vi-VN")}
-                    </span>
+        {/* ===== Tabs: Description + Reviews ===== */}
+        <div className="mt-14">
+          {/* Tab buttons */}
+          <div className="flex border-b border-subtle">
+            <button
+              onClick={() => setActiveTab("description")}
+              className={`px-6 py-3.5 text-sm font-semibold transition-colors relative ${
+                activeTab === "description"
+                  ? "text-accent"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              Mô tả sản phẩm
+              {activeTab === "description" && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-t" />
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab("reviews")}
+              className={`px-6 py-3.5 text-sm font-semibold transition-colors relative ${
+                activeTab === "reviews"
+                  ? "text-accent"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              Đánh giá ({reviews.length})
+              {activeTab === "reviews" && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-t" />
+              )}
+            </button>
+          </div>
+
+          {/* Tab content */}
+          <div className="py-8">
+            {activeTab === "description" && (
+              <div className="max-w-3xl">
+                <p className="text-sm text-muted leading-relaxed whitespace-pre-line">
+                  {product.moTa || "Chưa có mô tả cho sản phẩm này."}
+                </p>
+              </div>
+            )}
+
+            {activeTab === "reviews" && (
+              <>
+                {reviews.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FiStar size={40} className="mx-auto text-subtle mb-3" />
+                    <p className="text-muted text-sm">
+                      Chưa có đánh giá nào cho sản phẩm này
+                    </p>
                   </div>
-                  <p className="text-sm text-gray-500">{rv.ghiChu}</p>
-                  {rv.hinhAnh && (
-                    <img
-                      src={getImageUrl(rv.hinhAnh)}
-                      alt="review"
-                      className="mt-3 w-20 h-20 object-cover border border-subtle"
+                ) : (
+                  <div className="space-y-4 max-w-3xl">
+                    {reviews.map((rv) => (
+                      <div
+                        key={rv.id}
+                        className="bg-card border border-subtle rounded-xl p-5"
+                      >
+                        <div className="flex items-start justify-between gap-4 mb-3">
+                          <div className="flex items-center gap-3">
+                            {/* Avatar */}
+                            <div className="w-9 h-9 rounded-full bg-accent/10 flex items-center justify-center text-accent font-bold text-sm shrink-0">
+                              {rv.tenKhachHang?.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <span className="font-semibold text-sm text-foreground block">
+                                {rv.tenKhachHang}
+                              </span>
+                              <span className="text-xs text-muted">
+                                {new Date(rv.ngayTao).toLocaleDateString(
+                                  "vi-VN",
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex gap-0.5 shrink-0">
+                            {Array.from({ length: 5 }, (_, i) => (
+                              <FiStar
+                                key={i}
+                                size={13}
+                                className={
+                                  i < rv.soSao
+                                    ? "text-amber-400 fill-amber-400"
+                                    : "text-gray-300"
+                                }
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted leading-relaxed">
+                          {rv.ghiChu}
+                        </p>
+                        {rv.hinhAnh && (
+                          <img
+                            src={getImageUrl(rv.hinhAnh)}
+                            alt="review"
+                            className="mt-3 w-20 h-20 rounded-lg object-cover border border-subtle"
+                          />
+                        )}
+                      </div>
+                    ))}
+                    <Pagination
+                      currentPage={reviewPage}
+                      totalPages={reviewTotalPages}
+                      onPageChange={setReviewPage}
                     />
-                  )}
-                </div>
-              ))}
-              <Pagination
-                currentPage={reviewPage}
-                totalPages={reviewTotalPages}
-                onPageChange={setReviewPage}
-              />
-            </div>
-          )}
-        </section>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
       </div>
     </>
   );

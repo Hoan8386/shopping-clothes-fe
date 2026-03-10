@@ -71,32 +71,31 @@ export default function StaffProductsPage() {
   const statusText = (s: number) =>
     s === 1 ? "Đang bán" : s === 0 ? "Ngừng bán" : "Không rõ";
   const statusColor = (s: number) =>
-    s === 1 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600";
+    s === 1 ? "bg-green-500/15 text-green-500" : "bg-red-500/15 text-red-500";
 
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Danh sách sản phẩm</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <h1 className="text-2xl font-bold text-foreground">
+          Danh sách sản phẩm
+        </h1>
+        <p className="text-sm text-muted mt-1">
           Xem thông tin sản phẩm (chỉ xem)
         </p>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm p-4 mb-6 flex flex-wrap gap-3 items-center">
-        <form
-          onSubmit={handleSearch}
-          className="flex gap-2 flex-1 min-w-[200px]"
-        >
+      <div className="bg-card rounded-xl border border-subtle p-4 mb-6 flex flex-wrap gap-3 items-center">
+        <form onSubmit={handleSearch} className="flex gap-2 flex-1 min-w-50">
           <input
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Tìm tên sản phẩm..."
-            className="border rounded-lg px-3 py-2 text-sm flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm flex-1 focus:outline-none focus:ring-2 focus:ring-accent/40"
           />
           <button
             type="submit"
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 flex items-center gap-1"
+            className="bg-accent text-white px-4 py-2 rounded-lg text-sm hover:bg-accent-hover flex items-center gap-1"
           >
             <FiSearch size={14} /> Tìm
           </button>
@@ -110,7 +109,7 @@ export default function StaffProductsPage() {
             );
             setPage(1);
           }}
-          className="border rounded-lg px-3 py-2 text-sm focus:outline-none"
+          className="border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none"
         >
           <option value="">-- Tất cả loại --</option>
           {categories.map((c) => (
@@ -126,7 +125,7 @@ export default function StaffProductsPage() {
             setFilterBrand(e.target.value ? Number(e.target.value) : undefined);
             setPage(1);
           }}
-          className="border rounded-lg px-3 py-2 text-sm focus:outline-none"
+          className="border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none"
         >
           <option value="">-- Tất cả thương hiệu --</option>
           {brands.map((b) => (
@@ -140,40 +139,40 @@ export default function StaffProductsPage() {
       {loading ? (
         <Loading />
       ) : products.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
+        <div className="text-center py-16 text-muted">
           Không có sản phẩm nào
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-card rounded-xl border border-subtle overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-section border-b border-subtle">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">
+                <th className="px-4 py-3 text-left font-medium text-muted">
                   Sản phẩm
                 </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">
+                <th className="px-4 py-3 text-left font-medium text-muted">
                   Loại
                 </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">
+                <th className="px-4 py-3 text-left font-medium text-muted">
                   Thương hiệu
                 </th>
-                <th className="px-4 py-3 text-right font-medium text-gray-600">
+                <th className="px-4 py-3 text-right font-medium text-muted">
                   Giá bán
                 </th>
-                <th className="px-4 py-3 text-right font-medium text-gray-600">
+                <th className="px-4 py-3 text-right font-medium text-muted">
                   Giá giảm
                 </th>
-                <th className="px-4 py-3 text-center font-medium text-gray-600">
+                <th className="px-4 py-3 text-center font-medium text-muted">
                   Tồn kho
                 </th>
-                <th className="px-4 py-3 text-center font-medium text-gray-600">
+                <th className="px-4 py-3 text-center font-medium text-muted">
                   Trạng thái
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y">
+            <tbody className="divide-y divide-subtle">
               {products.map((p) => (
-                <tr key={p.id} className="hover:bg-gray-50 transition">
+                <tr key={p.id} className="hover:bg-section transition">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       {p.hinhAnhChinh && (
@@ -185,15 +184,13 @@ export default function StaffProductsPage() {
                           className="rounded-lg object-cover"
                         />
                       )}
-                      <span className="font-medium text-gray-800 line-clamp-1">
+                      <span className="font-medium text-foreground line-clamp-1">
                         {p.tenSanPham}
                       </span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-gray-500">
-                    {p.tenKieuSanPham}
-                  </td>
-                  <td className="px-4 py-3 text-gray-500">{p.tenThuongHieu}</td>
+                  <td className="px-4 py-3 text-muted">{p.tenKieuSanPham}</td>
+                  <td className="px-4 py-3 text-muted">{p.tenThuongHieu}</td>
                   <td className="px-4 py-3 text-right font-medium">
                     {formatCurrency(p.giaBan)}
                   </td>

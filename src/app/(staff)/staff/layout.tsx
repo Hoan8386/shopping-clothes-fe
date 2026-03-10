@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -10,6 +10,8 @@ import {
   FiShoppingCart,
   FiPackage,
   FiArrowLeft,
+  FiMenu,
+  FiX,
 } from "react-icons/fi";
 
 const menuItems = [
@@ -27,6 +29,7 @@ export default function StaffLayout({
   const { data: session, status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -43,19 +46,38 @@ export default function StaffLayout({
   if (status === "loading" || !session) return null;
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-background">
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-60 bg-white border-r shadow-sm flex-shrink-0 hidden lg:block">
-        <div className="p-4 border-b">
+      <aside
+        className={`fixed lg:sticky top-0 left-0 z-50 lg:z-auto w-64 h-screen bg-card border-r border-subtle shrink-0 flex flex-col transition-transform duration-200 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
+      >
+        <div className="p-5 border-b border-subtle flex items-center justify-between">
           <Link
             href="/"
-            className="flex items-center gap-2 text-green-600 font-bold text-lg"
+            className="flex items-center gap-2.5 text-accent font-bold text-lg"
           >
             <FiArrowLeft size={16} />
-            ShopVN Staff
+            <span>LUXE Staff</span>
           </Link>
+          <button
+            className="lg:hidden text-muted hover:text-foreground"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <FiX size={20} />
+          </button>
         </div>
-        <nav className="p-3 space-y-1">
+
+        <nav className="flex-1 p-3 space-y-1">
           {menuItems.map((item) => {
             const isActive =
               pathname === item.href ||
@@ -64,10 +86,11 @@ export default function StaffLayout({
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${
+                onClick={() => setSidebarOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                   isActive
-                    ? "bg-green-50 text-green-600"
-                    : "text-gray-600 hover:bg-gray-100"
+                    ? "bg-accent/10 text-accent"
+                    : "text-muted hover:bg-section hover:text-foreground"
                 }`}
               >
                 <item.icon size={18} />
@@ -76,11 +99,33 @@ export default function StaffLayout({
             );
           })}
         </nav>
+
+        <div className="p-4 border-t border-subtle">
+          <p className="text-xs text-muted truncate">
+            {session.user?.name ?? "Nhân viên"}
+          </p>
+          <p className="text-[11px] text-muted/60 truncate">
+            {session.user?.role?.name}
+          </p>
+        </div>
       </aside>
 
       {/* Main */}
-      <main className="flex-1 overflow-x-hidden">
-        <div className="p-6">{children}</div>
+      <main className="flex-1 overflow-x-hidden min-h-screen">
+        {/* Mobile top bar */}
+        <div className="lg:hidden sticky top-0 z-30 bg-card border-b border-subtle px-4 py-3 flex items-center gap-3">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="text-muted hover:text-foreground"
+          >
+            <FiMenu size={20} />
+          </button>
+          <span className="text-sm font-semibold text-foreground">
+            LUXE Staff
+          </span>
+        </div>
+
+        <div className="p-4 lg:p-6">{children}</div>
       </main>
     </div>
   );

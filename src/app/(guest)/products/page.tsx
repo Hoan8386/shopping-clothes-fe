@@ -105,14 +105,14 @@ function ProductsContent() {
       {/* Breadcrumb */}
       <div className="bg-section py-8 text-center">
         <h2 className="text-3xl font-extrabold text-foreground mb-1">
-          Sáº£n pháº©m
+          Sản phẩm
         </h2>
         <p className="text-sm text-gray-400">
           <Link href="/" className="hover:text-accent">
-            Trang chá»§
+            Trang chủ
           </Link>
           <span className="mx-2">/</span>
-          <span className="text-accent">Sáº£n pháº©m</span>
+          <span className="text-accent">Sản phẩm</span>
         </p>
       </div>
 
@@ -123,7 +123,7 @@ function ProductsContent() {
             onClick={() => setShowFilter(!showFilter)}
             className="md:hidden flex items-center gap-2 text-foreground border border-foreground px-4 py-2 text-xs uppercase tracking-wider font-bold"
           >
-            <FiFilter size={14} /> Bá»™ lá»c
+            <FiFilter size={14} /> Bộ lọc
           </button>
         </div>
 
@@ -137,20 +137,20 @@ function ProductsContent() {
             <div className="bg-card border border-subtle p-6 space-y-6 sticky top-20">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                  Bá»™ lá»c
+                  Bộ lọc
                 </h3>
                 <button
                   onClick={clearFilters}
                   className="text-xs text-accent hover:underline"
                 >
-                  XÃ³a táº¥t cáº£
+                  Xóa tất cả
                 </button>
               </div>
 
               {/* Search */}
               <div>
                 <label className="text-xs font-bold uppercase tracking-wider text-foreground block mb-2">
-                  TÃªn sáº£n pháº©m
+                  Tên sản phẩm
                 </label>
                 <input
                   type="text"
@@ -158,15 +158,15 @@ function ProductsContent() {
                   onChange={(e) =>
                     handleFilterChange("tenSanPham", e.target.value)
                   }
-                  placeholder="TÃ¬m kiáº¿m..."
+                  placeholder="Tìm kiếm..."
                   className="w-full border border-subtle px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition"
                 />
               </div>
 
-              {/* Loáº¡i */}
+              {/* Loại */}
               <div>
                 <label className="text-xs font-bold uppercase tracking-wider text-foreground block mb-2">
-                  Kiá»ƒu sáº£n pháº©m
+                  Kiểu sản phẩm
                 </label>
                 <select
                   value={filters.kieuSanPhamId || ""}
@@ -175,7 +175,7 @@ function ProductsContent() {
                   }
                   className="w-full border border-subtle px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition"
                 >
-                  <option value="">Táº¥t cáº£</option>
+                  <option value="">Tất cả</option>
                   {kieuSanPhams.map((k) => (
                     <option key={k.id} value={k.id}>
                       {k.tenKieuSanPham}
@@ -184,10 +184,10 @@ function ProductsContent() {
                 </select>
               </div>
 
-              {/* ThÆ°Æ¡ng hiá»‡u */}
+              {/* Thương hiệu */}
               <div>
                 <label className="text-xs font-bold uppercase tracking-wider text-foreground block mb-2">
-                  ThÆ°Æ¡ng hiá»‡u
+                  Thương hiệu
                 </label>
                 <select
                   value={filters.thuongHieuId || ""}
@@ -196,7 +196,7 @@ function ProductsContent() {
                   }
                   className="w-full border border-subtle px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition"
                 >
-                  <option value="">Táº¥t cáº£</option>
+                  <option value="">Tất cả</option>
                   {thuongHieus.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.tenThuongHieu}
@@ -205,10 +205,10 @@ function ProductsContent() {
                 </select>
               </div>
 
-              {/* Bá»™ sÆ°u táº­p */}
+              {/* Bộ sưu tập */}
               <div>
                 <label className="text-xs font-bold uppercase tracking-wider text-foreground block mb-2">
-                  Bá»™ sÆ°u táº­p
+                  Bộ sưu tập
                 </label>
                 <select
                   value={filters.boSuuTapId || ""}
@@ -217,7 +217,7 @@ function ProductsContent() {
                   }
                   className="w-full border border-subtle px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition"
                 >
-                  <option value="">Táº¥t cáº£</option>
+                  <option value="">Tất cả</option>
                   {boSuuTaps.map((b) => (
                     <option key={b.id} value={b.id}>
                       {b.tenSuuTap}
@@ -226,15 +226,15 @@ function ProductsContent() {
                 </select>
               </div>
 
-              {/* GiÃ¡ */}
+              {/* Giá */}
               <div>
                 <label className="text-xs font-bold uppercase tracking-wider text-foreground block mb-2">
-                  Khoáº£ng giÃ¡ (VNÄ)
+                  Khoảng giá (VNĐ)
                 </label>
                 <div className="flex gap-2">
                   <input
                     type="number"
-                    placeholder="Tá»«"
+                    placeholder="Từ"
                     value={filters.giaMin || ""}
                     onChange={(e) =>
                       handleFilterChange("giaMin", Number(e.target.value))
@@ -243,7 +243,7 @@ function ProductsContent() {
                   />
                   <input
                     type="number"
-                    placeholder="Äáº¿n"
+                    placeholder="Đến"
                     value={filters.giaMax || ""}
                     onChange={(e) =>
                       handleFilterChange("giaMax", Number(e.target.value))
@@ -256,18 +256,18 @@ function ProductsContent() {
               {/* Sort */}
               <div>
                 <label className="text-xs font-bold uppercase tracking-wider text-foreground block mb-2">
-                  Sáº¯p xáº¿p
+                  Sắp xếp
                 </label>
                 <select
                   value={filters.sort || ""}
                   onChange={(e) => handleFilterChange("sort", e.target.value)}
                   className="w-full border border-subtle px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition"
                 >
-                  <option value="ngayTao,desc">Má»›i nháº¥t</option>
-                  <option value="ngayTao,asc">CÅ© nháº¥t</option>
-                  <option value="giaBan,asc">GiÃ¡ tÄƒng dáº§n</option>
-                  <option value="giaBan,desc">GiÃ¡ giáº£m dáº§n</option>
-                  <option value="giaGiam,desc">Giáº£m giÃ¡ nhiá»u</option>
+                  <option value="ngayTao,desc">Mới nhất</option>
+                  <option value="ngayTao,asc">Cũ nhất</option>
+                  <option value="giaBan,asc">Giá tăng dần</option>
+                  <option value="giaBan,desc">Giá giảm dần</option>
+                  <option value="giaGiam,desc">Giảm giá nhiều</option>
                 </select>
               </div>
 
@@ -276,7 +276,7 @@ function ProductsContent() {
                 onClick={() => setShowFilter(false)}
                 className="md:hidden w-full bg-foreground text-background py-3 text-xs font-bold uppercase tracking-wider hover:bg-accent hover:text-white transition"
               >
-                Ãp dá»¥ng
+                Áp dụng
               </button>
             </div>
           </aside>
@@ -288,13 +288,13 @@ function ProductsContent() {
             ) : products.length === 0 ? (
               <div className="text-center py-20">
                 <p className="text-gray-400 text-sm">
-                  KhÃ´ng tÃ¬m tháº¥y sáº£n pháº©m phÃ¹ há»£p
+                  Không tìm thấy sản phẩm phù hợp
                 </p>
                 <button
                   onClick={clearFilters}
                   className="mt-4 text-accent text-sm hover:underline"
                 >
-                  XÃ³a bá»™ lá»c
+                  Xóa bộ lọc
                 </button>
               </div>
             ) : (

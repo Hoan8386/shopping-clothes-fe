@@ -38,7 +38,11 @@ export default function AdminOrdersPage() {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const params: OrderSearchParams = { page, size: 10, trangThai: filterStatus };
+      const params: OrderSearchParams = {
+        page,
+        size: 10,
+        trangThai: filterStatus,
+      };
       const data = await orderService.getAll(params);
       setOrders(data.result);
       setTotalPages(data.meta.pages);
@@ -93,111 +97,143 @@ export default function AdminOrdersPage() {
   };
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">Quản lý đơn hàng</h1>
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Quản lý đơn hàng</h1>
+        <p className="text-sm text-gray-500 mt-1">
+          Xem và xử lý các đơn hàng của khách hàng
+        </p>
+      </div>
 
       {/* Filters */}
-      <div className="flex gap-2 mb-4 flex-wrap">
-        {[
-          { label: "Tất cả", value: undefined },
-          { label: "Chờ xác nhận", value: 0 },
-          { label: "Đã xác nhận", value: 1 },
-          { label: "Đang giao", value: 2 },
-          { label: "Thành công", value: 3 },
-          { label: "Đã hủy", value: 4 },
-        ].map((f) => (
-          <button
-            key={f.label}
-            onClick={() => {
-              setFilterStatus(f.value);
-              setPage(1);
-            }}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-              filterStatus === f.value
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
+      <div className="bg-white rounded-2xl border border-gray-100 p-4">
+        <div className="flex gap-2 flex-wrap">
+          {[
+            { label: "Tất cả", value: undefined },
+            { label: "Chờ xác nhận", value: 0 },
+            { label: "Đã xác nhận", value: 1 },
+            { label: "Đang giao", value: 2 },
+            { label: "Thành công", value: 3 },
+            { label: "Đã hủy", value: 4 },
+          ].map((f) => (
+            <button
+              key={f.label}
+              onClick={() => {
+                setFilterStatus(f.value);
+                setPage(1);
+              }}
+              className={`px-4 py-2 rounded-xl text-xs font-medium transition-all ${
+                filterStatus === f.value
+                  ? "bg-indigo-600 text-white shadow-sm"
+                  : "bg-gray-50 text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading ? (
         <Loading />
       ) : (
-        <div className="bg-white rounded-lg border overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-600">
-              <tr>
-                <th className="px-4 py-3 text-left">Mã đơn</th>
-                <th className="px-4 py-3 text-left">Ngày tạo</th>
-                <th className="px-4 py-3 text-left">Tổng tiền</th>
-                <th className="px-4 py-3 text-left">Trạng thái</th>
-                <th className="px-4 py-3 text-left">Thanh toán</th>
-                <th className="px-4 py-3 text-left">Hình thức</th>
-                <th className="px-4 py-3 text-center">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {orders.map((o) => (
-                <tr key={o.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium">#{o.id}</td>
-                  <td className="px-4 py-3">{formatDate(o.ngayTao)}</td>
-                  <td className="px-4 py-3 font-medium">
-                    {formatCurrency(o.tongTienTra || o.tongTien)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${getOrderStatusColor(
-                        o.trangThai
-                      )}`}
-                    >
-                      {getOrderStatusText(o.trangThai)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-xs">
-                    {getPaymentStatusText(o.trangThaiThanhToan)}
-                  </td>
-                  <td className="px-4 py-3 text-xs">
-                    {o.hinhThucDonHang === 0 ? "Tại quầy" : "Online"}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <button
-                        onClick={() => openDetail(o.id)}
-                        className="text-gray-500 hover:text-blue-600 p-1"
-                        title="Chi tiết"
-                      >
-                        <FiEye size={16} />
-                      </button>
-                      <button
-                        onClick={() => openEdit(o)}
-                        className="text-blue-500 hover:text-blue-700 p-1"
-                        title="Sửa trạng thái"
-                      >
-                        <FiEdit size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(o.id)}
-                        className="text-red-500 hover:text-red-700 p-1"
-                        title="Xóa"
-                      >
-                        <FiTrash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50/80 border-b border-gray-100">
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Mã đơn
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Ngày tạo
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Tổng tiền
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Trạng thái
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Thanh toán
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Hình thức
+                  </th>
+                  <th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Thao tác
+                  </th>
                 </tr>
-              ))}
-              {orders.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="text-center py-8 text-gray-400">
-                    Không có đơn hàng nào
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {orders.map((o) => (
+                  <tr key={o.id} className="hover:bg-indigo-50/30 transition">
+                    <td className="px-5 py-3.5 font-medium text-gray-900">
+                      #{o.id}
+                    </td>
+                    <td className="px-5 py-3.5 text-gray-500">
+                      {formatDate(o.ngayTao)}
+                    </td>
+                    <td className="px-5 py-3.5 font-semibold text-indigo-600">
+                      {formatCurrency(o.tongTienTra || o.tongTien)}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium ${getOrderStatusColor(
+                          o.trangThai,
+                        )}`}
+                      >
+                        {getOrderStatusText(o.trangThai)}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-xs text-gray-600">
+                      {getPaymentStatusText(o.trangThaiThanhToan)}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full ${o.hinhThucDonHang === 0 ? "bg-gray-100 text-gray-600" : "bg-blue-50 text-blue-600"}`}
+                      >
+                        {o.hinhThucDonHang === 0 ? "Tại quầy" : "Online"}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => openDetail(o.id)}
+                          className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-indigo-600 transition"
+                          title="Chi tiết"
+                        >
+                          <FiEye size={15} />
+                        </button>
+                        <button
+                          onClick={() => openEdit(o)}
+                          className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-50 transition"
+                          title="Sửa trạng thái"
+                        >
+                          <FiEdit size={15} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(o.id)}
+                          className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition"
+                          title="Xóa"
+                        >
+                          <FiTrash2 size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {orders.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="text-center py-12 text-gray-400">
+                      <FiShoppingCart className="mx-auto mb-2" size={24} />
+                      Không có đơn hàng nào
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -213,8 +249,8 @@ export default function AdminOrdersPage() {
 
       {/* Detail Modal */}
       {showDetail && selectedOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 shadow-xl">
             <h2 className="text-lg font-bold mb-4">
               Chi tiết đơn #{selectedOrder.id}
             </h2>
@@ -239,14 +275,16 @@ export default function AdminOrdersPage() {
                       {item.chiTietSanPham?.tenKichThuoc} × {item.soLuong}
                     </p>
                   </div>
-                  <p className="font-medium">{formatCurrency(item.thanhTien)}</p>
+                  <p className="font-medium">
+                    {formatCurrency(item.thanhTien)}
+                  </p>
                 </div>
               ))}
               <div className="flex justify-between font-bold text-lg pt-2">
                 <span>Tổng:</span>
                 <span className="text-blue-600">
                   {formatCurrency(
-                    selectedOrder.tongTienTra || selectedOrder.tongTien
+                    selectedOrder.tongTienTra || selectedOrder.tongTien,
                   )}
                 </span>
               </div>
@@ -263,8 +301,8 @@ export default function AdminOrdersPage() {
 
       {/* Edit Status Modal */}
       {editOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-md p-6">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl">
             <h2 className="text-lg font-bold mb-4">
               Cập nhật đơn #{editOrder.id}
             </h2>
@@ -291,9 +329,7 @@ export default function AdminOrdersPage() {
                 </label>
                 <select
                   value={newPaymentStatus}
-                  onChange={(e) =>
-                    setNewPaymentStatus(Number(e.target.value))
-                  }
+                  onChange={(e) => setNewPaymentStatus(Number(e.target.value))}
                   className="w-full border rounded-lg px-3 py-2"
                 >
                   <option value={0}>Chưa thanh toán</option>

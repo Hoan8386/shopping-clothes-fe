@@ -104,85 +104,109 @@ export default function AdminRolesPage() {
   );
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Quản lý vai trò</h1>
+    <div className="space-y-5">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Quản lý vai trò</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Phân quyền và quản lý vai trò người dùng
+          </p>
+        </div>
         <button
           onClick={openCreate}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl hover:bg-indigo-700 transition shadow-sm font-medium text-sm"
         >
-          <FiPlus /> Thêm mới
+          <FiPlus size={16} /> Thêm mới
         </button>
       </div>
 
       {loading ? (
         <Loading />
       ) : (
-        <div className="bg-white rounded-lg border overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-600">
-              <tr>
-                <th className="px-4 py-3 text-left">ID</th>
-                <th className="px-4 py-3 text-left">Tên vai trò</th>
-                <th className="px-4 py-3 text-left">Mô tả</th>
-                <th className="px-4 py-3 text-left">Quyền</th>
-                <th className="px-4 py-3 text-left">Trạng thái</th>
-                <th className="px-4 py-3 text-center">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {roles.map((role) => (
-                <tr key={role.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3">{role.id}</td>
-                  <td className="px-4 py-3 font-medium">{role.name}</td>
-                  <td className="px-4 py-3 text-gray-500 max-w-[200px] truncate">
-                    {role.description}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-sm text-blue-600">
-                      {role.permissions?.length || 0} quyền
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-xs ${role.active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
-                    >
-                      {role.active ? "Hoạt động" : "Ngưng"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <button
-                        onClick={() => openEdit(role)}
-                        className="text-blue-500 hover:text-blue-700 p-1"
-                      >
-                        <FiEdit size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(role.id)}
-                        className="text-red-500 hover:text-red-700 p-1"
-                      >
-                        <FiTrash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50/80 border-b border-gray-100">
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    ID
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Tên vai trò
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Mô tả
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Quyền
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Trạng thái
+                  </th>
+                  <th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Thao tác
+                  </th>
                 </tr>
-              ))}
-              {roles.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="text-center py-8 text-gray-400">
-                    Không có dữ liệu
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {roles.map((role) => (
+                  <tr
+                    key={role.id}
+                    className="hover:bg-indigo-50/30 transition"
+                  >
+                    <td className="px-5 py-3.5 text-gray-500">#{role.id}</td>
+                    <td className="px-5 py-3.5 font-medium text-gray-900">
+                      {role.name}
+                    </td>
+                    <td className="px-5 py-3.5 text-gray-500 max-w-[200px] truncate">
+                      {role.description}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span className="text-sm text-indigo-600 font-medium bg-indigo-50 px-2.5 py-1 rounded-lg">
+                        {role.permissions?.length || 0} quyền
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium ${role.active ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}
+                      >
+                        {role.active ? "Hoạt động" : "Ngưng"}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => openEdit(role)}
+                          className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-50 transition"
+                        >
+                          <FiEdit size={15} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(role.id)}
+                          className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition"
+                        >
+                          <FiTrash2 size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {roles.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="text-center py-12 text-gray-400">
+                      Không có dữ liệu
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 shadow-xl">
             <h2 className="text-lg font-bold mb-4">
               {editing ? "Sửa" : "Thêm"} vai trò
             </h2>
@@ -195,7 +219,7 @@ export default function AdminRolesPage() {
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full border rounded-lg px-3 py-2"
+                  className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition"
                   required
                 />
               </div>
@@ -206,7 +230,7 @@ export default function AdminRolesPage() {
                   onChange={(e) =>
                     setForm({ ...form, description: e.target.value })
                   }
-                  className="w-full border rounded-lg px-3 py-2"
+                  className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition"
                   rows={2}
                 />
               </div>
@@ -218,6 +242,7 @@ export default function AdminRolesPage() {
                   onChange={(e) =>
                     setForm({ ...form, active: e.target.checked })
                   }
+                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                 />
                 <label htmlFor="active" className="text-sm">
                   Hoạt động
@@ -228,22 +253,23 @@ export default function AdminRolesPage() {
                 <label className="block text-sm font-medium mb-2">
                   Phân quyền
                 </label>
-                <div className="border rounded-lg p-3 max-h-60 overflow-y-auto space-y-3">
+                <div className="border border-gray-200 rounded-xl p-3 max-h-60 overflow-y-auto space-y-3">
                   {Object.entries(permsByModule).map(([mod, perms]) => (
                     <div key={mod}>
-                      <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">
+                      <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1 tracking-wider">
                         {mod}
                       </h4>
                       <div className="grid grid-cols-2 gap-1">
                         {perms.map((p) => (
                           <label
                             key={p.id}
-                            className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-50 px-2 py-1 rounded"
+                            className="flex items-center gap-2 text-sm cursor-pointer hover:bg-indigo-50/30 px-2 py-1.5 rounded-lg transition"
                           >
                             <input
                               type="checkbox"
                               checked={selectedPerms.includes(p.id)}
                               onChange={() => togglePerm(p.id)}
+                              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                             />
                             <span className="truncate">{p.name}</span>
                             <span
@@ -267,17 +293,17 @@ export default function AdminRolesPage() {
                 </div>
               </div>
 
-              <div className="flex gap-3 justify-end">
+              <div className="flex gap-3 justify-end pt-2">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                  className="px-5 py-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition font-medium text-sm"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition shadow-sm font-medium text-sm"
                 >
                   {editing ? "Cập nhật" : "Thêm mới"}
                 </button>

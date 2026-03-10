@@ -250,6 +250,7 @@ export interface ResDanhGiaSanPhamDTO {
   id: number;
   khachHangId: number;
   tenKhachHang: string;
+  chiTietDonHangId: number;
   sanPhamId: number;
   tenSanPham: string;
   donHangId: number;
@@ -267,7 +268,8 @@ export interface PhieuNhap {
   nhaCungCap?: NhaCungCap;
   tenPhieuNhap: string;
   trangThai: number;
-  ngayGiaoHang: string;
+  trangThaiText?: string;
+  ngayDatHang: string;
   ngayNhanHang: string;
   chiTietPhieuNhaps?: ChiTietPhieuNhap[];
   ngayTao: string;
@@ -276,11 +278,28 @@ export interface PhieuNhap {
 
 export interface ChiTietPhieuNhap {
   id: number;
+  phieuNhapId?: number;
+  tenPhieuNhap?: string;
   chiTietSanPham?: ResChiTietSanPhamDTO;
   soLuong: number;
-  ghiTru: string;
-  ghiTruKiemHang: string;
+  soLuongThieu?: number | null;
+  ghiTru?: string | null;
+  ghiTruKiemHang?: string | null;
   trangThai: number;
+  trangThaiText?: string;
+  ngayTao?: string;
+  ngayCapNhat?: string;
+}
+
+export interface ReqChiTietPhieuNhapDTO {
+  id?: number;
+  phieuNhapId: number;
+  chiTietSanPhamId: number;
+  soLuong: number;
+  soLuongThieu?: number | null;
+  ghiTru?: string | null;
+  ghiTruKiemHang?: string | null;
+  trangThai?: number;
 }
 
 // ============ RBAC ============

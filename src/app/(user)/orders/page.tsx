@@ -5,11 +5,7 @@ import { useRouter } from "next/navigation";
 import { DonHang } from "@/types";
 import { orderService } from "@/services/order.service";
 import { useAuthStore } from "@/store/auth.store";
-import {
-  formatCurrency,
-  formatDate,
-  getOrderStatusText,
-} from "@/lib/utils";
+import { formatCurrency, formatDate, getOrderStatusText } from "@/lib/utils";
 import Loading from "@/components/ui/Loading";
 import Pagination from "@/components/ui/Pagination";
 import Link from "next/link";
@@ -222,7 +218,7 @@ export default function OrdersPage() {
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Địa chỉ</p>
-                      <p className="text-sm font-medium text-foreground truncate max-w-[200px]">
+                      <p className="text-sm font-medium text-foreground truncate max-w-50">
                         {order.diaChi || "—"}
                       </p>
                     </div>

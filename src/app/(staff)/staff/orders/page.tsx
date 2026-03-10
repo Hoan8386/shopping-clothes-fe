@@ -237,8 +237,10 @@ export default function StaffOrdersPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Quản lý đơn hàng</h1>
-          <p className="text-sm text-gray-500 mt-1">Xem và xử lý đơn hàng</p>
+          <h1 className="text-2xl font-bold text-foreground">
+            Quản lý đơn hàng
+          </h1>
+          <p className="text-sm text-muted mt-1">Xem và xử lý đơn hàng</p>
         </div>
         <button
           onClick={() => {
@@ -250,14 +252,14 @@ export default function StaffOrdersPage() {
             setVariants([]);
             setShowPosModal(true);
           }}
-          className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition"
+          className="flex items-center gap-2 bg-accent text-white px-4 py-2 rounded-lg text-sm hover:bg-accent-hover transition"
         >
           <FiPlus size={16} /> Tạo đơn tại quầy
         </button>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm p-4 mb-6 flex flex-wrap gap-3 items-center">
+      <div className="bg-card rounded-xl border border-subtle p-4 mb-6 flex flex-wrap gap-3 items-center">
         <div className="flex gap-2 flex-wrap">
           {ORDER_STATUSES.map((s) => (
             <button
@@ -268,8 +270,8 @@ export default function StaffOrdersPage() {
               }}
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
                 filterStatus === s.value
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  ? "bg-accent text-white"
+                  : "bg-section text-muted hover:text-foreground"
               }`}
             >
               {s.label}
@@ -284,7 +286,7 @@ export default function StaffOrdersPage() {
             );
             setPage(1);
           }}
-          className="border rounded-lg px-3 py-1.5 text-sm"
+          className="border border-subtle bg-background text-foreground rounded-lg px-3 py-1.5 text-sm"
         >
           <option value="">Tất cả hình thức</option>
           <option value="0">Tại quầy</option>
@@ -296,54 +298,54 @@ export default function StaffOrdersPage() {
       {loading ? (
         <Loading />
       ) : orders.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
+        <div className="text-center py-16 text-muted">
           Không có đơn hàng nào
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-card rounded-xl border border-subtle overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-section border-b border-subtle">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">
+                <th className="px-4 py-3 text-left font-medium text-muted">
                   Mã đơn
                 </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">
+                <th className="px-4 py-3 text-left font-medium text-muted">
                   Khách hàng
                 </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">
+                <th className="px-4 py-3 text-left font-medium text-muted">
                   Ngày tạo
                 </th>
-                <th className="px-4 py-3 text-right font-medium text-gray-600">
+                <th className="px-4 py-3 text-right font-medium text-muted">
                   Tổng tiền
                 </th>
-                <th className="px-4 py-3 text-center font-medium text-gray-600">
+                <th className="px-4 py-3 text-center font-medium text-muted">
                   Hình thức
                 </th>
-                <th className="px-4 py-3 text-center font-medium text-gray-600">
+                <th className="px-4 py-3 text-center font-medium text-muted">
                   Trạng thái
                 </th>
-                <th className="px-4 py-3 text-center font-medium text-gray-600">
+                <th className="px-4 py-3 text-center font-medium text-muted">
                   Thanh toán
                 </th>
-                <th className="px-4 py-3 text-center font-medium text-gray-600">
+                <th className="px-4 py-3 text-center font-medium text-muted">
                   Thao tác
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y">
+            <tbody className="divide-y divide-subtle">
               {orders.map((o) => (
-                <tr key={o.id} className="hover:bg-gray-50 transition">
+                <tr key={o.id} className="hover:bg-section transition">
                   <td className="px-4 py-3 font-semibold">#{o.id}</td>
-                  <td className="px-4 py-3 text-gray-600">
+                  <td className="px-4 py-3 text-muted">
                     {o.khachHang?.tenKhachHang || "—"}
                   </td>
-                  <td className="px-4 py-3 text-gray-500">
+                  <td className="px-4 py-3 text-muted">
                     {formatDate(o.ngayTao)}
                   </td>
                   <td className="px-4 py-3 text-right font-medium text-blue-600">
                     {formatCurrency(o.tongTienTra || o.tongTien)}
                   </td>
-                  <td className="px-4 py-3 text-center text-gray-500">
+                  <td className="px-4 py-3 text-center text-muted">
                     {o.hinhThucDonHang === 0 ? "Tại quầy" : "Online"}
                   </td>
                   <td className="px-4 py-3 text-center">
@@ -353,14 +355,14 @@ export default function StaffOrdersPage() {
                       {getOrderStatusText(o.trangThai)}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-center text-gray-500 text-xs">
+                  <td className="px-4 py-3 text-center text-muted text-xs">
                     {getPaymentStatusText(o.trangThaiThanhToan)}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-center gap-2">
                       <button
                         onClick={() => handleViewDetail(o.id)}
-                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+                        className="p-1.5 text-blue-500 hover:bg-blue-500/10 rounded"
                         title="Xem chi tiết"
                       >
                         <FiEye size={15} />
@@ -368,7 +370,7 @@ export default function StaffOrdersPage() {
                       {o.trangThai < 5 && o.trangThai !== 4 && (
                         <button
                           onClick={() => handleOpenEdit(o)}
-                          className="p-1.5 text-green-600 hover:bg-green-50 rounded"
+                          className="p-1.5 text-green-500 hover:bg-green-500/10 rounded"
                           title="Cập nhật trạng thái"
                         >
                           <FiEdit size={15} />
@@ -396,14 +398,14 @@ export default function StaffOrdersPage() {
       {/* Detail Modal */}
       {showDetail && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
-              <h2 className="font-bold text-lg">
+          <div className="bg-card rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b border-subtle sticky top-0 bg-card">
+              <h2 className="font-bold text-lg text-foreground">
                 Chi tiết đơn hàng {selectedOrder ? `#${selectedOrder.id}` : ""}
               </h2>
               <button
                 onClick={() => setShowDetail(false)}
-                className="text-gray-400 hover:text-gray-700"
+                className="text-muted hover:text-foreground"
               >
                 <FiX size={20} />
               </button>
@@ -415,31 +417,31 @@ export default function StaffOrdersPage() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="text-gray-400">Khách hàng: </span>
-                      <span className="font-medium">
+                      <span className="text-muted">Khách hàng: </span>
+                      <span className="font-medium text-foreground">
                         {selectedOrder.khachHang?.tenKhachHang || "—"}
                       </span>
                     </div>
                     <div>
-                      <span className="text-gray-400">SĐT: </span>
-                      <span className="font-medium">
+                      <span className="text-muted">SĐT: </span>
+                      <span className="font-medium text-foreground">
                         {selectedOrder.khachHang?.sdt || "—"}
                       </span>
                     </div>
                     <div>
-                      <span className="text-gray-400">Địa chỉ: </span>
-                      <span className="font-medium">
+                      <span className="text-muted">Địa chỉ: </span>
+                      <span className="font-medium text-foreground">
                         {selectedOrder.diaChi || "—"}
                       </span>
                     </div>
                     <div>
-                      <span className="text-gray-400">Nhân viên: </span>
-                      <span className="font-medium">
+                      <span className="text-muted">Nhân viên: </span>
+                      <span className="font-medium text-foreground">
                         {selectedOrder.nhanVien?.tenNhanVien || "—"}
                       </span>
                     </div>
                     <div>
-                      <span className="text-gray-400">Tổng tiền: </span>
+                      <span className="text-muted">Tổng tiền: </span>
                       <span className="font-medium text-blue-600">
                         {formatCurrency(
                           selectedOrder.tongTienTra || selectedOrder.tongTien,
@@ -447,7 +449,7 @@ export default function StaffOrdersPage() {
                       </span>
                     </div>
                     <div>
-                      <span className="text-gray-400">Trạng thái: </span>
+                      <span className="text-muted">Trạng thái: </span>
                       <span
                         className={`px-2 py-0.5 rounded-full text-xs font-medium ${getOrderStatusColor(selectedOrder.trangThai)}`}
                       >
@@ -455,22 +457,22 @@ export default function StaffOrdersPage() {
                       </span>
                     </div>
                   </div>
-                  <hr />
-                  <h3 className="font-semibold text-sm text-gray-700">
+                  <hr className="border-subtle" />
+                  <h3 className="font-semibold text-sm text-foreground">
                     Sản phẩm
                   </h3>
                   <div className="space-y-2">
                     {(selectedOrder.chiTietDonHangs || []).map((item, idx) => (
                       <div
                         key={idx}
-                        className="flex justify-between text-sm border-b pb-2"
+                        className="flex justify-between text-sm border-b border-subtle pb-2"
                       >
                         <div>
                           <p className="font-medium">
                             {item.chiTietSanPham?.tenSanPham ||
                               `SP #${idx + 1}`}
                           </p>
-                          <p className="text-gray-400 text-xs">
+                          <p className="text-muted text-xs">
                             {item.chiTietSanPham?.tenMauSac} /{" "}
                             {item.chiTietSanPham?.tenKichThuoc} × {item.soLuong}
                           </p>
@@ -491,23 +493,21 @@ export default function StaffOrdersPage() {
       {/* Edit Status Modal */}
       {showEditModal && editOrder && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="font-bold">
+          <div className="bg-card rounded-xl shadow-xl w-full max-w-sm">
+            <div className="flex items-center justify-between p-4 border-b border-subtle">
+              <h2 className="font-bold text-foreground">
                 Cập nhật trạng thái đơn #{editOrder.id}
               </h2>
               <button
                 onClick={() => setShowEditModal(false)}
-                className="text-gray-400 hover:text-gray-700"
+                className="text-muted hover:text-foreground"
               >
                 <FiX size={20} />
               </button>
             </div>
             <div className="p-4 space-y-4">
               <div>
-                <p className="text-sm text-gray-500 mb-1">
-                  Trạng thái hiện tại
-                </p>
+                <p className="text-sm text-muted mb-1">Trạng thái hiện tại</p>
                 <span
                   className={`px-3 py-1 rounded-full text-sm font-medium ${getOrderStatusColor(editOrder.trangThai)}`}
                 >
@@ -515,13 +515,13 @@ export default function StaffOrdersPage() {
                 </span>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Trạng thái mới
                 </label>
                 <select
                   value={newStatus}
                   onChange={(e) => setNewStatus(Number(e.target.value))}
-                  className="w-full border rounded-lg px-3 py-2 text-sm"
+                  className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm"
                 >
                   {ORDER_STATUSES.filter(
                     (s) =>
@@ -536,14 +536,14 @@ export default function StaffOrdersPage() {
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowEditModal(false)}
-                  className="flex-1 px-4 py-2 border rounded-lg text-sm hover:bg-gray-50"
+                  className="flex-1 px-4 py-2 border border-subtle rounded-lg text-sm text-foreground hover:bg-section"
                 >
                   Hủy
                 </button>
                 <button
                   onClick={handleUpdateStatus}
                   disabled={updating}
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 disabled:opacity-50"
+                  className="flex-1 px-4 py-2 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover disabled:opacity-50"
                 >
                   {updating ? "Đang lưu..." : "Cập nhật"}
                 </button>
@@ -556,12 +556,14 @@ export default function StaffOrdersPage() {
       {/* POS Modal */}
       {showPosModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
-              <h2 className="font-bold text-lg">Tạo đơn hàng tại quầy</h2>
+          <div className="bg-card rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b border-subtle sticky top-0 bg-card">
+              <h2 className="font-bold text-lg text-foreground">
+                Tạo đơn hàng tại quầy
+              </h2>
               <button
                 onClick={() => setShowPosModal(false)}
-                className="text-gray-400 hover:text-gray-700"
+                className="text-muted hover:text-foreground"
               >
                 <FiX size={20} />
               </button>
@@ -569,9 +571,9 @@ export default function StaffOrdersPage() {
             <div className="p-4 space-y-5">
               {/* Customer ID */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Mã khách hàng{" "}
-                  <span className="text-gray-400 font-normal">
+                  <span className="text-muted font-normal">
                     (không bắt buộc)
                   </span>
                 </label>
@@ -580,13 +582,13 @@ export default function StaffOrdersPage() {
                   value={posCustomerId}
                   onChange={(e) => setPosCustomerId(e.target.value)}
                   placeholder="Nhập ID khách hàng..."
-                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
                 />
               </div>
 
               {/* Product Search */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Thêm sản phẩm
                 </label>
                 <form
@@ -597,22 +599,22 @@ export default function StaffOrdersPage() {
                     value={productSearch}
                     onChange={(e) => setProductSearch(e.target.value)}
                     placeholder="Tìm tên sản phẩm..."
-                    className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="flex-1 border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
                   />
                   <button
                     type="submit"
-                    className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-700 flex items-center gap-1"
+                    className="bg-accent text-white px-3 py-2 rounded-lg text-sm hover:bg-accent-hover flex items-center gap-1"
                   >
                     <FiSearch size={14} />
                   </button>
                 </form>
                 {searchResults.length > 0 && (
-                  <div className="border rounded-lg divide-y text-sm">
+                  <div className="border border-subtle rounded-lg divide-y divide-subtle text-sm">
                     {searchResults.map((p) => (
                       <button
                         key={p.id}
                         onClick={() => handleSelectProduct(p)}
-                        className="w-full px-3 py-2 text-left hover:bg-gray-50 flex justify-between"
+                        className="w-full px-3 py-2 text-left hover:bg-section flex justify-between"
                       >
                         <span>{p.tenSanPham}</span>
                         <span className="text-blue-600 font-medium">
@@ -624,20 +626,20 @@ export default function StaffOrdersPage() {
                 )}
                 {variants.length > 0 && selectedProduct && (
                   <div className="mt-2">
-                    <p className="text-xs text-gray-500 mb-1">
+                    <p className="text-xs text-muted mb-1">
                       Chọn biến thể — {selectedProduct.tenSanPham}
                     </p>
-                    <div className="border rounded-lg divide-y text-sm">
+                    <div className="border border-subtle rounded-lg divide-y divide-subtle text-sm">
                       {variants.map((v) => (
                         <button
                           key={v.id}
                           onClick={() => handleAddVariant(v)}
-                          className="w-full px-3 py-2 text-left hover:bg-green-50 flex justify-between"
+                          className="w-full px-3 py-2 text-left hover:bg-accent/10 flex justify-between"
                         >
                           <span>
                             {v.tenMauSac} / {v.tenKichThuoc}
                           </span>
-                          <span className="text-gray-400 text-xs">
+                          <span className="text-muted text-xs">
                             Tồn: {v.soLuong}
                           </span>
                         </button>
@@ -650,25 +652,25 @@ export default function StaffOrdersPage() {
               {/* Items */}
               {posItems.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-medium text-gray-700 mb-2">
+                  <h3 className="text-sm font-medium text-foreground mb-2">
                     Danh sách sản phẩm
                   </h3>
                   <div className="space-y-2">
                     {posItems.map((item, idx) => (
                       <div
                         key={idx}
-                        className="flex items-center gap-3 text-sm border rounded-lg px-3 py-2"
+                        className="flex items-center gap-3 text-sm border border-subtle rounded-lg px-3 py-2"
                       >
                         <div className="flex-1">
                           <p className="font-medium">{item.tenSanPham}</p>
-                          <p className="text-xs text-gray-400">
+                          <p className="text-xs text-muted">
                             {item.mauSac} / {item.kichThuoc}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => updateItemQty(idx, item.soLuong - 1)}
-                            className="w-6 h-6 rounded border text-center"
+                            className="w-6 h-6 rounded border border-subtle text-center text-foreground"
                           >
                             −
                           </button>
@@ -677,7 +679,7 @@ export default function StaffOrdersPage() {
                           </span>
                           <button
                             onClick={() => updateItemQty(idx, item.soLuong + 1)}
-                            className="w-6 h-6 rounded border text-center"
+                            className="w-6 h-6 rounded border border-subtle text-center text-foreground"
                           >
                             +
                           </button>
@@ -694,7 +696,7 @@ export default function StaffOrdersPage() {
                       </div>
                     ))}
                   </div>
-                  <div className="flex justify-between items-center mt-3 pt-3 border-t font-bold">
+                  <div className="flex justify-between items-center mt-3 pt-3 border-t border-subtle font-bold">
                     <span>Tổng cộng</span>
                     <span className="text-blue-600 text-lg">
                       {formatCurrency(posTongTien)}
@@ -706,14 +708,14 @@ export default function StaffOrdersPage() {
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowPosModal(false)}
-                  className="flex-1 px-4 py-2 border rounded-lg text-sm hover:bg-gray-50"
+                  className="flex-1 px-4 py-2 border border-subtle rounded-lg text-sm text-foreground hover:bg-section"
                 >
                   Hủy
                 </button>
                 <button
                   onClick={handleSubmitPos}
                   disabled={submittingPos || posItems.length === 0}
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 disabled:opacity-50"
+                  className="flex-1 px-4 py-2 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover disabled:opacity-50"
                 >
                   {submittingPos ? "Đang tạo..." : "Xác nhận đơn hàng"}
                 </button>

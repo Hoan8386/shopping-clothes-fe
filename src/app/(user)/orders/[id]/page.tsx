@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { DonHang } from "@/types";
+import { DonHang, ResDanhGiaSanPhamDTO } from "@/types";
 import { orderService } from "@/services/order.service";
+import { danhGiaService } from "@/services/common.service";
 import { useAuthStore } from "@/store/auth.store";
 import {
   formatCurrency,
@@ -16,7 +17,8 @@ import {
 import Loading from "@/components/ui/Loading";
 import toast from "react-hot-toast";
 import Link from "next/link";
-import { FiArrowLeft } from "react-icons/fi";
+import Image from "next/image";
+import { FiArrowLeft, FiStar, FiX, FiCamera } from "react-icons/fi";
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -24,6 +26,18 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<DonHang | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+
+  // Review state
+  const [reviewModal, setReviewModal] = useState(false);
+  const [reviewItemId, setReviewItemId] = useState<number | null>(null);
+  const [reviewItemName, setReviewItemName] = useState("");
+  const [reviewSoSao, setReviewSoSao] = useState(5);
+  const [reviewGhiChu, setReviewGhiChu] = useState("");
+  const [reviewFile, setReviewFile] = useState<File | null>(null);
+  const [reviewPreview, setReviewPreview] = useState<string | null>(null);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewedItems, setReviewedItems] = useState<Set<number>>(new Set());
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -38,6 +52,21 @@ export default function OrderDetailPage() {
       setLoading(true);
       const data = await orderService.getById(Number(params.id));
       setOrder(data);
+      // Check which items already have reviews
+      if (data.trangThai === 5 && data.chiTietDonHangs) {
+        const reviewed = new Set<number>();
+        for (const item of data.chiTietDonHangs) {
+          if (item.id) {
+            try {
+              const review = await danhGiaService.getByChiTietDonHang(item.id);
+              if (review) reviewed.add(item.id);
+            } catch {
+              // No review exists for this item
+            }
+          }
+        }
+        setReviewedItems(reviewed);
+      }
     } catch {
       toast.error("Không thể tải đơn hàng");
       router.push("/orders");
@@ -55,6 +84,48 @@ export default function OrderDetailPage() {
       fetchOrder();
     } catch {
       toast.error("Không thể hủy đơn hàng");
+    }
+  };
+
+  const openReviewModal = (chiTietDonHangId: number, productName: string) => {
+    setReviewItemId(chiTietDonHangId);
+    setReviewItemName(productName);
+    setReviewSoSao(5);
+    setReviewGhiChu("");
+    setReviewFile(null);
+    setReviewPreview(null);
+    setReviewModal(true);
+  };
+
+  const handleReviewFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setReviewFile(file);
+      setReviewPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!reviewItemId) return;
+    if (reviewSoSao < 1 || reviewSoSao > 5) {
+      toast.error("Số sao phải từ 1 đến 5");
+      return;
+    }
+    setReviewSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append("chiTietDonHangId", reviewItemId.toString());
+      formData.append("soSao", reviewSoSao.toString());
+      if (reviewGhiChu) formData.append("ghiTru", reviewGhiChu);
+      if (reviewFile) formData.append("file", reviewFile);
+      await danhGiaService.create(formData);
+      toast.success("Đánh giá thành công!");
+      setReviewModal(false);
+      setReviewedItems((prev) => new Set(prev).add(reviewItemId));
+    } catch {
+      toast.error("Không thể tạo đánh giá");
+    } finally {
+      setReviewSubmitting(false);
     }
   };
 
@@ -134,7 +205,9 @@ export default function OrderDetailPage() {
                   <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">
                     Địa chỉ giao hàng
                   </p>
-                  <p className="font-semibold text-foreground">{order.diaChi}</p>
+                  <p className="font-semibold text-foreground">
+                    {order.diaChi}
+                  </p>
                 </div>
               )}
             </div>
@@ -166,6 +239,29 @@ export default function OrderDetailPage() {
                     <p className="text-xs text-accent mt-0.5">
                       Giảm giá: {item.giamGia}%
                     </p>
+                  )}
+                  {/* Review button for delivered orders */}
+                  {order.trangThai === 5 && item.id && (
+                    <div className="mt-2">
+                      {reviewedItems.has(item.id) ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-green-600 font-medium">
+                          <FiStar size={12} className="fill-green-600" /> Đã
+                          đánh giá
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() =>
+                            openReviewModal(
+                              item.id!,
+                              item.chiTietSanPham?.tenSanPham || "Sản phẩm",
+                            )
+                          }
+                          className="inline-flex items-center gap-1 text-xs font-bold text-accent hover:underline"
+                        >
+                          <FiStar size={12} /> Đánh giá sản phẩm
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
                 <div className="text-right">
@@ -229,6 +325,126 @@ export default function OrderDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Review Modal */}
+      {reviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-4 border-b">
+              <h3 className="font-bold text-foreground">Đánh giá sản phẩm</h3>
+              <button
+                onClick={() => setReviewModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <FiX size={20} />
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <p className="text-sm font-medium text-foreground">
+                {reviewItemName}
+              </p>
+
+              {/* Star Rating */}
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2 block">
+                  Số sao
+                </label>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setReviewSoSao(star)}
+                      className="p-0.5"
+                    >
+                      <FiStar
+                        size={24}
+                        className={
+                          star <= reviewSoSao
+                            ? "text-yellow-400 fill-yellow-400"
+                            : "text-gray-300"
+                        }
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Review Text */}
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2 block">
+                  Nội dung đánh giá
+                </label>
+                <textarea
+                  value={reviewGhiChu}
+                  onChange={(e) => setReviewGhiChu(e.target.value)}
+                  rows={3}
+                  placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm..."
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                />
+              </div>
+
+              {/* Image Upload */}
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2 block">
+                  Ảnh đánh giá (tùy chọn)
+                </label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleReviewFileChange}
+                />
+                {reviewPreview ? (
+                  <div className="relative inline-block">
+                    <Image
+                      src={reviewPreview}
+                      alt="Preview"
+                      width={100}
+                      height={100}
+                      className="object-cover rounded border"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReviewFile(null);
+                        setReviewPreview(null);
+                      }}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5"
+                    >
+                      <FiX size={12} />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-2 px-4 py-2 border border-dashed border-gray-300 rounded text-sm text-gray-500 hover:border-accent hover:text-accent transition"
+                  >
+                    <FiCamera size={16} /> Chọn ảnh
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t flex justify-end gap-3">
+              <button
+                onClick={() => setReviewModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleSubmitReview}
+                disabled={reviewSubmitting}
+                className="px-6 py-2 bg-accent text-white text-sm font-bold uppercase tracking-wider hover:bg-accent-hover transition disabled:opacity-50"
+              >
+                {reviewSubmitting ? "Đang gửi..." : "Gửi đánh giá"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
