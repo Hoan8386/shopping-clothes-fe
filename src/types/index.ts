@@ -224,6 +224,8 @@ export interface CuaHang {
   tenCuaHang: string;
   diaChi: string;
   viTri: string;
+  latitude: number | null;
+  longitude: number | null;
   soDienThoai: string;
   email: string;
   trangThai: number;

@@ -1,11 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { CuaHang } from "@/types";
 import { cuaHangService } from "@/services/common.service";
 import Loading from "@/components/ui/Loading";
 import toast from "react-hot-toast";
-import { FiPlus, FiEdit, FiTrash2 } from "react-icons/fi";
+import { FiPlus, FiEdit, FiTrash2, FiMapPin } from "react-icons/fi";
+
+const MapPicker = dynamic(() => import("@/components/ui/MapPicker"), {
+  ssr: false,
+  loading: () => <div className="h-75 rounded-xl bg-section animate-pulse" />,
+});
+
+const DEFAULT_LAT = 10.7769;
+const DEFAULT_LNG = 106.7009;
 
 export default function AdminStoresPage() {
   const [items, setItems] = useState<CuaHang[]>([]);
@@ -19,6 +28,8 @@ export default function AdminStoresPage() {
     soDienThoai: "",
     email: "",
     trangThai: 1,
+    lat: DEFAULT_LAT,
+    lng: DEFAULT_LNG,
   });
 
   useEffect(() => {
@@ -46,11 +57,15 @@ export default function AdminStoresPage() {
       soDienThoai: "",
       email: "",
       trangThai: 1,
+      lat: DEFAULT_LAT,
+      lng: DEFAULT_LNG,
     });
     setShowModal(true);
   };
   const openEdit = (item: CuaHang) => {
     setEditing(item);
+    const lat = item.latitude ?? DEFAULT_LAT;
+    const lng = item.longitude ?? DEFAULT_LNG;
     setForm({
       tenCuaHang: item.tenCuaHang,
       diaChi: item.diaChi,
@@ -58,18 +73,28 @@ export default function AdminStoresPage() {
       soDienThoai: item.soDienThoai,
       email: item.email,
       trangThai: item.trangThai,
+      lat,
+      lng,
     });
     setShowModal(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const payload = {
+      tenCuaHang: form.tenCuaHang,
+      diaChi: form.diaChi,
+      viTri: `${form.lat},${form.lng}`,
+      soDienThoai: form.soDienThoai,
+      email: form.email,
+      trangThai: form.trangThai,
+    };
     try {
       if (editing) {
-        await cuaHangService.update({ id: editing.id, ...form });
+        await cuaHangService.update({ id: editing.id, ...payload });
         toast.success("Cập nhật thành công");
       } else {
-        await cuaHangService.create(form);
+        await cuaHangService.create(payload);
         toast.success("Thêm thành công");
       }
       setShowModal(false);
@@ -125,6 +150,9 @@ export default function AdminStoresPage() {
                   Địa chỉ
                 </th>
                 <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
+                  Vị trí
+                </th>
+                <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
                   SĐT
                 </th>
                 <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
@@ -145,8 +173,18 @@ export default function AdminStoresPage() {
                   <td className="px-5 py-3.5 font-medium text-foreground">
                     {item.tenCuaHang}
                   </td>
-                  <td className="px-5 py-3.5 text-muted max-w-[200px] truncate">
+                  <td className="px-5 py-3.5 text-muted max-w-50 truncate">
                     {item.diaChi}
+                  </td>
+                  <td className="px-5 py-3.5 text-muted text-xs">
+                    {item.latitude && item.longitude ? (
+                      <span className="flex items-center gap-1">
+                        <FiMapPin size={12} />
+                        {item.latitude.toFixed(4)}, {item.longitude.toFixed(4)}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
                   </td>
                   <td className="px-5 py-3.5 text-muted">{item.soDienThoai}</td>
                   <td className="px-5 py-3.5 text-muted">{item.email}</td>
@@ -177,7 +215,7 @@ export default function AdminStoresPage() {
               ))}
               {items.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-muted">
+                  <td colSpan={8} className="text-center py-12 text-muted">
                     Không có dữ liệu
                   </td>
                 </tr>
@@ -188,7 +226,7 @@ export default function AdminStoresPage() {
       </div>
       {showModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-card border border-subtle rounded-2xl w-full max-w-lg p-6 shadow-2xl">
+          <div className="bg-card border border-subtle rounded-2xl w-full max-w-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-bold mb-4 text-foreground">
               {editing ? "Sửa" : "Thêm"} cửa hàng
             </h2>
@@ -248,14 +286,21 @@ export default function AdminStoresPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1 text-foreground">
-                  Vị trí
+                  Vị trí (click trên bản đồ để chọn)
                 </label>
-                <input
-                  type="text"
-                  value={form.viTri}
-                  onChange={(e) => setForm({ ...form, viTri: e.target.value })}
-                  className="w-full border border-subtle bg-background text-foreground rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition"
+                <MapPicker
+                  lat={form.lat}
+                  lng={form.lng}
+                  onChange={(lat, lng) =>
+                    setForm({ ...form, lat, lng, viTri: `${lat},${lng}` })
+                  }
                 />
+                <div className="flex items-center gap-2 mt-2 text-xs text-muted">
+                  <FiMapPin size={12} />
+                  <span>
+                    {form.lat.toFixed(6)}, {form.lng.toFixed(6)}
+                  </span>
+                </div>
               </div>
               <div className="flex gap-3 justify-end pt-2">
                 <button

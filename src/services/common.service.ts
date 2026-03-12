@@ -121,8 +121,12 @@ export const kichThuocService = {
 // ============ CuaHang ============
 export const cuaHangService = {
   getAll: async () => {
-    const res = await apiClient.get<RestResponse<CuaHang[]>>("/cua-hang");
-    return res.data.data;
+    const res = await apiClient.get<
+      RestResponse<CuaHang[] | ResultPaginationDTO<CuaHang>>
+    >("/cua-hang");
+    const payload = res.data.data;
+    if (Array.isArray(payload)) return payload;
+    return payload?.result ?? [];
   },
   getById: async (id: number) => {
     const res = await apiClient.get<RestResponse<CuaHang>>(`/cua-hang/${id}`);

@@ -80,6 +80,7 @@ export default function Header() {
   const navLinks = [
     { href: "/", label: "Trang chủ" },
     { href: "/products", label: "Sản phẩm" },
+    { href: "/stores", label: "Cửa hàng" },
   ];
 
   const isActive = (href: string) => {
