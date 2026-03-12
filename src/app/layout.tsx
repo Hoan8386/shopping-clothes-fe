@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Toaster } from "react-hot-toast";
 import SessionProvider from "@/components/providers/SessionProvider";
 import { AuthSync } from "@/components/providers/AuthSync";
 import ThemeProvider from "@/components/providers/ThemeProvider";
+import AppToaster from "@/components/providers/AppToaster";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,7 +34,7 @@ export default function RootLayout({
         <SessionProvider>
           <ThemeProvider>
             <AuthSync />
-            <Toaster position="top-right" />
+            <AppToaster />
             {children}
           </ThemeProvider>
         </SessionProvider>

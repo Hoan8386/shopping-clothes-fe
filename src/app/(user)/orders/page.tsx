@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { DonHang } from "@/types";
 import { orderService } from "@/services/order.service";
@@ -21,40 +21,40 @@ import {
 } from "react-icons/fi";
 
 const statusConfig: Record<
-  number,
+  string,
   { icon: React.ReactNode; color: string; bg: string; border: string }
 > = {
-  0: {
+  "Chờ xác nhận": {
     icon: <FiClock size={14} />,
     color: "text-yellow-400",
     bg: "bg-yellow-400/10",
     border: "border-yellow-400/20",
   },
-  1: {
+  "Đã xác nhận": {
     icon: <FiCheckCircle size={14} />,
     color: "text-blue-400",
     bg: "bg-blue-400/10",
     border: "border-blue-400/20",
   },
-  2: {
+  "Đang đóng gói": {
     icon: <FiBox size={14} />,
     color: "text-orange-400",
     bg: "bg-orange-400/10",
     border: "border-orange-400/20",
   },
-  3: {
+  "Đang giao hàng": {
     icon: <FiTruck size={14} />,
     color: "text-purple-400",
     bg: "bg-purple-400/10",
     border: "border-purple-400/20",
   },
-  4: {
+  "Đã hủy": {
     icon: <FiXCircle size={14} />,
     color: "text-red-400",
     bg: "bg-red-400/10",
     border: "border-red-400/20",
   },
-  5: {
+  "Đã nhận hàng": {
     icon: <FiCheckCircle size={14} />,
     color: "text-green-400",
     bg: "bg-green-400/10",
@@ -62,9 +62,10 @@ const statusConfig: Record<
   },
 };
 
-function getStatusStyle(status: number) {
+function getStatusStyle(status: string | number) {
+  const key = typeof status === "string" ? status : String(status);
   return (
-    statusConfig[status] || {
+    statusConfig[key] || {
       icon: <FiPackage size={14} />,
       color: "text-gray-400",
       bg: "bg-gray-400/10",
@@ -77,33 +78,71 @@ export default function OrdersPage() {
   const { isAuthenticated } = useAuthStore();
   const [orders, setOrders] = useState<DonHang[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [filterStatus, setFilterStatus] = useState<number | undefined>();
+  const [confirmingId, setConfirmingId] = useState<number | null>(null);
+  const hasLoadedRef = useRef(false);
   const router = useRouter();
+
+  const fetchOrders = useCallback(
+    async (showPageLoading = false) => {
+      try {
+        if (showPageLoading) {
+          setLoading(true);
+        } else {
+          setRefreshing(true);
+        }
+
+        const data = await orderService.getAll({
+          page,
+          size: 10,
+          trangThai: filterStatus,
+        });
+        setOrders(data.result);
+        setTotalPages(data.meta.pages);
+      } catch {
+        toast.error("Không thể tải đơn hàng");
+      } finally {
+        if (showPageLoading) {
+          setLoading(false);
+        } else {
+          setRefreshing(false);
+        }
+      }
+    },
+    [page, filterStatus],
+  );
 
   useEffect(() => {
     if (!isAuthenticated) {
       router.push("/login");
       return;
     }
-    fetchOrders();
-  }, [isAuthenticated, page, filterStatus, router]);
+    const shouldShowPageLoading = !hasLoadedRef.current;
+    fetchOrders(shouldShowPageLoading);
+    if (!hasLoadedRef.current) {
+      hasLoadedRef.current = true;
+    }
+  }, [isAuthenticated, router, fetchOrders]);
 
-  const fetchOrders = async () => {
+  const handleConfirmReceived = async (
+    e: React.MouseEvent,
+    orderId: number,
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm("Xác nhận bạn đã nhận được hàng?")) return;
     try {
-      setLoading(true);
-      const data = await orderService.getAll({
-        page,
-        size: 10,
-        trangThai: filterStatus,
-      });
-      setOrders(data.result);
-      setTotalPages(data.meta.pages);
+      setConfirmingId(orderId);
+      await orderService.update({ id: orderId, trangThai: 5 } as DonHang);
+      toast.success("Đã xác nhận nhận hàng thành công!");
+      fetchOrders(false);
     } catch {
-      toast.error("Không thể tải đơn hàng");
+      toast.error("Không thể xác nhận nhận hàng");
     } finally {
-      setLoading(false);
+      setConfirmingId(null);
     }
   };
 
@@ -148,6 +187,10 @@ export default function OrdersPage() {
           </button>
         ))}
       </div>
+
+      {/* {refreshing && (
+        <p className="text-xs text-gray-500 mb-4">Đang cập nhật danh sách...</p>
+      )} */}
 
       {orders.length === 0 ? (
         <div className="text-center py-20">
@@ -195,7 +238,7 @@ export default function OrdersPage() {
 
                 {/* Order Body */}
                 <div className="px-6 py-5 flex items-center justify-between">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6 flex-1">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-6 flex-1">
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Tổng tiền</p>
                       <p className="text-base font-bold text-foreground">
@@ -213,7 +256,7 @@ export default function OrdersPage() {
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Hình thức</p>
                       <p className="text-sm font-medium text-foreground">
-                        {order.hinhThucDonHang === 0 ? "Tại quầy" : "Online"}
+                        {String(order.hinhThucDonHang)}
                       </p>
                     </div>
                     <div>
@@ -222,11 +265,33 @@ export default function OrdersPage() {
                         {order.diaChi || "—"}
                       </p>
                     </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">
+                        Số điện thoại
+                      </p>
+                      <p className="text-sm font-medium text-foreground">
+                        {order.sdt || "—"}
+                      </p>
+                    </div>
                   </div>
-                  <FiChevronRight
-                    size={20}
-                    className="text-gray-500 group-hover:text-purple-400 transition shrink-0 ml-4"
-                  />
+                  <div className="flex items-center gap-3 shrink-0 ml-4">
+                    {(order.trangThai === "Đang giao hàng" ||
+                      order.trangThai === 3) && (
+                      <button
+                        onClick={(e) => handleConfirmReceived(e, order.id)}
+                        disabled={confirmingId === order.id}
+                        className="px-4 py-2 bg-green-500 text-white text-xs font-bold rounded-full hover:bg-green-600 transition disabled:opacity-50"
+                      >
+                        {confirmingId === order.id
+                          ? "Đang xử lý..."
+                          : "Đã nhận hàng"}
+                      </button>
+                    )}
+                    <FiChevronRight
+                      size={20}
+                      className="text-gray-500 group-hover:text-purple-400 transition"
+                    />
+                  </div>
                 </div>
               </Link>
             );

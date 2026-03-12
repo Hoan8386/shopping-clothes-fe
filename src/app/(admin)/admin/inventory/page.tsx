@@ -521,23 +521,23 @@ export default function AdminInventoryPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-foreground">
             Quản lý phiếu nhập
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-muted mt-1">
             Phiếu nhập hàng từ nhà cung cấp
           </p>
         </div>
         <button
           onClick={openCreateModal}
-          className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm hover:bg-indigo-700 transition shadow-sm font-medium"
+          className="flex items-center gap-2 bg-accent text-white px-5 py-2.5 rounded-xl text-sm hover:bg-accent-hover transition shadow-sm font-medium"
         >
           <FiPlus size={16} /> Tạo phiếu nhập
         </button>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
+      <div className="bg-card rounded-2xl border border-subtle p-4 space-y-3">
         <div className="flex flex-wrap gap-2">
           {[
             { label: "Tất cả", value: undefined },
@@ -556,8 +556,8 @@ export default function AdminInventoryPage() {
               }}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition ${
                 filterStatus === s.value
-                  ? "bg-indigo-600 text-white shadow-sm"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  ? "bg-accent text-white shadow-sm"
+                  : "bg-section text-muted hover:text-foreground"
               }`}
             >
               {s.label}
@@ -567,14 +567,14 @@ export default function AdminInventoryPage() {
         <div className="flex gap-2">
           <div className="relative flex-1">
             <FiSearch
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted"
               size={14}
             />
             <input
               value={searchName}
               onChange={(e) => setSearchName(e.target.value)}
               placeholder="Tìm theo tên phiếu nhập..."
-              className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition"
+              className="w-full pl-10 pr-3 py-2.5 border border-subtle bg-background text-foreground rounded-xl text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   setPage(1);
@@ -588,7 +588,7 @@ export default function AdminInventoryPage() {
               setPage(1);
               fetchReceipts();
             }}
-            className="bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm hover:bg-indigo-700 transition"
+            className="bg-accent text-white px-4 py-2.5 rounded-xl text-sm hover:bg-accent-hover transition"
           >
             <FiSearch size={14} />
           </button>
@@ -599,59 +599,59 @@ export default function AdminInventoryPage() {
       {loading ? (
         <Loading />
       ) : receipts.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
+        <div className="text-center py-16 text-muted">
           Không có phiếu nhập nào
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        <div className="bg-card rounded-2xl border border-subtle overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50/80 border-b border-gray-100">
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <tr className="bg-section border-b border-subtle">
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
                     Tên phiếu nhập
                   </th>
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
                     Cửa hàng
                   </th>
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
                     Nhà cung cấp
                   </th>
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
                     Ngày đặt
                   </th>
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
                     Ngày nhận
                   </th>
-                  <th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <th className="px-5 py-3.5 text-center text-xs font-semibold text-muted uppercase tracking-wider">
                     Trạng thái
                   </th>
-                  <th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <th className="px-5 py-3.5 text-center text-xs font-semibold text-muted uppercase tracking-wider">
                     Thao tác
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-subtle">
                 {receipts.map((r) => (
-                  <tr key={r.id} className="hover:bg-indigo-50/30 transition">
-                    <td className="px-5 py-3.5 font-medium text-gray-900">
+                  <tr key={r.id} className="hover:bg-section transition">
+                    <td className="px-5 py-3.5 font-medium text-foreground">
                       {r.tenPhieuNhap}
                     </td>
-                    <td className="px-5 py-3.5 text-gray-600">
+                    <td className="px-5 py-3.5 text-muted">
                       {r.cuaHang?.tenCuaHang || "—"}
                     </td>
-                    <td className="px-5 py-3.5 text-gray-600">
+                    <td className="px-5 py-3.5 text-muted">
                       {r.nhaCungCap?.tenNhaCungCap || "—"}
                     </td>
-                    <td className="px-5 py-3.5 text-gray-500">
+                    <td className="px-5 py-3.5 text-muted">
                       {r.ngayDatHang ? formatDate(r.ngayDatHang) : "—"}
                     </td>
-                    <td className="px-5 py-3.5 text-gray-500">
+                    <td className="px-5 py-3.5 text-muted">
                       {r.ngayNhanHang ? formatDate(r.ngayNhanHang) : "—"}
                     </td>
                     <td className="px-5 py-3.5 text-center">
                       <span
-                        className={`px-2.5 py-1 rounded-lg text-xs font-medium ${TRANG_THAI_COLOR[r.trangThai] || "bg-gray-100 text-gray-600"}`}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium ${TRANG_THAI_COLOR[r.trangThai] || "bg-section text-muted"}`}
                       >
                         {TRANG_THAI_TEXT[r.trangThai] || r.trangThai}
                       </span>
@@ -660,7 +660,7 @@ export default function AdminInventoryPage() {
                       <div className="flex justify-center gap-1">
                         <button
                           onClick={() => handleViewDetail(r.id)}
-                          className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-50 transition"
+                          className="p-2 rounded-lg text-sky-600 hover:bg-sky-500/10 transition"
                           title="Xem chi tiết"
                         >
                           <FiEye size={15} />
@@ -670,7 +670,7 @@ export default function AdminInventoryPage() {
                           r.trangThai !== 5 && (
                             <button
                               onClick={() => handleOpenEdit(r)}
-                              className="p-2 rounded-lg text-amber-500 hover:bg-amber-50 transition"
+                              className="p-2 rounded-lg text-amber-500 hover:bg-amber-500/10 transition"
                               title="Cập nhật"
                             >
                               <FiEdit size={15} />
@@ -679,7 +679,7 @@ export default function AdminInventoryPage() {
                         {r.trangThai === 1 && (
                           <button
                             onClick={() => handleKiemKe(r.id)}
-                            className="p-2 rounded-lg text-emerald-600 hover:bg-emerald-50 transition"
+                            className="p-2 rounded-lg text-emerald-600 hover:bg-emerald-500/10 transition"
                             title="Kiểm kê"
                           >
                             <FiCheckSquare size={15} />
@@ -687,7 +687,7 @@ export default function AdminInventoryPage() {
                         )}
                         <button
                           onClick={() => handleDeleteReceipt(r.id)}
-                          className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition"
+                          className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition"
                           title="Xóa phiếu nhập"
                         >
                           <FiTrash2 size={15} />
@@ -714,24 +714,22 @@ export default function AdminInventoryPage() {
 
       {/* ==================== DETAIL MODAL ==================== */}
       {showDetail && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100 sticky top-0 bg-white z-10">
-              <h2 className="font-bold text-lg text-gray-900">
-                Chi tiết phiếu nhập
-              </h2>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-card border border-subtle rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-subtle sticky top-0 bg-card/95 backdrop-blur z-10 rounded-t-2xl">
+              <h2 className="font-bold text-foreground">Chi tiết phiếu nhập</h2>
               <button
                 onClick={() => {
                   setShowDetail(false);
                   setEditingItemId(null);
                   setShowAddItem(false);
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-section transition"
               >
                 <FiX size={20} />
               </button>
             </div>
-            <div className="p-4">
+            <div className="px-6 py-5">
               {detailLoading ? (
                 <Loading />
               ) : selectedReceipt ? (
@@ -739,13 +737,13 @@ export default function AdminInventoryPage() {
                   {/* Receipt info */}
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
-                      <span className="text-gray-500">Tên phiếu: </span>
-                      <span className="font-medium text-gray-900">
+                      <span className="text-muted">Tên phiếu: </span>
+                      <span className="font-medium text-foreground">
                         {selectedReceipt.tenPhieuNhap}
                       </span>
                     </div>
                     <div>
-                      <span className="text-gray-500">Trạng thái: </span>
+                      <span className="text-muted">Trạng thái: </span>
                       <span
                         className={`px-2 py-0.5 rounded-lg text-xs font-medium ${TRANG_THAI_COLOR[selectedReceipt.trangThai]}`}
                       >
@@ -754,44 +752,44 @@ export default function AdminInventoryPage() {
                       </span>
                     </div>
                     <div>
-                      <span className="text-gray-500">Cửa hàng: </span>
-                      <span className="font-medium text-gray-900">
+                      <span className="text-muted">Cửa hàng: </span>
+                      <span className="font-medium text-foreground">
                         {selectedReceipt.cuaHang?.tenCuaHang || "—"}
                       </span>
                     </div>
                     <div>
-                      <span className="text-gray-500">Nhà cung cấp: </span>
-                      <span className="font-medium text-gray-900">
+                      <span className="text-muted">Nhà cung cấp: </span>
+                      <span className="font-medium text-foreground">
                         {selectedReceipt.nhaCungCap?.tenNhaCungCap || "—"}
                       </span>
                     </div>
                     <div>
-                      <span className="text-gray-500">Ngày đặt hàng: </span>
-                      <span className="font-medium text-gray-900">
+                      <span className="text-muted">Ngày đặt hàng: </span>
+                      <span className="font-medium text-foreground">
                         {selectedReceipt.ngayDatHang
                           ? formatDate(selectedReceipt.ngayDatHang)
                           : "—"}
                       </span>
                     </div>
                     <div>
-                      <span className="text-gray-500">Ngày nhận hàng: </span>
-                      <span className="font-medium text-gray-900">
+                      <span className="text-muted">Ngày nhận hàng: </span>
+                      <span className="font-medium text-foreground">
                         {selectedReceipt.ngayNhanHang
                           ? formatDate(selectedReceipt.ngayNhanHang)
                           : "—"}
                       </span>
                     </div>
                     <div>
-                      <span className="text-gray-500">Ngày tạo: </span>
-                      <span className="font-medium text-gray-900">
+                      <span className="text-muted">Ngày tạo: </span>
+                      <span className="font-medium text-foreground">
                         {selectedReceipt.ngayTao
                           ? formatDate(selectedReceipt.ngayTao)
                           : "—"}
                       </span>
                     </div>
                     <div>
-                      <span className="text-gray-500">Cập nhật: </span>
-                      <span className="font-medium text-gray-900">
+                      <span className="text-muted">Cập nhật: </span>
+                      <span className="font-medium text-foreground">
                         {selectedReceipt.ngayCapNhat
                           ? formatDate(selectedReceipt.ngayCapNhat)
                           : "—"}
@@ -799,11 +797,11 @@ export default function AdminInventoryPage() {
                     </div>
                   </div>
 
-                  <hr className="border-gray-100" />
+                  <hr className="border-subtle" />
 
                   {/* Items header */}
                   <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-sm text-gray-900 flex items-center gap-2">
+                    <h3 className="font-semibold text-sm text-foreground flex items-center gap-2">
                       <FiPackage size={16} /> Sản phẩm trong phiếu (
                       {detailItems.length})
                     </h3>
@@ -821,7 +819,7 @@ export default function AdminInventoryPage() {
                             ghiTru: "",
                           });
                         }}
-                        className="flex items-center gap-1 text-xs bg-indigo-600 text-white px-3 py-1.5 rounded-xl hover:bg-indigo-700 transition"
+                        className="flex items-center gap-1 text-xs bg-accent text-white px-3 py-1.5 rounded-xl hover:bg-accent-hover transition"
                       >
                         <FiPlus size={12} /> Thêm SP
                       </button>
@@ -842,8 +840,8 @@ export default function AdminInventoryPage() {
 
                   {/* Add item form */}
                   {showAddItem && canManageItems(selectedReceipt.trangThai) && (
-                    <div className="bg-gray-50 border border-gray-100 rounded-xl p-3 space-y-3">
-                      <p className="text-xs font-medium text-gray-900">
+                    <div className="bg-section border border-subtle rounded-xl p-3 space-y-3">
+                      <p className="text-xs font-medium text-foreground">
                         Thêm sản phẩm mới
                       </p>
                       {addItemForm.variantId === 0 ? (
@@ -858,22 +856,22 @@ export default function AdminInventoryPage() {
                                 setAddProductSearch(e.target.value)
                               }
                               placeholder="Tìm tên sản phẩm..."
-                              className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition"
+                              className="flex-1 border border-subtle bg-background text-foreground rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition"
                             />
                             <button
                               type="submit"
-                              className="bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs hover:bg-indigo-700 transition"
+                              className="bg-accent text-white px-3 py-2 rounded-xl text-xs hover:bg-accent-hover transition"
                             >
                               <FiSearch size={12} />
                             </button>
                           </form>
                           {addSearchResults.length > 0 && (
-                            <div className="border border-gray-100 rounded-xl divide-y divide-gray-50 text-xs">
+                            <div className="border border-subtle rounded-xl divide-y divide-subtle text-xs">
                               {addSearchResults.map((p) => (
                                 <button
                                   key={p.id}
                                   onClick={() => handleAddSelectProduct(p)}
-                                  className="w-full px-3 py-2 text-left hover:bg-indigo-50/30 text-gray-700"
+                                  className="w-full px-3 py-2 text-left hover:bg-section text-foreground"
                                 >
                                   {p.tenSanPham}
                                 </button>
@@ -882,20 +880,20 @@ export default function AdminInventoryPage() {
                           )}
                           {addVariants.length > 0 && addSelectedProduct && (
                             <div>
-                              <p className="text-xs text-gray-500 mb-1">
+                              <p className="text-xs text-muted mb-1">
                                 Chọn biến thể — {addSelectedProduct.tenSanPham}
                               </p>
-                              <div className="border border-gray-100 rounded-xl divide-y divide-gray-50 text-xs">
+                              <div className="border border-subtle rounded-xl divide-y divide-subtle text-xs">
                                 {addVariants.map((v) => (
                                   <button
                                     key={v.id}
                                     onClick={() => handleAddSelectVariant(v)}
-                                    className="w-full px-3 py-2 text-left hover:bg-indigo-50/30 flex justify-between text-gray-700"
+                                    className="w-full px-3 py-2 text-left hover:bg-section flex justify-between text-foreground"
                                   >
                                     <span>
                                       {v.tenMauSac} / {v.tenKichThuoc}
                                     </span>
-                                    <span className="text-gray-400">
+                                    <span className="text-muted">
                                       Tồn: {v.soLuong}
                                     </span>
                                   </button>
@@ -916,7 +914,7 @@ export default function AdminInventoryPage() {
                                 soLuong: Math.max(1, Number(e.target.value)),
                               })
                             }
-                            className="w-20 border border-gray-200 rounded-xl px-2 py-1.5 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                            className="w-20 border border-subtle bg-background text-foreground rounded-xl px-2 py-1.5 text-xs focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none"
                             placeholder="SL"
                           />
                           <input
@@ -928,7 +926,7 @@ export default function AdminInventoryPage() {
                               })
                             }
                             placeholder="Ghi chú..."
-                            className="flex-1 border border-gray-200 rounded-xl px-2 py-1.5 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                            className="flex-1 border border-subtle bg-background text-foreground rounded-xl px-2 py-1.5 text-xs focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none"
                           />
                           <button
                             onClick={handleConfirmAddItem}
@@ -945,7 +943,7 @@ export default function AdminInventoryPage() {
                                 ghiTru: "",
                               })
                             }
-                            className="text-gray-400 hover:text-gray-600 text-xs px-2"
+                            className="text-muted hover:text-foreground text-xs px-2"
                           >
                             Hủy
                           </button>
@@ -956,7 +954,7 @@ export default function AdminInventoryPage() {
 
                   {/* Items list */}
                   {detailItems.length === 0 ? (
-                    <p className="text-sm text-gray-400 py-4 text-center">
+                    <p className="text-sm text-muted py-4 text-center">
                       Chưa có sản phẩm trong phiếu nhập
                     </p>
                   ) : (
@@ -964,15 +962,15 @@ export default function AdminInventoryPage() {
                       {detailItems.map((item) => (
                         <div
                           key={item.id}
-                          className="border border-gray-100 rounded-xl p-3 text-sm"
+                          className="border border-subtle rounded-xl p-3 text-sm"
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-gray-900">
+                              <p className="font-medium text-foreground">
                                 {item.chiTietSanPham?.tenSanPham ||
                                   `Mặt hàng #${item.id}`}
                               </p>
-                              <p className="text-gray-500 text-xs mt-0.5">
+                              <p className="text-muted text-xs mt-0.5">
                                 {item.chiTietSanPham?.tenMauSac} /{" "}
                                 {item.chiTietSanPham?.tenKichThuoc}
                                 {item.ghiTru && (
@@ -983,7 +981,7 @@ export default function AdminInventoryPage() {
                               </p>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-gray-700 font-medium">
+                              <span className="text-foreground font-medium">
                                 SL: {item.soLuong}
                               </span>
                               <span
@@ -1003,7 +1001,7 @@ export default function AdminInventoryPage() {
                           {/* Show inspection info */}
                           {(item.soLuongThieu != null ||
                             item.ghiTruKiemHang) && (
-                            <div className="mt-2 flex gap-4 text-xs text-gray-500 bg-gray-50 rounded-lg px-2 py-1.5">
+                            <div className="mt-2 flex gap-4 text-xs text-muted bg-section rounded-lg px-2 py-1.5">
                               {item.soLuongThieu != null && (
                                 <span>
                                   SL thiếu:{" "}
@@ -1015,7 +1013,7 @@ export default function AdminInventoryPage() {
                               {item.ghiTruKiemHang && (
                                 <span>
                                   Kiểm hàng:{" "}
-                                  <span className="text-gray-700">
+                                  <span className="text-foreground">
                                     {item.ghiTruKiemHang}
                                   </span>
                                 </span>
@@ -1026,9 +1024,9 @@ export default function AdminInventoryPage() {
                           {/* Inline edit for inspection (status=1) */}
                           {canInspectItems(selectedReceipt.trangThai) &&
                             editingItemId === item.id && (
-                              <div className="mt-2 bg-gray-50 rounded-xl p-2 space-y-2">
+                              <div className="mt-2 bg-section rounded-xl p-2 space-y-2">
                                 <div className="flex gap-2 items-center flex-wrap">
-                                  <label className="text-xs text-gray-500">
+                                  <label className="text-xs text-muted">
                                     Trạng thái:
                                   </label>
                                   <select
@@ -1039,14 +1037,14 @@ export default function AdminInventoryPage() {
                                         trangThai: Number(e.target.value),
                                       })
                                     }
-                                    className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                                    className="border border-subtle bg-background text-foreground rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none"
                                   >
                                     <option value={0}>Đủ</option>
                                     <option value={1}>Thiếu</option>
                                   </select>
                                   {itemEditForm.trangThai === 1 && (
                                     <>
-                                      <label className="text-xs text-gray-500">
+                                      <label className="text-xs text-muted">
                                         SL thiếu:
                                       </label>
                                       <input
@@ -1063,7 +1061,7 @@ export default function AdminInventoryPage() {
                                             ),
                                           })
                                         }
-                                        className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                                        className="w-16 border border-subtle bg-background text-foreground rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none"
                                       />
                                     </>
                                   )}
@@ -1078,7 +1076,7 @@ export default function AdminInventoryPage() {
                                       })
                                     }
                                     placeholder="Ghi chú kiểm hàng..."
-                                    className="flex-1 border border-gray-200 rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                                    className="flex-1 border border-subtle bg-background text-foreground rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none"
                                   />
                                   <button
                                     onClick={() => handleSaveItemEdit(item)}
@@ -1090,7 +1088,7 @@ export default function AdminInventoryPage() {
                                   </button>
                                   <button
                                     onClick={() => setEditingItemId(null)}
-                                    className="text-gray-400 hover:text-gray-600 text-xs px-2 py-1"
+                                    className="text-muted hover:text-foreground text-xs px-2 py-1"
                                   >
                                     Hủy
                                   </button>
@@ -1104,7 +1102,7 @@ export default function AdminInventoryPage() {
                               editingItemId !== item.id && (
                                 <button
                                   onClick={() => startEditItem(item)}
-                                  className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                                  className="text-xs text-accent hover:text-accent-hover flex items-center gap-1"
                                 >
                                   <FiEdit size={11} /> Kiểm hàng
                                 </button>
@@ -1112,7 +1110,7 @@ export default function AdminInventoryPage() {
                             {canManageItems(selectedReceipt.trangThai) && (
                               <button
                                 onClick={() => handleDeleteItem(item.id)}
-                                className="text-xs text-red-500 hover:text-red-600 flex items-center gap-1"
+                                className="text-xs text-red-500 hover:text-red-500/80 flex items-center gap-1"
                               >
                                 <FiTrash2 size={11} /> Xóa
                               </button>
@@ -1127,7 +1125,7 @@ export default function AdminInventoryPage() {
                   {selectedReceipt.trangThai === 1 && (
                     <button
                       onClick={() => handleKiemKe(selectedReceipt.id)}
-                      className="w-full mt-2 py-2.5 bg-indigo-600 text-white rounded-xl text-sm hover:bg-indigo-700 flex items-center justify-center gap-2 font-medium transition"
+                      className="w-full mt-2 py-2.5 bg-accent text-white rounded-xl text-sm hover:bg-accent-hover flex items-center justify-center gap-2 font-medium transition"
                     >
                       <FiCheckSquare size={16} /> Thực hiện kiểm kê
                     </button>
@@ -1165,22 +1163,22 @@ export default function AdminInventoryPage() {
 
       {/* ==================== EDIT MODAL ==================== */}
       {showEditModal && editReceipt && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
-              <h2 className="font-bold text-gray-900">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-card border border-subtle rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between p-4 border-b border-subtle">
+              <h2 className="font-bold text-foreground">
                 Cập nhật phiếu nhập #{editReceipt.id}
               </h2>
               <button
                 onClick={() => setShowEditModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-section transition"
               >
                 <FiX size={20} />
               </button>
             </div>
             <div className="p-4 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Tên phiếu nhập
                 </label>
                 <input
@@ -1188,11 +1186,11 @@ export default function AdminInventoryPage() {
                   onChange={(e) =>
                     setEditForm({ ...editForm, tenPhieuNhap: e.target.value })
                   }
-                  className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition"
+                  className="w-full border border-subtle bg-background text-foreground rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Cửa hàng
                 </label>
                 <select
@@ -1203,7 +1201,7 @@ export default function AdminInventoryPage() {
                       cuaHangId: Number(e.target.value),
                     })
                   }
-                  className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition"
+                  className="w-full border border-subtle bg-background text-foreground rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition"
                 >
                   {stores.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -1213,7 +1211,7 @@ export default function AdminInventoryPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Nhà cung cấp
                 </label>
                 <select
@@ -1224,7 +1222,7 @@ export default function AdminInventoryPage() {
                       nhaCungCapId: Number(e.target.value),
                     })
                   }
-                  className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition"
+                  className="w-full border border-subtle bg-background text-foreground rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition"
                 >
                   {suppliers.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -1234,10 +1232,10 @@ export default function AdminInventoryPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Trạng thái
                   {!canChangeStatus(editReceipt.trangThai) && (
-                    <span className="text-xs text-gray-400 font-normal ml-2">
+                    <span className="text-xs text-muted font-normal ml-2">
                       (không thể thay đổi)
                     </span>
                   )}
@@ -1251,7 +1249,7 @@ export default function AdminInventoryPage() {
                     })
                   }
                   disabled={!canChangeStatus(editReceipt.trangThai)}
-                  className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition disabled:opacity-50"
+                  className="w-full border border-subtle bg-background text-foreground rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition disabled:opacity-50"
                 >
                   {getAvailableStatuses(editReceipt.trangThai).map((val) => (
                     <option key={val} value={val}>
@@ -1263,14 +1261,14 @@ export default function AdminInventoryPage() {
               <div className="flex gap-2 pt-1">
                 <button
                   onClick={() => setShowEditModal(false)}
-                  className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-50 transition"
+                  className="flex-1 px-4 py-2.5 border border-subtle rounded-xl text-sm text-foreground hover:bg-section transition"
                 >
                   Hủy
                 </button>
                 <button
                   onClick={handleUpdate}
                   disabled={updating}
-                  className="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm hover:bg-indigo-700 disabled:opacity-50 transition"
+                  className="flex-1 px-4 py-2.5 bg-accent text-white rounded-xl text-sm hover:bg-accent-hover disabled:opacity-50 transition"
                 >
                   {updating ? "Đang lưu..." : "Cập nhật"}
                 </button>
@@ -1282,22 +1280,22 @@ export default function AdminInventoryPage() {
 
       {/* ==================== CREATE MODAL ==================== */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100 sticky top-0 bg-white">
-              <h2 className="font-bold text-lg text-gray-900">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-card border border-subtle rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b border-subtle sticky top-0 bg-card/95 backdrop-blur z-10">
+              <h2 className="font-bold text-lg text-foreground">
                 Tạo phiếu nhập mới
               </h2>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-section transition"
               >
                 <FiX size={20} />
               </button>
             </div>
             <div className="p-4 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Tên phiếu nhập *
                 </label>
                 <input
@@ -1309,12 +1307,12 @@ export default function AdminInventoryPage() {
                     })
                   }
                   placeholder="VD: Nhập hàng tháng 3 - CN Q.1"
-                  className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition"
+                  className="w-full border border-subtle bg-background text-foreground rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Cửa hàng *
                   </label>
                   <select
@@ -1325,7 +1323,7 @@ export default function AdminInventoryPage() {
                         cuaHangId: Number(e.target.value),
                       })
                     }
-                    className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition"
+                    className="w-full border border-subtle bg-background text-foreground rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition"
                   >
                     <option value={0}>-- Chọn cửa hàng --</option>
                     {stores.map((s) => (
@@ -1336,7 +1334,7 @@ export default function AdminInventoryPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Nhà cung cấp *
                   </label>
                   <select
@@ -1347,7 +1345,7 @@ export default function AdminInventoryPage() {
                         nhaCungCapId: Number(e.target.value),
                       })
                     }
-                    className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition"
+                    className="w-full border border-subtle bg-background text-foreground rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition"
                   >
                     <option value={0}>-- Chọn nhà cung cấp --</option>
                     {suppliers.map((s) => (
@@ -1361,9 +1359,9 @@ export default function AdminInventoryPage() {
 
               {/* Product search */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Thêm sản phẩm{" "}
-                  <span className="text-gray-400 font-normal">
+                  <span className="text-muted font-normal">
                     (không bắt buộc)
                   </span>
                 </label>
@@ -1373,30 +1371,30 @@ export default function AdminInventoryPage() {
                 >
                   <div className="relative flex-1">
                     <FiSearch
-                      className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+                      className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted"
                       size={14}
                     />
                     <input
                       value={productSearch}
                       onChange={(e) => setProductSearch(e.target.value)}
                       placeholder="Tìm tên sản phẩm..."
-                      className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition"
+                      className="w-full pl-10 pr-3 py-2.5 border border-subtle bg-background text-foreground rounded-xl text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition"
                     />
                   </div>
                   <button
                     type="submit"
-                    className="bg-indigo-600 text-white px-3 py-2.5 rounded-xl text-sm hover:bg-indigo-700 transition"
+                    className="bg-accent text-white px-3 py-2.5 rounded-xl text-sm hover:bg-accent-hover transition"
                   >
                     <FiSearch size={14} />
                   </button>
                 </form>
                 {searchResults.length > 0 && (
-                  <div className="border border-gray-100 rounded-xl divide-y divide-gray-50 text-sm">
+                  <div className="border border-subtle rounded-xl divide-y divide-subtle text-sm">
                     {searchResults.map((p) => (
                       <button
                         key={p.id}
                         onClick={() => handleSelectProduct(p)}
-                        className="w-full px-3 py-2 text-left hover:bg-indigo-50/30 text-gray-700"
+                        className="w-full px-3 py-2 text-left hover:bg-section text-foreground"
                       >
                         {p.tenSanPham}
                       </button>
@@ -1405,20 +1403,20 @@ export default function AdminInventoryPage() {
                 )}
                 {variants.length > 0 && selectedProduct && (
                   <div className="mt-2">
-                    <p className="text-xs text-gray-500 mb-1">
+                    <p className="text-xs text-muted mb-1">
                       Chọn biến thể — {selectedProduct.tenSanPham}
                     </p>
-                    <div className="border border-gray-100 rounded-xl divide-y divide-gray-50 text-sm">
+                    <div className="border border-subtle rounded-xl divide-y divide-subtle text-sm">
                       {variants.map((v) => (
                         <button
                           key={v.id}
                           onClick={() => handleAddVariant(v)}
-                          className="w-full px-3 py-2 text-left hover:bg-indigo-50/30 flex justify-between"
+                          className="w-full px-3 py-2 text-left hover:bg-section flex justify-between text-foreground"
                         >
                           <span>
                             {v.tenMauSac} / {v.tenKichThuoc}
                           </span>
-                          <span className="text-gray-400 text-xs">
+                          <span className="text-muted text-xs">
                             Tồn hiện tại: {v.soLuong}
                           </span>
                         </button>
@@ -1431,25 +1429,25 @@ export default function AdminInventoryPage() {
               {/* Items list */}
               {nhapItems.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-medium text-gray-900 mb-2">
+                  <h3 className="text-sm font-medium text-foreground mb-2">
                     Sản phẩm nhập
                   </h3>
                   <div className="space-y-2">
                     {nhapItems.map((item, idx) => (
                       <div
                         key={idx}
-                        className="flex items-center gap-3 text-sm border border-gray-100 rounded-xl px-3 py-2"
+                        className="flex items-center gap-3 text-sm border border-subtle rounded-xl px-3 py-2"
                       >
                         <div className="flex-1">
-                          <p className="font-medium text-gray-900">
+                          <p className="font-medium text-foreground">
                             {item.tenSanPham}
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-muted">
                             {item.mauSac} / {item.kichThuoc}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-400">SL:</span>
+                          <span className="text-xs text-muted">SL:</span>
                           <input
                             type="number"
                             min={1}
@@ -1462,7 +1460,7 @@ export default function AdminInventoryPage() {
                               );
                               setNhapItems(updated);
                             }}
-                            className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                            className="w-16 border border-subtle bg-background text-foreground rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none"
                           />
                         </div>
                         <input
@@ -1473,7 +1471,7 @@ export default function AdminInventoryPage() {
                             setNhapItems(updated);
                           }}
                           placeholder="Ghi chú..."
-                          className="border border-gray-200 rounded-lg px-2 py-1 text-xs w-32 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                          className="border border-subtle bg-background text-foreground rounded-lg px-2 py-1 text-xs w-32 focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none"
                         />
                         <button
                           onClick={() => handleRemoveNhapItem(idx)}
@@ -1490,14 +1488,14 @@ export default function AdminInventoryPage() {
               <div className="flex gap-2 pt-1">
                 <button
                   onClick={() => setShowCreateModal(false)}
-                  className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-50 transition"
+                  className="flex-1 px-4 py-2.5 border border-subtle rounded-xl text-sm text-foreground hover:bg-section transition"
                 >
                   Hủy
                 </button>
                 <button
                   onClick={handleCreate}
                   disabled={creating}
-                  className="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm hover:bg-indigo-700 disabled:opacity-50 transition"
+                  className="flex-1 px-4 py-2.5 bg-accent text-white rounded-xl text-sm hover:bg-accent-hover disabled:opacity-50 transition"
                 >
                   {creating ? "Đang tạo..." : "Tạo phiếu nhập"}
                 </button>

@@ -51,7 +51,7 @@ export default function AdminReviewsPage() {
           key={s}
           size={14}
           className={
-            s <= count ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+            s <= count ? "fill-yellow-400 text-yellow-400" : "text-muted/40"
           }
         />
       ))}
@@ -61,8 +61,8 @@ export default function AdminReviewsPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Quản lý đánh giá</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <h1 className="text-2xl font-bold text-foreground">Quản lý đánh giá</h1>
+        <p className="text-sm text-muted mt-1">
           Đánh giá sản phẩm từ khách hàng
         </p>
       </div>
@@ -70,55 +70,55 @@ export default function AdminReviewsPage() {
       {loading ? (
         <Loading />
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        <div className="bg-card rounded-2xl border border-subtle overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50/80 border-b border-gray-100">
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <tr className="bg-section border-b border-subtle">
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
                     ID
                   </th>
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
                     Sản phẩm
                   </th>
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
                     Khách hàng
                   </th>
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
                     Sao
                   </th>
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
                     Bình luận
                   </th>
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
                     Ngày
                   </th>
-                  <th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <th className="px-5 py-3.5 text-center text-xs font-semibold text-muted uppercase tracking-wider">
                     Thao tác
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-subtle">
                 {reviews.map((r) => (
-                  <tr key={r.id} className="hover:bg-indigo-50/30 transition">
-                    <td className="px-5 py-3.5 text-gray-500">#{r.id}</td>
-                    <td className="px-5 py-3.5 font-medium text-gray-900 max-w-[200px] truncate">
+                  <tr key={r.id} className="hover:bg-section transition">
+                    <td className="px-5 py-3.5 text-muted">#{r.id}</td>
+                    <td className="px-5 py-3.5 font-medium text-foreground max-w-[200px] truncate">
                       {r.tenSanPham || "—"}
                     </td>
-                    <td className="px-5 py-3.5 text-gray-600">
+                    <td className="px-5 py-3.5 text-muted">
                       {r.tenKhachHang || "—"}
                     </td>
                     <td className="px-5 py-3.5">{renderStars(r.soSao)}</td>
-                    <td className="px-5 py-3.5 text-gray-600 max-w-[300px] truncate">
+                    <td className="px-5 py-3.5 text-muted max-w-[300px] truncate">
                       {r.ghiChu}
                     </td>
-                    <td className="px-5 py-3.5 text-gray-500">
+                    <td className="px-5 py-3.5 text-muted">
                       {formatDate(r.ngayTao)}
                     </td>
                     <td className="px-5 py-3.5 text-center">
                       <button
                         onClick={() => handleDelete(r.id)}
-                        className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition"
+                        className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition"
                       >
                         <FiTrash2 size={15} />
                       </button>
@@ -127,7 +127,7 @@ export default function AdminReviewsPage() {
                 ))}
                 {reviews.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="text-center py-12 text-gray-400">
+                    <td colSpan={7} className="text-center py-12 text-muted">
                       Không có đánh giá
                     </td>
                   </tr>

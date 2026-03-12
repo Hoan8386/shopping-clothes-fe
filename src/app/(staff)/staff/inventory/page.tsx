@@ -344,7 +344,7 @@ export default function StaffInventoryPage() {
   const handleKiemKe = async (id: number) => {
     if (
       !confirm(
-        "Xác nhận kiểm kê phiếu nhập này? Thao tác này sẽ cộng hàng vào kho.",
+        "Xác nhận kiểm kê phiếu nhập này? Hệ thống sẽ cập nhật số lượng tồn kho.",
       )
     )
       return;
@@ -487,9 +487,9 @@ export default function StaffInventoryPage() {
 
   // Can add/delete items when status is 0 or 2
   const canManageItems = (status: number) => status === 0 || status === 2;
-  // Can edit inspection data when status is 1
-  const canInspectItems = (status: number) => status === 1;
-  // Status can only be changed from 0 or 2
+  // Can edit inspection data when status is 1 or 4 (thiếu hàng)
+  const canInspectItems = (status: number) => status === 1 || status === 4;
+  // Status can only be changed manually from 0 or 2
   const canChangeStatus = (currentStatus: number) =>
     currentStatus === 0 || currentStatus === 2;
   const getAvailableStatuses = (currentStatus: number): number[] => {
@@ -498,13 +498,16 @@ export default function StaffInventoryPage() {
     return [currentStatus];
   };
 
+  const completedReceipts = receipts.filter((r) => r.trangThai === 5).length;
+  const warningReceipts = receipts.filter((r) => r.trangThai === 4).length;
+
   return (
-    <div>
-      <div className="mb-6 flex items-center justify-between">
+    <div className="space-y-5">
+      <div className="mb-2 bg-card rounded-2xl border border-subtle p-4 lg:p-5 flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            Quản lý kho hàng
-          </h1>
+          <p className="text-sm font-semibold text-foreground">
+            Phiếu nhập kho
+          </p>
           <p className="text-sm text-muted mt-1">
             Phiếu nhập hàng từ nhà cung cấp
           </p>
@@ -517,8 +520,35 @@ export default function StaffInventoryPage() {
         </button>
       </div>
 
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="bg-card border border-subtle rounded-xl p-4">
+          <p className="text-xs text-muted uppercase tracking-wide">
+            Tổng phiếu trang
+          </p>
+          <p className="text-xl font-bold text-foreground mt-1">
+            {receipts.length}
+          </p>
+        </div>
+        <div className="bg-card border border-subtle rounded-xl p-4">
+          <p className="text-xs text-muted uppercase tracking-wide">
+            Hoàn thành
+          </p>
+          <p className="text-xl font-bold text-green-500 mt-1">
+            {completedReceipts}
+          </p>
+        </div>
+        <div className="bg-card border border-subtle rounded-xl p-4">
+          <p className="text-xs text-muted uppercase tracking-wide">
+            Thiếu hàng
+          </p>
+          <p className="text-xl font-bold text-yellow-500 mt-1">
+            {warningReceipts}
+          </p>
+        </div>
+      </div>
+
       {/* Filters */}
-      <div className="bg-card rounded-xl border border-subtle p-4 mb-6 space-y-3">
+      <div className="bg-card rounded-2xl border border-subtle p-4 mb-6 space-y-3">
         <div className="flex flex-wrap gap-2">
           {[
             { label: "Tất cả", value: undefined },
@@ -578,9 +608,12 @@ export default function StaffInventoryPage() {
           Không có phiếu nhập nào
         </div>
       ) : (
-        <div className="bg-card rounded-xl border border-subtle overflow-hidden">
+        <div className="bg-card rounded-2xl border border-subtle overflow-hidden">
+          <div className="px-4 py-3 border-b border-subtle bg-section/60 text-xs text-muted">
+            Mở chi tiết để cập nhật mặt hàng, kiểm hàng và thực hiện kiểm kê.
+          </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-230">
               <thead className="bg-section border-b border-subtle">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium text-muted">
@@ -640,22 +673,22 @@ export default function StaffInventoryPage() {
                         >
                           <FiEye size={15} />
                         </button>
-                        {r.trangThai !== 3 &&
-                          r.trangThai !== 4 &&
-                          r.trangThai !== 5 && (
-                            <button
-                              onClick={() => handleOpenEdit(r)}
-                              className="p-1.5 text-yellow-500 hover:bg-yellow-500/10 rounded"
-                              title="Cập nhật"
-                            >
-                              <FiEdit size={15} />
-                            </button>
-                          )}
-                        {r.trangThai === 1 && (
+                        {r.trangThai !== 3 && r.trangThai !== 5 && (
+                          <button
+                            onClick={() => handleOpenEdit(r)}
+                            className="p-1.5 text-yellow-500 hover:bg-yellow-500/10 rounded"
+                            title="Cập nhật"
+                          >
+                            <FiEdit size={15} />
+                          </button>
+                        )}
+                        {(r.trangThai === 1 || r.trangThai === 4) && (
                           <button
                             onClick={() => handleKiemKe(r.id)}
                             className="p-1.5 text-green-500 hover:bg-green-500/10 rounded"
-                            title="Kiểm kê"
+                            title={
+                              r.trangThai === 4 ? "Kiểm kê lại" : "Kiểm kê"
+                            }
                           >
                             <FiCheckSquare size={15} />
                           </button>
@@ -801,9 +834,9 @@ export default function StaffInventoryPage() {
                     <div className="flex items-start gap-2 bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-xs text-blue-400">
                       <FiAlertTriangle size={14} className="mt-0.5 shrink-0" />
                       <span>
-                        Phiếu nhập đã nhận hàng. Bạn có thể cập nhật số lượng
-                        thiếu và ghi chú kiểm hàng cho từng sản phẩm trước khi
-                        kiểm kê.
+                        {selectedReceipt.trangThai === 4
+                          ? 'Phiếu đang Thiếu hàng. Cập nhật lại số lượng thiếu cho từng sản phẩm, sau đó bấm "Kiểm kê lại" để bổ sung hàng vào kho.'
+                          : "Phiếu nhập đã nhận hàng. Bạn có thể cập nhật số lượng thiếu và ghi chú kiểm hàng cho từng sản phẩm trước khi kiểm kê."}
                       </span>
                     </div>
                   )}
@@ -970,13 +1003,22 @@ export default function StaffInventoryPage() {
 
                           {/* Show inspection info if exists */}
                           {(item.soLuongThieu != null ||
+                            item.soLuongDaNhap != null ||
                             item.ghiTruKiemHang) && (
-                            <div className="mt-2 flex gap-4 text-xs text-muted bg-section rounded px-2 py-1.5">
+                            <div className="mt-2 flex flex-wrap gap-4 text-xs text-muted bg-section rounded px-2 py-1.5">
                               {item.soLuongThieu != null && (
                                 <span>
                                   SL thiếu:{" "}
                                   <span className="text-red-400 font-medium">
                                     {item.soLuongThieu}
+                                  </span>
+                                </span>
+                              )}
+                              {item.soLuongDaNhap != null && (
+                                <span>
+                                  Đã nhập kho:{" "}
+                                  <span className="text-green-400 font-medium">
+                                    {item.soLuongDaNhap}
                                   </span>
                                 </span>
                               )}
@@ -1092,12 +1134,16 @@ export default function StaffInventoryPage() {
                   )}
 
                   {/* Kiểm kê button */}
-                  {selectedReceipt.trangThai === 1 && (
+                  {(selectedReceipt.trangThai === 1 ||
+                    selectedReceipt.trangThai === 4) && (
                     <button
                       onClick={() => handleKiemKe(selectedReceipt.id)}
                       className="w-full mt-2 py-2.5 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover flex items-center justify-center gap-2 font-medium"
                     >
-                      <FiCheckSquare size={16} /> Thực hiện kiểm kê
+                      <FiCheckSquare size={16} />{" "}
+                      {selectedReceipt.trangThai === 4
+                        ? "Kiểm kê lại (bổ sung hàng thiếu)"
+                        : "Thực hiện kiểm kê"}
                     </button>
                   )}
 
@@ -1118,8 +1164,9 @@ export default function StaffInventoryPage() {
                         </>
                       ) : (
                         <>
-                          <FiAlertTriangle size={16} /> Phiếu nhập đã kiểm kê —
-                          có sản phẩm thiếu hàng
+                          <FiAlertTriangle size={16} /> Hiện có sản phẩm thiếu
+                          hàng — cập nhật chi tiết và bấm &quot;Kiểm kê
+                          lại&quot; để bổ sung hàng vào kho
                         </>
                       )}
                     </div>

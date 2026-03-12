@@ -29,7 +29,7 @@ export interface ResLoginUser {
   email: string;
   name: string;
   role: Role;
-  diemTichLuy?: number;
+  diemTichLuy?: number | null;
 }
 
 export interface ResLoginDTO {
@@ -109,7 +109,11 @@ export interface ReqThemGioHangDTO {
 // ============ ORDER ============
 export interface ChiTietDonHang {
   id?: number;
-  chiTietSanPham?: ResChiTietSanPhamDTO;
+  chiTietSanPhamId?: number;
+  tenSanPham?: string;
+  hinhAnhChinh?: string;
+  tenMauSac?: string;
+  tenKichThuoc?: string;
   giaSanPham: number;
   giamGia: number;
   giaGiam: number;
@@ -117,27 +121,50 @@ export interface ChiTietDonHang {
   thanhTien: number;
 }
 
+export interface KhuyenMaiHoaDon {
+  id: number;
+  tenKhuyenMai: string;
+  phanTramGiam: number;
+  giamToiDa: number;
+  hoaDonToiDa: number;
+  tienDaGiam: number;
+}
+
+export interface KhuyenMaiDiem {
+  id: number;
+  tenKhuyenMai: string;
+  phanTramGiam: number;
+  giamToiDa: number;
+  hoaDonToiDa: number;
+  diemToiThieu: number;
+  tienDaGiam: number;
+}
+
 export interface DonHang {
   id: number;
   cuaHang?: CuaHang;
   khachHang?: KhachHang;
   nhanVien?: NhanVien;
+  khuyenMaiHoaDon?: KhuyenMaiHoaDon;
+  khuyenMaiDiem?: KhuyenMaiDiem;
   maKhuyenMaiHoaDon?: number;
   maKhuyenMaiDiem?: number;
+  sdt?: string;
   diaChi: string;
   tongTien: number;
   tienGiam: number;
   tongTienGiam: number;
   tongTienTra: number;
-  trangThai: number;
-  trangThaiThanhToan: number;
-  hinhThucDonHang: number;
+  trangThai: string | number;
+  trangThaiThanhToan: string | number;
+  hinhThucDonHang: string | number;
   chiTietDonHangs: ChiTietDonHang[];
   ngayTao: string;
   ngayCapNhat: string;
 }
 
 export interface ReqTaoDonHangDTO {
+  sdt?: string;
   diaChi?: string;
   cuaHangId?: number;
   maKhuyenMaiHoaDon?: number;
@@ -255,7 +282,7 @@ export interface ResDanhGiaSanPhamDTO {
   tenSanPham: string;
   donHangId: number;
   soSao: number;
-  ghiChu: string;
+  ghiTru: string;
   hinhAnh: string;
   ngayTao: string;
   ngayCapNhat: string;
@@ -283,6 +310,7 @@ export interface ChiTietPhieuNhap {
   chiTietSanPham?: ResChiTietSanPhamDTO;
   soLuong: number;
   soLuongThieu?: number | null;
+  soLuongDaNhap?: number | null;
   ghiTru?: string | null;
   ghiTruKiemHang?: string | null;
   trangThai: number;
@@ -317,4 +345,22 @@ export interface Role {
   description?: string;
   active?: boolean;
   permissions?: Permission[];
+}
+
+// ============ KHUYEN MAI PREVIEW ============
+export interface ResApDungKhuyenMaiDTO {
+  tongTienGoc: number;
+  maKhuyenMaiHoaDon?: number;
+  tenKhuyenMaiHoaDon?: string;
+  tienGiamHoaDon?: number;
+  maKhuyenMaiDiem?: number;
+  tenKhuyenMaiDiem?: string;
+  tienGiamDiem?: number;
+  tongTienGiam: number;
+  tongTienTra: number;
+}
+
+export interface ResKhuyenMaiHopLeDTO {
+  khuyenMaiHoaDon: KhuyenMaiTheoHoaDon[];
+  khuyenMaiDiem: KhuyenMaiTheoDiem[];
 }

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useAuthStore } from "@/store/auth.store";
+import { authService } from "@/services/auth.service";
 
 /**
  * Keeps the existing Zustand auth store and localStorage token in sync
@@ -17,12 +18,25 @@ export function AuthSync() {
 
     if (session?.user?.accessToken) {
       localStorage.setItem("access_token", session.user.accessToken);
+      // Set basic info immediately, then fetch full account for diemTichLuy
       setUser({
         id: Number(session.user.id) || 0,
         email: session.user.email ?? "",
         name: session.user.name ?? "",
         role: session.user.role,
       });
+      authService
+        .getAccount()
+        .then((account) => {
+          setUser({
+            id: account.id,
+            email: account.email,
+            name: account.name,
+            role: account.role,
+            diemTichLuy: account.diemTichLuy,
+          });
+        })
+        .catch(() => {});
     } else if (status === "unauthenticated") {
       localStorage.removeItem("access_token");
       setUser(null);

@@ -216,13 +216,11 @@ export const khuyenMaiDiemService = {
 
 // ============ DanhGiaSanPham ============
 export const danhGiaService = {
-  getByProduct: async (sanPhamId: number, page = 1, size = 5) => {
-    const res = await apiClient.get<
-      RestResponse<ResultPaginationDTO<ResDanhGiaSanPhamDTO>>
-    >(`/danh-gia-san-pham/san-pham/${sanPhamId}`, {
-      params: { page, size },
-    });
-    return res.data.data ?? { result: [], meta: { page: 1, pageSize: size, pages: 1, total: 0 } };
+  getByProduct: async (sanPhamId: number) => {
+    const res = await apiClient.get<RestResponse<ResDanhGiaSanPhamDTO[]>>(
+      `/danh-gia-san-pham/san-pham/${sanPhamId}`
+    );
+    return res.data.data ?? [];
   },
   getMyReviews: async () => {
     const res = await apiClient.get<RestResponse<ResDanhGiaSanPhamDTO[]>>(
@@ -247,10 +245,10 @@ export const danhGiaService = {
     return res.data.data;
   },
   getByChiTietDonHang: async (chiTietDonHangId: number) => {
-    const res = await apiClient.get<RestResponse<ResDanhGiaSanPhamDTO>>(
+    const res = await apiClient.get<RestResponse<ResDanhGiaSanPhamDTO[]>>(
       `/danh-gia-san-pham/chi-tiet-don-hang/${chiTietDonHangId}`
     );
-    return res.data.data;
+    return res.data.data ?? [];
   },
   delete: async (id: number) => {
     await apiClient.delete(`/danh-gia-san-pham/${id}`);

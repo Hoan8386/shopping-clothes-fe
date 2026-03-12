@@ -27,30 +27,35 @@ export function formatDate(dateStr: string): string {
   });
 }
 
-export function getOrderStatusText(status: number): string {
+export function getOrderStatusText(status: string | number): string {
+  if (typeof status === "string") return status;
   const map: Record<number, string> = {
     0: "Chờ xác nhận",
     1: "Đã xác nhận",
     2: "Đang đóng gói",
-    3: "Đang giao",
+    3: "Đang giao hàng",
     4: "Đã hủy",
     5: "Đã nhận hàng",
   };
   return map[status] || `Trạng thái ${status}`;
 }
 
-export function getOrderStatusColor(status: number): string {
-  const map: Record<number, string> = {
-    0: "bg-yellow-100 text-yellow-800",
-    1: "bg-blue-100 text-blue-800",
-    2: "bg-orange-100 text-orange-800",
-    3: "bg-purple-100 text-purple-800",
-    4: "bg-red-100 text-red-800",
-    5: "bg-green-100 text-green-800",
-  };
-  return map[status] || "bg-gray-100 text-gray-800";
+const STATUS_COLOR_MAP: Record<string, string> = {
+  "Chờ xác nhận": "bg-yellow-100 text-yellow-800",
+  "Đã xác nhận": "bg-blue-100 text-blue-800",
+  "Đang đóng gói": "bg-orange-100 text-orange-800",
+  "Đang giao hàng": "bg-purple-100 text-purple-800",
+  "Đang giao": "bg-purple-100 text-purple-800",
+  "Đã hủy": "bg-red-100 text-red-800",
+  "Đã nhận hàng": "bg-green-100 text-green-800",
+};
+
+export function getOrderStatusColor(status: string | number): string {
+  const text = getOrderStatusText(status);
+  return STATUS_COLOR_MAP[text] || "bg-gray-100 text-gray-800";
 }
 
-export function getPaymentStatusText(status: number): string {
+export function getPaymentStatusText(status: string | number): string {
+  if (typeof status === "string") return status;
   return status === 0 ? "Chưa thanh toán" : "Đã thanh toán";
 }

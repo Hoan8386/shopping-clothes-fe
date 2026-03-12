@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ResGioHangDTO, ResChiTietGioHang } from "@/types";
+import {
+  ResGioHangDTO,
+  ResChiTietGioHang,
+  KhuyenMaiTheoHoaDon,
+  KhuyenMaiTheoDiem,
+  ResApDungKhuyenMaiDTO,
+} from "@/types";
 import { cartService } from "@/services/cart.service";
 import { useAuthStore } from "@/store/auth.store";
 import { useCartStore } from "@/store/cart.store";
@@ -17,14 +23,52 @@ import {
   FiMinus,
   FiPlus,
   FiLock,
+  FiTag,
 } from "react-icons/fi";
 
 export default function CartPage() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const { setCartCount } = useCartStore();
   const [cart, setCart] = useState<ResGioHangDTO | null>(null);
   const [loading, setLoading] = useState(true);
+  const [promoHoaDon, setPromoHoaDon] = useState<KhuyenMaiTheoHoaDon[]>([]);
+  const [promoDiem, setPromoDiem] = useState<KhuyenMaiTheoDiem[]>([]);
+  const [selectedPromoHD, setSelectedPromoHD] = useState<number | undefined>();
+  const [selectedPromoDiem, setSelectedPromoDiem] = useState<
+    number | undefined
+  >();
+  const [discountPreview, setDiscountPreview] =
+    useState<ResApDungKhuyenMaiDTO | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [updatingItemId, setUpdatingItemId] = useState<number | null>(null);
   const router = useRouter();
+
+  const fetchCart = useCallback(
+    async (showPageLoading = true) => {
+      try {
+        if (showPageLoading) {
+          setLoading(true);
+        }
+        const [data, promoData] = await Promise.all([
+          cartService.getMyCart(),
+          cartService
+            .getKhuyenMaiHopLe()
+            .catch(() => ({ khuyenMaiHoaDon: [], khuyenMaiDiem: [] })),
+        ]);
+        setCart(data);
+        setCartCount(data.tongSoLuong);
+        setPromoHoaDon(promoData.khuyenMaiHoaDon ?? []);
+        setPromoDiem(promoData.khuyenMaiDiem ?? []);
+      } catch {
+        toast.error("Không thể tải giỏ hàng");
+      } finally {
+        if (showPageLoading) {
+          setLoading(false);
+        }
+      }
+    },
+    [setCartCount],
+  );
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -32,29 +76,120 @@ export default function CartPage() {
       return;
     }
     fetchCart();
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router, fetchCart]);
 
-  const fetchCart = async () => {
-    try {
-      setLoading(true);
-      const data = await cartService.getMyCart();
-      setCart(data);
-      setCartCount(data.tongSoLuong);
-    } catch {
-      toast.error("Không thể tải giỏ hàng");
-    } finally {
-      setLoading(false);
-    }
+  const fetchDiscountPreview = useCallback(
+    async (hdId?: number, diemId?: number) => {
+      if (!hdId && !diemId) {
+        setDiscountPreview(null);
+        return;
+      }
+      setPreviewLoading(true);
+      try {
+        const preview = await cartService.apDungKhuyenMai({
+          maKhuyenMaiHoaDon: hdId,
+          maKhuyenMaiDiem: diemId,
+        });
+        setDiscountPreview(preview);
+      } catch (err: unknown) {
+        const msg = (err as { response?: { data?: { message?: string } } })
+          ?.response?.data?.message;
+        toast.error(msg || "Mã khuyến mãi không hợp lệ");
+        setDiscountPreview(null);
+      } finally {
+        setPreviewLoading(false);
+      }
+    },
+    [],
+  );
+
+  const handleSelectPromoHD = (value: string) => {
+    const id = value ? Number(value) : undefined;
+    setSelectedPromoHD(id);
+    fetchDiscountPreview(id, selectedPromoDiem);
+  };
+
+  const handleSelectPromoDiem = (value: string) => {
+    const id = value ? Number(value) : undefined;
+    setSelectedPromoDiem(id);
+    fetchDiscountPreview(selectedPromoHD, id);
   };
 
   const handleRemoveItem = async (maChiTietGioHang: number) => {
     try {
       await cartService.removeCartItem(maChiTietGioHang);
       toast.success("Đã xóa sản phẩm khỏi giỏ hàng");
-      fetchCart();
+      setSelectedPromoHD(undefined);
+      setSelectedPromoDiem(undefined);
+      setDiscountPreview(null);
+      fetchCart(false);
     } catch {
       toast.error("Xóa thất bại");
     }
+  };
+
+  const resetDiscountState = () => {
+    setSelectedPromoHD(undefined);
+    setSelectedPromoDiem(undefined);
+    setDiscountPreview(null);
+  };
+
+  const fallbackUpdateItemQuantity = async (
+    item: ResChiTietGioHang,
+    nextQuantity: number,
+  ) => {
+    if (nextQuantity <= 0) {
+      await cartService.removeCartItem(item.maChiTietGioHang);
+      return;
+    }
+
+    await cartService.removeCartItem(item.maChiTietGioHang);
+    await cartService.addToCart({
+      maChiTietSanPham: item.maChiTietSanPham,
+      soLuong: nextQuantity,
+    });
+  };
+
+  const handleUpdateItemQuantity = async (
+    item: ResChiTietGioHang,
+    nextQuantity: number,
+  ) => {
+    if (nextQuantity < 1 || updatingItemId === item.maChiTietGioHang) {
+      return;
+    }
+
+    setUpdatingItemId(item.maChiTietGioHang);
+    try {
+      try {
+        await cartService.updateCartItemQuantity(
+          item.maChiTietGioHang,
+          nextQuantity,
+        );
+      } catch {
+        await fallbackUpdateItemQuantity(item, nextQuantity);
+      }
+
+      resetDiscountState();
+      await fetchCart(false);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message;
+      toast.error(msg || "Cập nhật số lượng thất bại");
+    } finally {
+      setUpdatingItemId(null);
+    }
+  };
+
+  const buildCheckoutHref = () => {
+    const params = new URLSearchParams();
+    if (selectedPromoHD) {
+      params.set("maKhuyenMaiHoaDon", String(selectedPromoHD));
+    }
+    if (selectedPromoDiem) {
+      params.set("maKhuyenMaiDiem", String(selectedPromoDiem));
+    }
+    const query = params.toString();
+    return query ? `/checkout?${query}` : "/checkout";
   };
 
   if (loading) return <Loading />;
@@ -123,13 +258,28 @@ export default function CartPage() {
                 {/* Quantity + Price */}
                 <div className="flex items-center justify-between mt-5">
                   <div className="inline-flex items-center border border-subtle rounded-lg overflow-hidden">
-                    <button className="px-3 py-2 text-gray-400 hover:text-foreground hover:bg-section transition">
+                    <button
+                      onClick={() =>
+                        handleUpdateItemQuantity(item, item.soLuong - 1)
+                      }
+                      disabled={
+                        item.soLuong <= 1 ||
+                        updatingItemId === item.maChiTietGioHang
+                      }
+                      className="px-3 py-2 text-gray-400 hover:text-foreground hover:bg-section transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
                       <FiMinus size={14} />
                     </button>
                     <span className="px-4 py-2 text-sm font-semibold text-foreground min-w-10 text-center">
                       {item.soLuong}
                     </span>
-                    <button className="px-3 py-2 text-gray-400 hover:text-foreground hover:bg-section transition">
+                    <button
+                      onClick={() =>
+                        handleUpdateItemQuantity(item, item.soLuong + 1)
+                      }
+                      disabled={updatingItemId === item.maChiTietGioHang}
+                      className="px-3 py-2 text-gray-400 hover:text-foreground hover:bg-section transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
                       <FiPlus size={14} />
                     </button>
                   </div>
@@ -177,36 +327,116 @@ export default function CartPage() {
                 <span className="text-gray-500">Phí vận chuyển</span>
                 <span className="font-semibold text-green-400">Miễn phí</span>
               </div>
+
+              {/* Discount preview lines */}
+              {previewLoading && (
+                <p className="text-xs text-gray-400 text-center py-1">
+                  Đang tính giảm giá...
+                </p>
+              )}
+              {discountPreview && !previewLoading && (
+                <>
+                  {(discountPreview.tienGiamHoaDon ?? 0) > 0 && (
+                    <div className="flex justify-between text-green-500">
+                      <span className="flex flex-col">
+                        <span>KM hóa đơn</span>
+                        <span className="text-xs text-gray-400 font-normal">
+                          {discountPreview.tenKhuyenMaiHoaDon}
+                        </span>
+                      </span>
+                      <span>
+                        -{formatCurrency(discountPreview.tienGiamHoaDon!)}
+                      </span>
+                    </div>
+                  )}
+                  {(discountPreview.tienGiamDiem ?? 0) > 0 && (
+                    <div className="flex justify-between text-green-500">
+                      <span className="flex flex-col">
+                        <span>KM điểm</span>
+                        <span className="text-xs text-gray-400 font-normal">
+                          {discountPreview.tenKhuyenMaiDiem}
+                        </span>
+                      </span>
+                      <span>
+                        -{formatCurrency(discountPreview.tienGiamDiem!)}
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
+
               <div className="border-t border-subtle pt-4 flex justify-between">
                 <span className="font-bold text-foreground text-base">
                   Tổng cộng
                 </span>
                 <span className="font-bold text-foreground text-xl">
-                  {formatCurrency(cart.tongTien)}
+                  {formatCurrency(
+                    discountPreview
+                      ? discountPreview.tongTienTra
+                      : cart.tongTien,
+                  )}
                 </span>
               </div>
             </div>
 
-            {/* Promo Code */}
-            <div className="mt-6">
-              <p className="text-sm font-semibold text-foreground mb-2">
-                Mã giảm giá
-              </p>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Nhập mã"
-                  className="flex-1 bg-section border border-subtle rounded-lg px-4 py-2.5 text-sm text-foreground placeholder-gray-500 focus:outline-none focus:border-purple-500 transition"
-                />
-                <button className="bg-section border border-subtle rounded-lg px-5 py-2.5 text-sm font-semibold text-foreground hover:bg-purple-500/10 hover:border-purple-500 transition">
-                  Áp dụng
-                </button>
+            {/* Promotions */}
+            {(promoHoaDon.length > 0 || promoDiem.length > 0) && (
+              <div className="mt-6 space-y-4">
+                <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <FiTag size={14} /> Khuyến mãi
+                </p>
+                {promoHoaDon.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+                      Khuyến mãi hóa đơn
+                    </label>
+                    <select
+                      value={selectedPromoHD || ""}
+                      onChange={(e) => handleSelectPromoHD(e.target.value)}
+                      className="w-full bg-section border border-subtle rounded-lg px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-purple-500 transition"
+                    >
+                      <option value="">-- Không sử dụng --</option>
+                      {promoHoaDon.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.tenKhuyenMai} — Giảm {p.phanTramGiam}% (tối đa{" "}
+                          {formatCurrency(p.giamToiDa)})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {promoDiem.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+                      Khuyến mãi điểm tích lũy ({user?.diemTichLuy ?? 0} điểm)
+                    </label>
+                    <select
+                      value={selectedPromoDiem || ""}
+                      onChange={(e) => handleSelectPromoDiem(e.target.value)}
+                      className="w-full bg-section border border-subtle rounded-lg px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-purple-500 transition"
+                    >
+                      <option value="">-- Không sử dụng --</option>
+                      {promoDiem.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.tenKhuyenMai} — Giảm {p.phanTramGiam}%
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
-            </div>
+            )}
+            {promoHoaDon.length === 0 && promoDiem.length === 0 && (
+              <div className="mt-6">
+                <p className="text-sm text-gray-500 flex items-center gap-2">
+                  <FiTag size={14} /> Không có khuyến mãi khả dụng
+                </p>
+              </div>
+            )}
 
             {/* Checkout Button */}
             <Link
-              href="/checkout"
+              href={buildCheckoutHref()}
               className="mt-6 block w-full text-center bg-linear-to-r from-purple-500 to-pink-500 text-white py-4 font-bold text-sm rounded-full hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg shadow-purple-500/25"
             >
               Tiến hành đặt hàng

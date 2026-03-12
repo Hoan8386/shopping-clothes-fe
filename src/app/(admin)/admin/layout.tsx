@@ -20,10 +20,7 @@ import {
   FiPackage,
   FiClipboard,
   FiMenu,
-  FiX,
-  FiChevronDown,
   FiLogOut,
-  FiUser,
   FiExternalLink,
 } from "react-icons/fi";
 
@@ -69,61 +66,34 @@ const menuGroups = [
   },
 ];
 
-export default function AdminLayout({
-  children,
+function AdminSidebarContent({
+  pathname,
+  session,
+  onNavigate,
 }: {
-  children: React.ReactNode;
+  pathname: string;
+  session: {
+    user?: {
+      name?: string | null;
+      role?: { name?: string | null };
+    };
+  };
+  onNavigate: () => void;
 }) {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const pathname = usePathname();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-
-  useEffect(() => {
-    if (status === "loading") return;
-    if (!session) {
-      router.push("/login");
-      return;
-    }
-    if (session.user?.role?.name !== "ADMIN") {
-      router.push("/unauthorized");
-    }
-  }, [session, status, router]);
-
-  useEffect(() => {
-    setSidebarOpen(false);
-  }, [pathname]);
-
-  if (status === "loading" || !session) return null;
-
-  const currentPage =
-    menuGroups
-      .flatMap((g) => g.items)
-      .find(
-        (item) =>
-          pathname === item.href ||
-          (item.href !== "/admin" && pathname.startsWith(item.href)),
-      )?.label || "Dashboard";
-
-  const SidebarContent = () => (
+  return (
     <>
-      {/* Logo */}
       <div className="p-5 border-b border-indigo-500/20">
-        <Link href="/admin" className="flex items-center gap-3">
+        <Link href="/admin" className="flex items-center gap-3 text-white">
           <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
             <FiBox className="text-white" size={20} />
           </div>
           <div>
-            <h1 className="text-white font-bold text-lg leading-tight">
-              ShopVN
-            </h1>
+            <h1 className="text-white font-bold text-lg leading-tight">LUXE</h1>
             <p className="text-indigo-200 text-[11px]">Admin Panel</p>
           </div>
         </Link>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-3 space-y-5 scrollbar-thin">
         {menuGroups.map((group) => (
           <div key={group.label}>
@@ -139,10 +109,11 @@ export default function AdminLayout({
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                    onClick={onNavigate}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors border ${
                       isActive
-                        ? "bg-white/20 text-white shadow-lg shadow-indigo-900/20"
-                        : "text-indigo-100/80 hover:bg-white/10 hover:text-white"
+                        ? "bg-white/20 text-white border-white/20"
+                        : "text-indigo-100/85 border-transparent hover:bg-white/10 hover:text-white"
                     }`}
                   >
                     <item.icon
@@ -161,10 +132,9 @@ export default function AdminLayout({
         ))}
       </nav>
 
-      {/* User section */}
-      <div className="p-3 border-t border-indigo-500/20">
+      <div className="p-3 border-t border-indigo-500/20 bg-white/10 space-y-2">
         <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/10">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-400 to-purple-400 flex items-center justify-center text-white font-bold text-sm">
+          <div className="w-9 h-9 rounded-full bg-linear-to-br from-indigo-400 to-purple-400 flex items-center justify-center text-white font-bold text-sm">
             {session?.user?.name?.[0]?.toUpperCase() || "A"}
           </div>
           <div className="flex-1 min-w-0">
@@ -176,115 +146,125 @@ export default function AdminLayout({
             </p>
           </div>
         </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <Link
+            href="/"
+            onClick={onNavigate}
+            className="flex items-center justify-center gap-1.5 text-xs text-white bg-white/10 hover:bg-white/20 rounded-lg py-2 transition"
+          >
+            <FiExternalLink size={12} /> Xem shop
+          </Link>
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="flex items-center justify-center gap-1.5 text-xs text-white bg-white/10 hover:bg-white/20 rounded-lg py-2 transition"
+          >
+            <FiLogOut size={12} /> Đăng xuất
+          </button>
+        </div>
       </div>
     </>
   );
+}
+
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (status === "loading") return;
+    if (!session) {
+      router.push("/login");
+      return;
+    }
+    if (session.user?.role?.name !== "ADMIN") {
+      router.push("/unauthorized");
+    }
+  }, [session, status, router]);
+
+  if (status === "loading" || !session) return null;
+
+  const allItems = menuGroups.flatMap((g) => g.items);
+  const currentPage =
+    allItems.find(
+      (item) =>
+        pathname === item.href ||
+        (item.href !== "/admin" && pathname.startsWith(item.href)),
+    )?.label || "Dashboard";
+
+  const pageDescriptions: Record<string, string> = {
+    Dashboard: "Theo dõi nhanh toàn bộ hoạt động vận hành của cửa hàng.",
+    "Sản phẩm": "Quản lý danh mục sản phẩm và thông tin bán hàng.",
+    "Biến thể SP": "Theo dõi biến thể theo màu sắc, kích thước và tồn kho.",
+    "Đơn hàng": "Xử lý đơn hàng và theo dõi trạng thái giao nhận.",
+    "Phiếu nhập": "Quản lý nhập hàng và kiểm kê kho.",
+    "Thương hiệu": "Quản lý dữ liệu thương hiệu sản phẩm.",
+    "Kiểu sản phẩm": "Quản lý nhóm và phân loại sản phẩm.",
+    "Bộ sưu tập": "Thiết lập bộ sưu tập hiển thị cho sản phẩm.",
+    "Màu sắc": "Quản lý danh mục màu sắc dùng cho biến thể.",
+    "Kích thước": "Quản lý danh mục kích thước sản phẩm.",
+    "Cửa hàng": "Quản lý thông tin chi nhánh cửa hàng.",
+    "Nhà cung cấp": "Quản lý thông tin nhà cung cấp nhập hàng.",
+    "Khuyến mãi": "Thiết lập và quản lý các chương trình ưu đãi.",
+    "Đánh giá": "Theo dõi và xử lý phản hồi, đánh giá của khách hàng.",
+    "Vai trò": "Quản lý vai trò trong hệ thống.",
+    "Quyền hạn": "Quản lý quyền truy cập theo vai trò.",
+  };
 
   return (
-    <div className="flex h-screen bg-gray-50/80">
-      {/* Mobile overlay */}
+    <div className="flex min-h-screen bg-section/40">
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+          className="fixed inset-0 bg-black/60 z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar - Desktop */}
-      <aside className="hidden lg:flex w-[260px] flex-col bg-gradient-to-b from-indigo-900 via-indigo-800 to-indigo-900 flex-shrink-0">
-        <SidebarContent />
-      </aside>
-
-      {/* Sidebar - Mobile */}
       <aside
-        className={`lg:hidden fixed inset-y-0 left-0 z-50 w-[260px] flex flex-col bg-gradient-to-b from-indigo-900 via-indigo-800 to-indigo-900 transform transition-transform duration-300 ease-in-out ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        className={`fixed lg:sticky top-0 left-0 z-50 lg:z-auto w-65 h-screen flex flex-col bg-linear-to-b from-indigo-900 via-indigo-800 to-indigo-900 border-r border-indigo-500/20 shrink-0 transition-transform duration-200 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
-        <SidebarContent />
+        <AdminSidebarContent
+          pathname={pathname}
+          session={session}
+          onNavigate={() => setSidebarOpen(false)}
+        />
       </aside>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Header */}
-        <header className="h-16 bg-white border-b border-gray-200/80 flex items-center justify-between px-4 lg:px-6 flex-shrink-0 sticky top-0 z-30">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition"
-            >
-              <FiMenu size={20} />
-            </button>
-            <div>
-              <h2 className="text-lg font-bold text-gray-800">{currentPage}</h2>
-              <p className="text-xs text-gray-400 hidden sm:block">
-                Quản trị hệ thống ShopVN
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/"
-              className="hidden sm:flex items-center gap-1.5 text-sm text-gray-500 hover:text-indigo-600 transition px-3 py-2 rounded-lg hover:bg-indigo-50"
-            >
-              <FiExternalLink size={14} />
-              Xem shop
-            </Link>
-            <div className="relative">
-              <button
-                onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-gray-100 transition"
-              >
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs">
-                  {session?.user?.name?.[0]?.toUpperCase() || "A"}
-                </div>
-                <span className="hidden sm:block text-sm font-medium text-gray-700">
-                  {session?.user?.name || "Admin"}
-                </span>
-                <FiChevronDown size={14} className="text-gray-400" />
-              </button>
-              {userMenuOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setUserMenuOpen(false)}
-                  />
-                  <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
-                    <div className="px-3 py-2 border-b border-gray-100">
-                      <p className="text-sm font-medium text-gray-800">
-                        {session?.user?.name}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        {session?.user?.email || "admin@shopvn.vn"}
-                      </p>
-                    </div>
-                    <Link
-                      href="/account"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
-                    >
-                      <FiUser size={14} />
-                      Tài khoản
-                    </Link>
-                    <button
-                      onClick={() => signOut({ callbackUrl: "/login" })}
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left"
-                    >
-                      <FiLogOut size={14} />
-                      Đăng xuất
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </header>
+      <main className="flex-1 overflow-x-hidden min-h-screen">
+        <div className="lg:hidden sticky top-0 z-30 bg-card border-b border-subtle px-4 py-3 flex items-center gap-3">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="text-muted hover:text-foreground"
+          >
+            <FiMenu size={20} />
+          </button>
+          <span className="text-sm font-semibold text-foreground">
+            LUXE Admin
+          </span>
+        </div>
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-auto">
-          <div className="p-4 lg:p-6 max-w-[1600px] mx-auto">{children}</div>
-        </main>
-      </div>
+        <div className="border-b border-subtle bg-card/90 backdrop-blur">
+          <div className="max-w-7xl mx-auto px-4 lg:px-6 py-4 lg:py-5">
+            <h1 className="text-xl lg:text-2xl font-bold text-foreground">
+              {currentPage}
+            </h1>
+            <p className="text-sm text-muted mt-1">
+              {pageDescriptions[currentPage] ||
+                "Quản trị dữ liệu và vận hành hệ thống."}
+            </p>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto p-4 lg:p-6">{children}</div>
+      </main>
     </div>
   );
 }

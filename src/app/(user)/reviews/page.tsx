@@ -9,7 +9,6 @@ import { formatDate, getImageUrl } from "@/lib/utils";
 import Loading from "@/components/ui/Loading";
 import toast from "react-hot-toast";
 import { FiStar, FiTrash2, FiEdit2, FiX, FiCamera } from "react-icons/fi";
-import Image from "next/image";
 import Link from "next/link";
 
 export default function MyReviewsPage() {
@@ -64,7 +63,7 @@ export default function MyReviewsPage() {
   const openEditModal = (review: ResDanhGiaSanPhamDTO) => {
     setEditReview(review);
     setEditSoSao(review.soSao);
-    setEditGhiChu(review.ghiChu || "");
+    setEditGhiChu(review.ghiTru || "");
     setEditFile(null);
     setEditPreview(review.hinhAnh ? getImageUrl(review.hinhAnh) : null);
     setEditModal(true);
@@ -149,19 +148,19 @@ export default function MyReviewsPage() {
                     <div className="flex items-center gap-0.5 mt-2">
                       {renderStars(review.soSao)}
                     </div>
-                    {review.ghiChu && (
+                    {review.ghiTru && (
                       <p className="text-sm text-gray-500 mt-3 leading-relaxed">
-                        {review.ghiChu}
+                        {review.ghiTru}
                       </p>
                     )}
                     {review.hinhAnh && (
                       <div className="mt-3">
-                        <Image
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
                           src={getImageUrl(review.hinhAnh)}
                           alt="Review"
-                          width={80}
-                          height={80}
-                          className="object-cover border border-subtle"
+                          className="object-cover border border-subtle rounded-lg"
+                          style={{ width: 80, height: 80 }}
                         />
                       </div>
                     )}
@@ -269,12 +268,12 @@ export default function MyReviewsPage() {
                 />
                 {editPreview ? (
                   <div className="relative inline-block">
-                    <Image
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
                       src={editPreview}
                       alt="Preview"
-                      width={100}
-                      height={100}
-                      className="object-cover rounded border"
+                      className="object-cover rounded-lg border border-subtle"
+                      style={{ width: 100, height: 100 }}
                     />
                     <button
                       type="button"

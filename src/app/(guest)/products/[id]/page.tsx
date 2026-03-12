@@ -17,7 +17,6 @@ import {
 } from "@/types";
 import { getImageUrl, formatCurrency } from "@/lib/utils";
 import Loading from "@/components/ui/Loading";
-import Pagination from "@/components/ui/Pagination";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import {
@@ -42,8 +41,6 @@ export default function ProductDetailPage() {
   const [product, setProduct] = useState<ResSanPhamDTO | null>(null);
   const [variants, setVariants] = useState<ResChiTietSanPhamDTO[]>([]);
   const [reviews, setReviews] = useState<ResDanhGiaSanPhamDTO[]>([]);
-  const [reviewPage, setReviewPage] = useState(1);
-  const [reviewTotalPages, setReviewTotalPages] = useState(1);
 
   const [selectedVariant, setSelectedVariant] =
     useState<ResChiTietSanPhamDTO | null>(null);
@@ -100,13 +97,12 @@ export default function ProductDetailPage() {
   useEffect(() => {
     if (!id) return;
     danhGiaService
-      .getByProduct(Number(id), reviewPage, 5)
-      .then((res) => {
-        setReviews(res?.result ?? []);
-        setReviewTotalPages(res?.meta?.pages ?? 1);
+      .getByProduct(Number(id))
+      .then((list) => {
+        setReviews(list);
       })
       .catch(() => {});
-  }, [id, reviewPage]);
+  }, [id]);
 
   const discountedPrice = product
     ? product.giaGiam > 0
@@ -569,7 +565,7 @@ export default function ProductDetailPage() {
                           </div>
                         </div>
                         <p className="text-sm text-muted leading-relaxed">
-                          {rv.ghiChu}
+                          {rv.ghiTru}
                         </p>
                         {rv.hinhAnh && (
                           <img
@@ -580,11 +576,6 @@ export default function ProductDetailPage() {
                         )}
                       </div>
                     ))}
-                    <Pagination
-                      currentPage={reviewPage}
-                      totalPages={reviewTotalPages}
-                      onPageChange={setReviewPage}
-                    />
                   </div>
                 )}
               </>

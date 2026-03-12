@@ -67,10 +67,10 @@ export default function AdminCategoriesPage() {
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-foreground">
             Quản lý kiểu sản phẩm
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-muted mt-1">
             Phân loại sản phẩm theo kiểu
           </p>
         </div>
@@ -80,32 +80,32 @@ export default function AdminCategoriesPage() {
             setName("");
             setShowModal(true);
           }}
-          className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl hover:bg-indigo-700 transition shadow-sm font-medium text-sm"
+          className="flex items-center gap-2 bg-accent text-white px-5 py-2.5 rounded-xl hover:bg-accent-hover transition shadow-sm font-medium text-sm"
         >
           <FiPlus size={16} /> Thêm mới
         </button>
       </div>
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+      <div className="bg-card rounded-2xl border border-subtle overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50/80 border-b border-gray-100">
-                <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <tr className="bg-section border-b border-subtle">
+                <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
                   ID
                 </th>
-                <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
                   Tên kiểu sản phẩm
                 </th>
-                <th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <th className="px-5 py-3.5 text-center text-xs font-semibold text-muted uppercase tracking-wider">
                   Thao tác
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-subtle">
               {items.map((item) => (
-                <tr key={item.id} className="hover:bg-indigo-50/30 transition">
-                  <td className="px-5 py-3.5 text-gray-500">#{item.id}</td>
-                  <td className="px-5 py-3.5 font-medium text-gray-900">
+                <tr key={item.id} className="hover:bg-section transition">
+                  <td className="px-5 py-3.5 text-muted">#{item.id}</td>
+                  <td className="px-5 py-3.5 font-medium text-foreground">
                     {item.tenKieuSanPham}
                   </td>
                   <td className="px-5 py-3.5 text-center">
@@ -116,13 +116,13 @@ export default function AdminCategoriesPage() {
                           setName(item.tenKieuSanPham);
                           setShowModal(true);
                         }}
-                        className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-50 transition"
+                        className="p-2 rounded-lg text-accent hover:bg-accent/10 transition"
                       >
                         <FiEdit size={15} />
                       </button>
                       <button
                         onClick={() => handleDelete(item.id)}
-                        className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition"
+                        className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition"
                       >
                         <FiTrash2 size={15} />
                       </button>
@@ -132,7 +132,7 @@ export default function AdminCategoriesPage() {
               ))}
               {items.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="text-center py-12 text-gray-400">
+                  <td colSpan={3} className="text-center py-12 text-muted">
                     Không có dữ liệu
                   </td>
                 </tr>
@@ -142,9 +142,9 @@ export default function AdminCategoriesPage() {
         </div>
       </div>
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl">
-            <h2 className="text-lg font-bold mb-4 text-gray-900">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-subtle rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <h2 className="text-lg font-bold mb-4 text-foreground">
               {editing ? "Sửa" : "Thêm"} kiểu sản phẩm
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -153,20 +153,20 @@ export default function AdminCategoriesPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Tên kiểu sản phẩm"
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                className="w-full border border-subtle bg-background text-foreground rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
                 required
               />
               <div className="flex gap-3 justify-end pt-2">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 text-sm font-medium transition"
+                  className="px-4 py-2.5 border border-subtle rounded-xl text-foreground hover:bg-section text-sm font-medium transition"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 text-sm font-medium transition shadow-sm"
+                  className="px-5 py-2.5 bg-accent text-white rounded-xl hover:bg-accent-hover text-sm font-medium transition shadow-sm"
                 >
                   {editing ? "Cập nhật" : "Thêm mới"}
                 </button>

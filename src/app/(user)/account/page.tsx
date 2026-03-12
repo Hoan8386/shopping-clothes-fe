@@ -42,7 +42,9 @@ export default function AccountPage() {
     <>
       {/* Breadcrumb */}
       <div className="bg-section py-8 text-center">
-        <h2 className="text-3xl font-extrabold text-foreground mb-1">Tài khoản</h2>
+        <h2 className="text-3xl font-extrabold text-foreground mb-1">
+          Tài khoản
+        </h2>
         <p className="text-sm text-gray-400">
           <Link href="/" className="hover:text-accent">
             Trang chủ
@@ -70,7 +72,7 @@ export default function AccountPage() {
             </div>
           </div>
 
-          {user.diemTichLuy !== undefined && (
+          {user.role?.name === "KHACH_HANG" && (
             <div className="px-8 pb-8">
               <div className="bg-section p-5 flex items-center gap-3">
                 <FiAward className="text-accent shrink-0" size={24} />
@@ -79,7 +81,7 @@ export default function AccountPage() {
                     Điểm tích lũy
                   </p>
                   <p className="text-2xl font-extrabold text-foreground">
-                    {user.diemTichLuy}
+                    {user.diemTichLuy ?? 0}
                     <span className="text-sm font-normal text-gray-400 ml-1">
                       điểm
                     </span>
