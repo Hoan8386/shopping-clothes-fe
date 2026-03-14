@@ -339,42 +339,90 @@ export default function AdminReturnsPage() {
                     {selected.lyDoTraHang}
                   </span>
                 </div>
+                {selected.linkAnh && (
+                  <div className="col-span-2">
+                    <span className="text-muted block mb-1">Ảnh trả hàng:</span>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={selected.linkAnh}
+                      alt={`Ảnh trả hàng #${selected.id}`}
+                      className="rounded border border-subtle object-cover"
+                      style={{ width: 120, height: 120 }}
+                    />
+                  </div>
+                )}
               </div>
 
               <hr className="border-subtle" />
               <h3 className="text-sm font-semibold text-foreground">
                 Sản phẩm trả ({selected.chiTietTraHangs?.length || 0})
               </h3>
-              <div className="space-y-3">
-                {selected.chiTietTraHangs?.map((ct) => (
-                  <div
-                    key={ct.id}
-                    className="flex gap-3 p-3 bg-section rounded-lg border border-subtle"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground text-sm truncate">
-                        {ct.tenSanPham}
-                      </p>
-                      <p className="text-xs text-muted mt-0.5">
-                        {ct.tenMauSac} / {ct.tenKichThuoc} — SL: {ct.soLuong}
-                      </p>
-                      <p className="text-xs text-muted mt-0.5">
-                        Giá: {formatCurrency(ct.giaSanPham)} — Thành tiền:{" "}
-                        {formatCurrency(ct.thanhTien)}
-                      </p>
-                      {ct.ghiTru && (
-                        <p className="text-xs text-orange-600 mt-1">
-                          Ghi chú: {ct.ghiTru}
-                        </p>
-                      )}
-                    </div>
-                    <span
-                      className={`self-start px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${getReturnStatusColor(ct.trangThai)}`}
-                    >
-                      {ct.trangThai}
-                    </span>
-                  </div>
-                ))}
+              <div className="overflow-x-auto rounded-lg border border-subtle">
+                <table className="w-full text-sm min-w-170">
+                  <thead className="bg-section border-b border-subtle">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-muted font-medium">
+                        Sản phẩm
+                      </th>
+                      <th className="px-3 py-2 text-left text-muted font-medium">
+                        Phân loại
+                      </th>
+                      <th className="px-3 py-2 text-right text-muted font-medium">
+                        Giá gốc
+                      </th>
+                      <th className="px-3 py-2 text-right text-muted font-medium">
+                        Giá sản phẩm (giảm)
+                      </th>
+                      <th className="px-3 py-2 text-right text-muted font-medium">
+                        Số lượng
+                      </th>
+                      <th className="px-3 py-2 text-right text-muted font-medium">
+                        Thành tiền
+                      </th>
+                      <th className="px-3 py-2 text-center text-muted font-medium">
+                        Trạng thái
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-subtle">
+                    {selected.chiTietTraHangs?.map((ct) => (
+                      <tr key={ct.id} className="hover:bg-section/60">
+                        <td className="px-3 py-2">
+                          <p className="font-medium text-foreground text-sm truncate max-w-50">
+                            {ct.tenSanPham}
+                          </p>
+                          {ct.ghiTru && (
+                            <p className="text-xs text-orange-600 mt-0.5">
+                              Ghi chú: {ct.ghiTru}
+                            </p>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-muted">
+                          {ct.tenMauSac} / {ct.tenKichThuoc}
+                        </td>
+                        <td className="px-3 py-2 text-right text-muted">
+                          {formatCurrency(ct.giaSanPham)}
+                        </td>
+                        <td className="px-3 py-2 text-right font-medium text-foreground">
+                          {formatCurrency(ct.giaSanPhamGiam ?? 0)}
+                        </td>
+                        <td className="px-3 py-2 text-right text-muted">
+                          {ct.soLuong}
+                        </td>
+                        <td className="px-3 py-2 text-right font-medium text-blue-600">
+                          {formatCurrency(ct.thanhTien)}
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${getReturnStatusColor(ct.trangThai)}`}
+                          >
+                            {ct.trangThai}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
 
               {selected.trangThai === "Chờ xử lý" && (

@@ -64,6 +64,9 @@ export default function AccountPage() {
             <div className="flex-1">
               <h3 className="text-xl font-bold text-foreground">{user.name}</h3>
               <p className="text-gray-400 text-sm mt-0.5">{user.email}</p>
+              {user.sdt && (
+                <p className="text-gray-400 text-sm mt-0.5">SĐT: {user.sdt}</p>
+              )}
               {user.role && (
                 <span className="inline-flex items-center gap-1 mt-2 px-3 py-1 bg-section text-foreground text-xs font-bold uppercase tracking-wider">
                   <FiShield size={12} /> {user.role.name}

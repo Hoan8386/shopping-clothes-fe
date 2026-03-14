@@ -22,7 +22,7 @@ const menuItems = [
   { href: "/staff/products", label: "Sản phẩm", icon: FiBox },
   { href: "/staff/orders", label: "Đơn hàng", icon: FiShoppingCart },
   { href: "/staff/returns", label: "Trả hàng", icon: FiRotateCcw },
-  { href: "/staff/exchanges", label: "Đổi hàng", icon: FiRepeat },
+  // { href: "/staff/exchanges", label: "Đổi hàng", icon: FiRepeat },
   { href: "/staff/inventory", label: "Kho hàng", icon: FiPackage },
   { href: "/staff/employees", label: "Nhân viên", icon: FiUsers },
 ];

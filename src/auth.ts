@@ -34,6 +34,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             id: String(user.id),
             email: user.email,
             name: user.name,
+            sdt: user.sdt,
             role: user.role as Role,
             accessToken: access_token as string,
           };
@@ -49,12 +50,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.role = user.role as Role;
         token.accessToken = user.accessToken;
+        token.sdt = user.sdt as string | undefined;
       }
       return token;
     },
     session({ session, token }) {
       session.user.role = token.role as Role;
       session.user.accessToken = token.accessToken as string;
+      session.user.sdt = token.sdt as string | undefined;
       return session;
     },
   },

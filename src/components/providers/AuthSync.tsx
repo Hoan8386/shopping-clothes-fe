@@ -23,6 +23,7 @@ export function AuthSync() {
         id: Number(session.user.id) || 0,
         email: session.user.email ?? "",
         name: session.user.name ?? "",
+        sdt: session.user.sdt ?? null,
         role: session.user.role,
       });
       authService
@@ -32,6 +33,7 @@ export function AuthSync() {
             id: account.id,
             email: account.email,
             name: account.name,
+            sdt: account.sdt,
             role: account.role,
             diemTichLuy: account.diemTichLuy,
           });

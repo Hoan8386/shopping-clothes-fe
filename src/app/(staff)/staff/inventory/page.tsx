@@ -621,6 +621,9 @@ export default function StaffInventoryPage() {
               <thead className="bg-section border-b border-subtle">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium text-muted">
+                    ID
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-muted">
                     Tên phiếu nhập
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-muted">
@@ -646,6 +649,7 @@ export default function StaffInventoryPage() {
               <tbody className="divide-y divide-subtle">
                 {receipts.map((r) => (
                   <tr key={r.id} className="hover:bg-section transition">
+                    <td className="px-4 py-3 text-muted">{r.id}</td>
                     <td className="px-4 py-3 font-medium text-foreground">
                       {r.tenPhieuNhap}
                     </td>

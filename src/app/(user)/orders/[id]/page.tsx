@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import {
+  useEffect,
+  useState,
+  useRef,
+  useCallback,
+  useMemo,
+  type ChangeEvent,
+} from "react";
 import { useParams, useRouter } from "next/navigation";
 import { DonHang, TraHang, DoiHang, ResChiTietSanPhamDTO } from "@/types";
 import { orderService } from "@/services/order.service";
@@ -60,6 +67,10 @@ export default function OrderDetailPage() {
   // Return state
   const [returnModal, setReturnModal] = useState(false);
   const [returnReason, setReturnReason] = useState("");
+  const [returnImageFile, setReturnImageFile] = useState<File | null>(null);
+  const [returnImagePreview, setReturnImagePreview] = useState<string | null>(
+    null,
+  );
   const [returnItems, setReturnItems] = useState<
     {
       chiTietDonHangId: number;
@@ -70,6 +81,7 @@ export default function OrderDetailPage() {
   >([]);
   const [returnSubmitting, setReturnSubmitting] = useState(false);
   const [returnHistory, setReturnHistory] = useState<TraHang[]>([]);
+  const returnImageInputRef = useRef<HTMLInputElement>(null);
 
   // Exchange state
   const [exchangeModal, setExchangeModal] = useState(false);
@@ -293,7 +305,37 @@ export default function OrderDetailPage() {
 
     setReturnItems(items);
     setReturnReason("");
+    setReturnImageFile(null);
+    setReturnImagePreview(null);
     setReturnModal(true);
+  };
+
+  const handleSelectReturnImage = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Vui lòng chọn file ảnh");
+      return;
+    }
+
+    if (returnImagePreview) {
+      URL.revokeObjectURL(returnImagePreview);
+    }
+
+    setReturnImageFile(file);
+    setReturnImagePreview(URL.createObjectURL(file));
+  };
+
+  const handleClearReturnImage = () => {
+    if (returnImagePreview) {
+      URL.revokeObjectURL(returnImagePreview);
+    }
+    setReturnImagePreview(null);
+    setReturnImageFile(null);
+    if (returnImageInputRef.current) {
+      returnImageInputRef.current.value = "";
+    }
   };
 
   const toggleReturnItem = (idx: number) => {
@@ -323,16 +365,20 @@ export default function OrderDetailPage() {
     }
     setReturnSubmitting(true);
     try {
-      await traHangService.create({
-        donHangId: order.id,
-        lyDoTraHang: returnReason,
-        chiTietTraHangs: selected.map((i) => ({
-          chiTietDonHangId: i.chiTietDonHangId,
-          ghiTru: i.ghiTru || undefined,
-        })),
-      });
+      await traHangService.create(
+        {
+          donHangId: order.id,
+          lyDoTraHang: returnReason,
+          chiTietTraHangs: selected.map((i) => ({
+            chiTietDonHangId: i.chiTietDonHangId,
+            ghiTru: i.ghiTru || undefined,
+          })),
+        },
+        returnImageFile,
+      );
       toast.success("Tạo phiếu trả hàng thành công!");
       setReturnModal(false);
+      handleClearReturnImage();
       fetchOrder(false);
     } catch {
       toast.error("Không thể tạo phiếu trả hàng");
@@ -765,6 +811,20 @@ export default function OrderDetailPage() {
                     <span className="font-medium">Lý do:</span>{" "}
                     {ret.lyDoTraHang}
                   </p>
+                  {ret.linkAnh && (
+                    <div className="mb-3">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-1">
+                        Ảnh trả hàng
+                      </p>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={getImageUrl(ret.linkAnh)}
+                        alt={`Ảnh trả hàng #${ret.id}`}
+                        className="rounded border border-subtle object-cover"
+                        style={{ width: 120, height: 120 }}
+                      />
+                    </div>
+                  )}
                   <div className="space-y-2">
                     {ret.chiTietTraHangs?.map((ct) => (
                       <div
@@ -1134,6 +1194,48 @@ export default function OrderDetailPage() {
                 />
               </div>
 
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-muted mb-2 block">
+                  Ảnh trả hàng (tuỳ chọn)
+                </label>
+                <input
+                  ref={returnImageInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleSelectReturnImage}
+                  className="hidden"
+                />
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => returnImageInputRef.current?.click()}
+                    className="px-3 py-2 text-xs font-semibold rounded-lg border border-subtle hover:bg-section text-foreground"
+                  >
+                    Chọn ảnh
+                  </button>
+                  {returnImageFile && (
+                    <button
+                      type="button"
+                      onClick={handleClearReturnImage}
+                      className="px-3 py-2 text-xs font-semibold rounded-lg border border-subtle hover:bg-section text-red-500"
+                    >
+                      Xoá ảnh
+                    </button>
+                  )}
+                </div>
+                {returnImagePreview && (
+                  <div className="mt-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={returnImagePreview}
+                      alt="Preview ảnh trả hàng"
+                      className="rounded-lg border border-subtle object-cover"
+                      style={{ width: 120, height: 120 }}
+                    />
+                  </div>
+                )}
+              </div>
+
               {/* Select items to return */}
               <div>
                 <label className="text-xs font-bold uppercase tracking-wider text-muted mb-2 block">
@@ -1184,7 +1286,10 @@ export default function OrderDetailPage() {
             </div>
             <div className="px-6 py-4 border-t border-subtle flex justify-end gap-3">
               <button
-                onClick={() => setReturnModal(false)}
+                onClick={() => {
+                  setReturnModal(false);
+                  handleClearReturnImage();
+                }}
                 className="px-4 py-2 text-sm font-medium text-muted hover:text-foreground"
               >
                 Hủy

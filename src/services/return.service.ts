@@ -7,8 +7,23 @@ interface PaginationResult {
 }
 
 export const traHangService = {
-  create: async (data: ReqTraHangDTO) => {
-    const res = await apiClient.post<RestResponse<TraHang>>("/tra-hang", data);
+  create: async (data: ReqTraHangDTO, file?: File | null) => {
+    const formData = new FormData();
+    formData.append(
+      "data",
+      new Blob([JSON.stringify(data)], { type: "application/json" }),
+    );
+    if (file) {
+      formData.append("file", file);
+    }
+
+    const res = await apiClient.post<RestResponse<TraHang>>(
+      "/tra-hang",
+      formData,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+      }
+    );
     return res.data.data;
   },
 

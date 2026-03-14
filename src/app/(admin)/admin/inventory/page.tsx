@@ -609,6 +609,9 @@ export default function AdminInventoryPage() {
               <thead>
                 <tr className="bg-section border-b border-subtle">
                   <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
+                    ID
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
                     Tên phiếu nhập
                   </th>
                   <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
@@ -634,6 +637,7 @@ export default function AdminInventoryPage() {
               <tbody className="divide-y divide-subtle">
                 {receipts.map((r) => (
                   <tr key={r.id} className="hover:bg-section transition">
+                    <td className="px-5 py-3.5 text-muted">{r.id}</td>
                     <td className="px-5 py-3.5 font-medium text-foreground">
                       {r.tenPhieuNhap}
                     </td>

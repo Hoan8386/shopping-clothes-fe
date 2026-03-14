@@ -28,6 +28,7 @@ export interface ResLoginUser {
   id: number;
   email: string;
   name: string;
+  sdt?: string | null;
   role: Role;
   diemTichLuy?: number | null;
 }
@@ -413,6 +414,7 @@ export interface ChiTietTraHang {
   tenMauSac: string;
   tenKichThuoc: string;
   giaSanPham: number;
+  giaSanPhamGiam?: number;
   soLuong: number;
   thanhTien: number;
   ghiTru: string;
@@ -423,6 +425,7 @@ export interface TraHang {
   id: number;
   donHangId: number;
   lyDoTraHang: string;
+  linkAnh?: string;
   trangThai: string;
   tongTien: number;
   ngayTao: string;
