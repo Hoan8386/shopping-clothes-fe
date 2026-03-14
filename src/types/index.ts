@@ -70,9 +70,11 @@ export interface ResSanPhamDTO {
 // ============ PRODUCT VARIANT ============
 export interface ResChiTietSanPhamDTO {
   id: number;
+  sanPhamId: number;
   maPhieuNhap: number;
   tenCuaHang: string;
   soLuong: number;
+  giaBan: number;
   trangThai: number;
   moTa: string;
   ghiTru: string;
@@ -110,6 +112,7 @@ export interface ReqThemGioHangDTO {
 export interface ChiTietDonHang {
   id?: number;
   chiTietSanPhamId?: number;
+  sanPhamId?: number;
   tenSanPham?: string;
   hinhAnhChinh?: string;
   tenMauSac?: string;
@@ -182,12 +185,45 @@ export interface KhachHang {
 }
 
 // ============ EMPLOYEE ============
+export interface NhanVienCuaHangInfo {
+  id: number;
+  tenCuaHang: string;
+  diaChi: string;
+  soDienThoai: string;
+  email: string;
+  trangThai: number;
+}
+
+export interface NhanVienRoleInfo {
+  id: number;
+  name: string;
+  description: string;
+  active: boolean;
+}
+
 export interface NhanVien {
   id: number;
   tenNhanVien: string;
   email: string;
   soDienThoai: string;
+  ngayBatDauLam?: string;
+  ngayKetThucLam?: string;
   trangThai: number;
+  cuaHang?: NhanVienCuaHangInfo;
+  role?: NhanVienRoleInfo;
+}
+
+export interface ReqNhanVienDTO {
+  id?: number;
+  cuaHang?: { id: number };
+  tenNhanVien: string;
+  email: string;
+  soDienThoai: string;
+  matKhau?: string;
+  ngayBatDauLam?: string;
+  ngayKetThucLam?: string;
+  trangThai: number;
+  role?: { id: number };
 }
 
 // ============ SIMPLE ENTITIES ============
@@ -365,4 +401,81 @@ export interface ResApDungKhuyenMaiDTO {
 export interface ResKhuyenMaiHopLeDTO {
   khuyenMaiHoaDon: KhuyenMaiTheoHoaDon[];
   khuyenMaiDiem: KhuyenMaiTheoDiem[];
+}
+
+// ============ TRA HANG (RETURN) ============
+export interface ChiTietTraHang {
+  id: number;
+  chiTietDonHangId: number;
+  tenSanPham: string;
+  hinhAnhChinh: string;
+  tenMauSac: string;
+  tenKichThuoc: string;
+  giaSanPham: number;
+  soLuong: number;
+  thanhTien: number;
+  ghiTru: string;
+  trangThai: string;
+}
+
+export interface TraHang {
+  id: number;
+  donHangId: number;
+  lyDoTraHang: string;
+  trangThai: string;
+  tongTien: number;
+  ngayTao: string;
+  ngayCapNhat: string;
+  chiTietTraHangs: ChiTietTraHang[];
+}
+
+export interface ReqTraHangDTO {
+  donHangId: number;
+  lyDoTraHang: string;
+  chiTietTraHangs: {
+    chiTietDonHangId: number;
+    ghiTru?: string;
+  }[];
+}
+
+// ============ DOI HANG (EXCHANGE) ============
+export interface ChiTietDoiHang {
+  id: number;
+  ghiTru: string;
+  trangThai: string;
+  chiTietDonHangId: number;
+  tenSanPhamTra: string;
+  hinhAnhSanPhamTra: string;
+  mauSacTra: string;
+  kichThuocTra: string;
+  giaSanPhamTra: number;
+  soLuongTra: number;
+  chiTietSanPhamId: number;
+  tenSanPhamDoi: string;
+  hinhAnhSanPhamDoi: string;
+  mauSacDoi: string;
+  kichThuocDoi: string;
+  giaSanPhamDoi: number;
+  chenhLechGia: number;
+}
+
+export interface DoiHang {
+  id: number;
+  donHangId: number;
+  ghiTru: string;
+  trangThai: string;
+  tongTien: number;
+  ngayTao: string;
+  ngayCapNhat: string;
+  chiTietDoiHangs: ChiTietDoiHang[];
+}
+
+export interface ReqDoiHangDTO {
+  donHangId: number;
+  ghiTru?: string;
+  chiTietDoiHangs: {
+    chiTietDonHangId: number;
+    chiTietSanPhamId: number;
+    ghiTru?: string;
+  }[];
 }

@@ -9,6 +9,9 @@ import {
   FiBox,
   FiShoppingCart,
   FiPackage,
+  FiRotateCcw,
+  FiRepeat,
+  FiUsers,
   FiArrowLeft,
   FiMenu,
   FiX,
@@ -18,7 +21,10 @@ const menuItems = [
   { href: "/staff", label: "Tổng quan", icon: FiHome },
   { href: "/staff/products", label: "Sản phẩm", icon: FiBox },
   { href: "/staff/orders", label: "Đơn hàng", icon: FiShoppingCart },
+  { href: "/staff/returns", label: "Trả hàng", icon: FiRotateCcw },
+  { href: "/staff/exchanges", label: "Đổi hàng", icon: FiRepeat },
   { href: "/staff/inventory", label: "Kho hàng", icon: FiPackage },
+  { href: "/staff/employees", label: "Nhân viên", icon: FiUsers },
 ];
 
 const pageTitles: Record<string, { title: string; description: string }> = {
@@ -35,9 +41,21 @@ const pageTitles: Record<string, { title: string; description: string }> = {
     description:
       "Xử lý đơn online, đơn tại quầy và cập nhật tiến độ giao hàng.",
   },
+  "/staff/returns": {
+    title: "Trả hàng",
+    description: "Xử lý phiếu trả hàng và phê duyệt yêu cầu từ khách hàng.",
+  },
+  "/staff/exchanges": {
+    title: "Đổi hàng",
+    description: "Xử lý phiếu đổi hàng và phê duyệt yêu cầu từ khách hàng.",
+  },
   "/staff/inventory": {
     title: "Kho hàng",
     description: "Quản lý phiếu nhập, kiểm kê và theo dõi trạng thái hàng hóa.",
+  },
+  "/staff/employees": {
+    title: "Nhân viên",
+    description: "Xem thông tin nhân viên cùng cửa hàng.",
   },
 };
 
