@@ -255,7 +255,9 @@ export default function StaffInventoryPage() {
     setAddSearchResults([]);
     setAddProductSearch("");
     try {
-      const vars = await productVariantService.getByProduct(product.id);
+      const vars = await productVariantService.getByProductCurrentStore(
+        product.id,
+      );
       setAddVariants(Array.isArray(vars) ? vars : []);
     } catch {
       toast.error("Không thể tải biến thể sản phẩm");
@@ -383,7 +385,9 @@ export default function StaffInventoryPage() {
     setSearchResults([]);
     setProductSearch("");
     try {
-      const vars = await productVariantService.getByProduct(product.id);
+      const vars = await productVariantService.getByProductCurrentStore(
+        product.id,
+      );
       setVariants(Array.isArray(vars) ? vars : []);
     } catch {
       toast.error("Không thể tải biến thể sản phẩm");

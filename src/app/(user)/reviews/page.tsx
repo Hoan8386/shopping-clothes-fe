@@ -8,7 +8,15 @@ import { useAuthStore } from "@/store/auth.store";
 import { formatDate, getImageUrl } from "@/lib/utils";
 import Loading from "@/components/ui/Loading";
 import toast from "react-hot-toast";
-import { FiStar, FiTrash2, FiEdit2, FiX, FiCamera } from "react-icons/fi";
+import {
+  FiStar,
+  FiTrash2,
+  FiEdit2,
+  FiX,
+  FiCamera,
+  FiVideo,
+  FiPlay,
+} from "react-icons/fi";
 import Link from "next/link";
 
 export default function MyReviewsPage() {
@@ -16,6 +24,12 @@ export default function MyReviewsPage() {
   const [reviews, setReviews] = useState<ResDanhGiaSanPhamDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+
+  // Media Preview State (Phóng to ảnh/video)
+  const [previewMedia, setPreviewMedia] = useState<{
+    url: string;
+    type: "image" | "video";
+  } | null>(null);
 
   // Edit modal state
   const [editModal, setEditModal] = useState(false);
@@ -26,8 +40,11 @@ export default function MyReviewsPage() {
   const [editGhiChu, setEditGhiChu] = useState("");
   const [editFile, setEditFile] = useState<File | null>(null);
   const [editPreview, setEditPreview] = useState<string | null>(null);
+  const [editVideoFile, setEditVideoFile] = useState<File | null>(null);
+  const [editVideoPreview, setEditVideoPreview] = useState<string | null>(null);
   const [editSubmitting, setEditSubmitting] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -65,7 +82,11 @@ export default function MyReviewsPage() {
     setEditSoSao(review.soSao);
     setEditGhiChu(review.ghiTru || "");
     setEditFile(null);
+    setEditVideoFile(null);
     setEditPreview(review.hinhAnh ? getImageUrl(review.hinhAnh) : null);
+    setEditVideoPreview(
+      review.linkVideo ? getImageUrl(review.linkVideo) : null,
+    );
     setEditModal(true);
   };
 
@@ -74,6 +95,14 @@ export default function MyReviewsPage() {
     if (file) {
       setEditFile(file);
       setEditPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleEditVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setEditVideoFile(file);
+      setEditVideoPreview(URL.createObjectURL(file));
     }
   };
 
@@ -89,6 +118,7 @@ export default function MyReviewsPage() {
       formData.append("soSao", editSoSao.toString());
       if (editGhiChu) formData.append("ghiTru", editGhiChu);
       if (editFile) formData.append("file", editFile);
+      if (editVideoFile) formData.append("videoFile", editVideoFile);
       await danhGiaService.update(editReview.id, formData);
       toast.success("Cập nhật đánh giá thành công!");
       setEditModal(false);
@@ -153,17 +183,54 @@ export default function MyReviewsPage() {
                         {review.ghiTru}
                       </p>
                     )}
-                    {review.hinhAnh && (
-                      <div className="mt-3">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={getImageUrl(review.hinhAnh)}
-                          alt="Review"
-                          className="object-cover border border-subtle rounded-lg"
-                          style={{ width: 80, height: 80 }}
-                        />
-                      </div>
-                    )}
+
+                    <div className="flex flex-wrap gap-3 mt-3">
+                      {/* Image Thumbnail */}
+                      {review.hinhAnh && (
+                        <div
+                          className="cursor-zoom-in overflow-hidden rounded-lg border border-subtle group relative bg-gray-100"
+                          onClick={() =>
+                            setPreviewMedia({
+                              url: getImageUrl(review.hinhAnh!),
+                              type: "image",
+                            })
+                          }
+                        >
+                          <img
+                            src={getImageUrl(review.hinhAnh)}
+                            alt="Review"
+                            className="object-cover transition duration-300 group-hover:scale-110"
+                            style={{ width: 80, height: 80 }}
+                          />
+                        </div>
+                      )}
+
+                      {/* Video Thumbnail - Small size & Hover effect */}
+                      {review.linkVideo && (
+                        <div
+                          className="cursor-zoom-in overflow-hidden rounded-lg border border-subtle group relative bg-black"
+                          onClick={() =>
+                            setPreviewMedia({
+                              url: getImageUrl(review.linkVideo!),
+                              type: "video",
+                            })
+                          }
+                        >
+                          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/20 group-hover:bg-black/0 transition">
+                            <FiPlay
+                              className="text-white drop-shadow-md"
+                              size={20}
+                            />
+                          </div>
+                          <video
+                            src={getImageUrl(review.linkVideo)}
+                            className="object-cover transition duration-300 group-hover:scale-110 opacity-80 group-hover:opacity-100"
+                            style={{ width: 80, height: 80 }}
+                          />
+                        </div>
+                      )}
+                    </div>
+
                     <p className="text-xs text-gray-300 mt-3 uppercase tracking-wider">
                       {formatDate(review.ngayTao)}
                       {review.ngayCapNhat && (
@@ -196,10 +263,41 @@ export default function MyReviewsPage() {
         )}
       </div>
 
+      {/* Media Lightbox (Zoom View) */}
+      {previewMedia && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 p-4 transition-all animate-in fade-in duration-200"
+          onClick={() => setPreviewMedia(null)}
+        >
+          <button className="absolute top-6 right-6 text-white/70 hover:text-white transition-colors">
+            <FiX size={32} />
+          </button>
+          <div
+            className="relative max-w-5xl w-full h-full flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {previewMedia.type === "image" ? (
+              <img
+                src={previewMedia.url}
+                alt="Preview"
+                className="max-w-full max-h-[90vh] object-contain shadow-2xl rounded"
+              />
+            ) : (
+              <video
+                src={previewMedia.url}
+                controls
+                autoPlay
+                className="max-w-full max-h-[90vh] shadow-2xl rounded"
+              />
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Edit Review Modal */}
       {editModal && editReview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b">
               <h3 className="font-bold text-foreground">Sửa đánh giá</h3>
               <button
@@ -209,7 +307,7 @@ export default function MyReviewsPage() {
                 <FiX size={20} />
               </button>
             </div>
-            <div className="px-6 py-5 space-y-4">
+            <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
               <p className="text-sm font-medium text-foreground">
                 {editReview.tenSanPham}
               </p>
@@ -260,7 +358,7 @@ export default function MyReviewsPage() {
                   Ảnh đánh giá (tùy chọn)
                 </label>
                 <input
-                  ref={fileInputRef}
+                  ref={imageInputRef}
                   type="file"
                   accept="image/*"
                   className="hidden"
@@ -268,7 +366,6 @@ export default function MyReviewsPage() {
                 />
                 {editPreview ? (
                   <div className="relative inline-block">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={editPreview}
                       alt="Preview"
@@ -289,15 +386,57 @@ export default function MyReviewsPage() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => imageInputRef.current?.click()}
                     className="flex items-center gap-2 px-4 py-2 border border-dashed border-gray-300 rounded text-sm text-gray-500 hover:border-accent hover:text-accent transition"
                   >
                     <FiCamera size={16} /> Chọn ảnh
                   </button>
                 )}
               </div>
+
+              {/* Video Upload */}
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2 block">
+                  Video đánh giá (tùy chọn)
+                </label>
+                <input
+                  ref={videoInputRef}
+                  type="file"
+                  accept="video/*"
+                  className="hidden"
+                  onChange={handleEditVideoChange}
+                />
+                {editVideoPreview ? (
+                  <div className="relative inline-block">
+                    <video
+                      src={editVideoPreview}
+                      controls
+                      className="rounded-lg border border-subtle"
+                      style={{ width: 220, maxHeight: 140 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditVideoFile(null);
+                        setEditVideoPreview(null);
+                      }}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5"
+                    >
+                      <FiX size={12} />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => videoInputRef.current?.click()}
+                    className="flex items-center gap-2 px-4 py-2 border border-dashed border-gray-300 rounded text-sm text-gray-500 hover:border-accent hover:text-accent transition"
+                  >
+                    <FiVideo size={16} /> Chọn video
+                  </button>
+                )}
+              </div>
             </div>
-            <div className="px-6 py-4 border-t flex justify-end gap-3">
+            <div className="px-6 py-4 border-t flex justify-end gap-3 bg-gray-50">
               <button
                 onClick={() => setEditModal(false)}
                 className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800"

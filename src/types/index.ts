@@ -322,6 +322,7 @@ export interface ResDanhGiaSanPhamDTO {
   soSao: number;
   ghiTru: string;
   hinhAnh: string;
+  linkVideo?: string | null;
   ngayTao: string;
   ngayCapNhat: string;
 }

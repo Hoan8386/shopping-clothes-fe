@@ -11,6 +11,7 @@ import {
 import {
   productService,
   productVariantService,
+  variantImageService,
 } from "@/services/product.service";
 import {
   mauSacService,
@@ -39,6 +40,11 @@ type StoreStockRow = {
   quantity: number;
   visibleCount: number;
   hiddenCount: number;
+};
+
+type ExistingImageItem = {
+  id: number | null;
+  url: string;
 };
 
 export default function AdminVariantsPage() {
@@ -70,7 +76,7 @@ export default function AdminVariantsPage() {
   });
   const [files, setFiles] = useState<FileList | null>(null);
   const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]);
-  const [existingImages, setExistingImages] = useState<string[]>([]);
+  const [existingImages, setExistingImages] = useState<ExistingImageItem[]>([]);
   const [showStockModal, setShowStockModal] = useState(false);
   const [stockRows, setStockRows] = useState<StoreStockRow[]>([]);
   const [stockModalTitle, setStockModalTitle] = useState("");
@@ -332,7 +338,9 @@ export default function AdminVariantsPage() {
 
   const openEditModal = async (variant: ResChiTietSanPhamDTO) => {
     setEditing(variant);
-    setExistingImages(extractImageUrls(variant).map((u) => getImageUrl(u)));
+    setExistingImages(
+      extractImageUrls(variant).map((u) => ({ id: null, url: getImageUrl(u) })),
+    );
     setNewImagePreviews([]);
 
     const findProductId = () =>
@@ -399,8 +407,21 @@ export default function AdminVariantsPage() {
             : []
       ).map((u) => getImageUrl(u));
 
-      if (detailImages.length > 0) {
-        setExistingImages(detailImages);
+      const imageRecords = await variantImageService.getByChiTietSanPham(
+        variant.id,
+      );
+
+      if (imageRecords.length > 0) {
+        setExistingImages(
+          imageRecords
+            .filter((img) => !!img.tenHinhAnh)
+            .map((img) => ({
+              id: img.id,
+              url: getImageUrl(img.tenHinhAnh),
+            })),
+        );
+      } else if (detailImages.length > 0) {
+        setExistingImages(detailImages.map((url) => ({ id: null, url })));
       }
 
       setForm(
@@ -422,6 +443,23 @@ export default function AdminVariantsPage() {
 
     setFiles(null);
     setShowModal(true);
+  };
+
+  const handleRemoveExistingImage = async (image: ExistingImageItem) => {
+    if (!editing || image.id == null) {
+      toast.error("Không thể xóa ảnh này");
+      return;
+    }
+
+    if (!confirm("Bạn có chắc muốn xóa ảnh này?")) return;
+
+    try {
+      await variantImageService.delete(image.id);
+      setExistingImages((prev) => prev.filter((img) => img.id !== image.id));
+      toast.success("Đã xóa ảnh");
+    } catch {
+      toast.error("Xóa ảnh thất bại");
+    }
   };
 
   const handleFilesChange = (nextFiles: FileList | null) => {
@@ -950,7 +988,7 @@ export default function AdminVariantsPage() {
                       className="w-full text-sm border border-subtle rounded-xl px-3 py-2 bg-background file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-accent/10 file:text-accent hover:file:bg-accent/20 transition"
                     />
                     <div className="mt-2 space-y-2">
-                      {newImagePreviews.length > 0 ? (
+                      {newImagePreviews.length > 0 && (
                         <>
                           <p className="text-xs text-muted">
                             Ảnh mới (xem trước)
@@ -967,22 +1005,40 @@ export default function AdminVariantsPage() {
                             ))}
                           </div>
                         </>
-                      ) : existingImages.length > 0 ? (
+                      )}
+
+                      {existingImages.length > 0 && (
                         <>
                           <p className="text-xs text-muted">Ảnh hiện tại</p>
                           <div className="grid grid-cols-4 gap-2">
-                            {existingImages.map((url, idx) => (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                key={`${url}-${idx}`}
-                                src={url}
-                                alt={`existing-${idx + 1}`}
-                                className="w-full h-14 rounded-lg object-cover border border-subtle"
-                              />
+                            {existingImages.map((img, idx) => (
+                              <div
+                                key={`${img.url}-${idx}`}
+                                className="relative"
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={img.url}
+                                  alt={`existing-${idx + 1}`}
+                                  className="w-full h-14 rounded-lg object-cover border border-subtle"
+                                />
+                                {editing && img.id != null && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleRemoveExistingImage(img)
+                                    }
+                                    className="absolute -top-2 -right-2 rounded-full bg-red-500 text-white p-0.5 hover:bg-red-600 transition"
+                                    title="Xóa ảnh"
+                                  >
+                                    <FiX size={12} />
+                                  </button>
+                                )}
+                              </div>
                             ))}
                           </div>
                         </>
-                      ) : null}
+                      )}
                     </div>
                   </div>
                 </div>

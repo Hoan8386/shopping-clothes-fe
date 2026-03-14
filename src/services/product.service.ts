@@ -2,6 +2,7 @@ import apiClient from "@/lib/api";
 import {
   ResSanPhamDTO,
   ResChiTietSanPhamDTO,
+  HinhAnh,
   RestResponse,
   ResultPaginationDTO,
 } from "@/types";
@@ -17,6 +18,14 @@ export interface ProductSearchParams {
   page?: number;
   size?: number;
   sort?: string;
+}
+
+export interface ProductVariantSearchParams {
+  sanPhamId?: number;
+  mauSacId?: number;
+  kichThuocId?: number;
+  maCuaHang?: number;
+  trangThai?: number;
 }
 
 export const productService = {
@@ -58,11 +67,31 @@ export const productService = {
 };
 
 export const productVariantService = {
+  getAll: async (params?: ProductVariantSearchParams) => {
+    const res = await apiClient.get<RestResponse<ResChiTietSanPhamDTO[]>>(
+      "/chi-tiet-san-pham",
+      { params }
+    );
+    return res.data.data ?? [];
+  },
+
   getByProduct: async (sanPhamId: number) => {
     const res = await apiClient.get<RestResponse<ResChiTietSanPhamDTO[]>>(
       `/chi-tiet-san-pham/san-pham/${sanPhamId}`
     );
     return res.data.data;
+  },
+
+  getByCurrentStore: async () => {
+    const res = await apiClient.get<RestResponse<ResChiTietSanPhamDTO[]>>(
+      "/chi-tiet-san-pham/san-pham-tai-cua-hang"
+    );
+    return res.data.data ?? [];
+  },
+
+  getByProductCurrentStore: async (sanPhamId: number) => {
+    const variants = await productVariantService.getByCurrentStore();
+    return variants.filter((item) => item.sanPhamId === sanPhamId);
   },
 
   getById: async (id: number) => {
@@ -92,5 +121,18 @@ export const productVariantService = {
 
   delete: async (id: number) => {
     await apiClient.delete(`/chi-tiet-san-pham/${id}`);
+  },
+};
+
+export const variantImageService = {
+  getByChiTietSanPham: async (chiTietSanPhamId: number) => {
+    const res = await apiClient.get<RestResponse<HinhAnh[]>>(
+      `/hinh-anh/chi-tiet-san-pham/${chiTietSanPhamId}`,
+    );
+    return res.data.data ?? [];
+  },
+
+  delete: async (id: number) => {
+    await apiClient.delete(`/hinh-anh/${id}`);
   },
 };

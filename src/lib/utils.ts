@@ -1,11 +1,31 @@
 const STORAGE_URL =
   process.env.NEXT_PUBLIC_STORAGE_URL || "http://localhost:8080/storage";
+const CLOUDINARY_CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+const CLOUDINARY_BASE = CLOUDINARY_CLOUD_NAME
+  ? `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload`
+  : "";
+
+function isAbsoluteUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value);
+}
 
 export function getImageUrl(fileName: string | undefined | null): string {
   if (!fileName) return "/images/placeholder.png";
-  if (fileName.startsWith("http")) return fileName;
+  const raw = fileName.trim();
+  if (!raw) return "/images/placeholder.png";
+  if (isAbsoluteUrl(raw) || raw.startsWith("data:")) return raw;
+
   // Strip leading /storage/ prefix that the backend may already include
-  const clean = fileName.replace(/^\/storage\//, "");
+  const clean = raw.replace(/^\/storage\//, "").replace(/^\/+/, "");
+
+  // Support Cloudinary public_id / folder path values stored in DB.
+  if (CLOUDINARY_BASE) {
+    if (clean.includes("/")) {
+      return `${CLOUDINARY_BASE}/${clean}`;
+    }
+    return `${CLOUDINARY_BASE}/products/${clean}`;
+  }
+
   return `${STORAGE_URL}/${clean}`;
 }
 

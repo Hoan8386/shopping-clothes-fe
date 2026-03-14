@@ -193,7 +193,9 @@ export default function StaffOrdersPage() {
     setSearchResults([]);
     setProductSearch("");
     try {
-      const vars = await productVariantService.getByProduct(product.id);
+      const vars = await productVariantService.getByProductCurrentStore(
+        product.id,
+      );
       setVariants(Array.isArray(vars) ? vars : []);
     } catch {
       toast.error("Không thể tải biến thể sản phẩm");

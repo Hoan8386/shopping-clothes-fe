@@ -6,6 +6,8 @@ import Link from "next/link";
 import { authService } from "@/services/auth.service";
 import toast from "react-hot-toast";
 
+const VIETNAM_PHONE_REGEX = /^(0\d{9}|\+84\d{9})$/;
+
 export default function RegisterPage() {
   const [form, setForm] = useState({
     tenKhachHang: "",
@@ -28,19 +30,37 @@ export default function RegisterPage() {
       return;
     }
 
+    const phone = form.sdt.trim();
+    if (!VIETNAM_PHONE_REGEX.test(phone)) {
+      toast.error(
+        "Số điện thoại không hợp lệ. Dùng 0xxxxxxxxx hoặc +84xxxxxxxxx",
+      );
+      return;
+    }
+
     setLoading(true);
     try {
       await authService.register({
         tenKhachHang: form.tenKhachHang,
         email: form.email,
-        sdt: form.sdt,
+        sdt: phone,
         password: form.password,
       });
       toast.success("Đăng ký thành công! Vui lòng đăng nhập.");
       router.push("/login");
-    } catch (error: any) {
-      const msg = error.response?.data?.message || "Đăng ký thất bại";
-      toast.error(typeof msg === "string" ? msg : msg[0]);
+    } catch (error: unknown) {
+      const err = error as {
+        response?: { data?: { message?: string | string[]; error?: string } };
+        message?: string;
+      };
+
+      const serverMessage = err.response?.data?.message;
+      const fallbackError = err.response?.data?.error;
+      const msg = Array.isArray(serverMessage)
+        ? serverMessage[0]
+        : serverMessage || fallbackError || err.message || "Đăng ký thất bại";
+
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -50,7 +70,9 @@ export default function RegisterPage() {
     <>
       {/* Breadcrumb */}
       <div className="bg-section py-8 text-center">
-        <h2 className="text-3xl font-extrabold text-foreground mb-1">Đăng ký</h2>
+        <h2 className="text-3xl font-extrabold text-foreground mb-1">
+          Đăng ký
+        </h2>
         <p className="text-sm text-gray-400">
           <Link href="/" className="hover:text-accent">
             Trang chủ

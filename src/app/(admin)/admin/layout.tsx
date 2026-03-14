@@ -36,10 +36,15 @@ const menuGroups = [
     label: "Quản lý bán hàng",
     items: [
       { href: "/admin/products", label: "Sản phẩm", icon: FiBox },
+      {
+        href: "/admin/store-products",
+        label: "SP theo cửa hàng",
+        icon: FiMapPin,
+      },
       { href: "/admin/variants", label: "Biến thể SP", icon: FiPackage },
       { href: "/admin/orders", label: "Đơn hàng", icon: FiShoppingCart },
       { href: "/admin/returns", label: "Trả hàng", icon: FiRotateCcw },
-      { href: "/admin/exchanges", label: "Đổi hàng", icon: FiRepeat },
+      // { href: "/admin/exchanges", label: "Đổi hàng", icon: FiRepeat },
       { href: "/admin/inventory", label: "Phiếu nhập", icon: FiClipboard },
       { href: "/admin/employees", label: "Nhân viên", icon: FiUsers },
     ],
@@ -207,6 +212,7 @@ export default function AdminLayout({
   const pageDescriptions: Record<string, string> = {
     Dashboard: "Theo dõi nhanh toàn bộ hoạt động vận hành của cửa hàng.",
     "Sản phẩm": "Quản lý danh mục sản phẩm và thông tin bán hàng.",
+    "SP theo cửa hàng": "Theo dõi tồn kho sản phẩm tại từng cửa hàng.",
     "Biến thể SP": "Theo dõi biến thể theo màu sắc, kích thước và tồn kho.",
     "Đơn hàng": "Xử lý đơn hàng và theo dõi trạng thái giao nhận.",
     "Phiếu nhập": "Quản lý nhập hàng và kiểm kê kho.",

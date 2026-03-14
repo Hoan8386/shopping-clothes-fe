@@ -25,6 +25,7 @@ import {
   FiStar,
   FiX,
   FiCamera,
+  FiVideo,
   FiRotateCcw,
   FiRepeat,
 } from "react-icons/fi";
@@ -46,10 +47,15 @@ export default function OrderDetailPage() {
   const [reviewGhiChu, setReviewGhiChu] = useState("");
   const [reviewFile, setReviewFile] = useState<File | null>(null);
   const [reviewPreview, setReviewPreview] = useState<string | null>(null);
+  const [reviewVideoFile, setReviewVideoFile] = useState<File | null>(null);
+  const [reviewVideoPreview, setReviewVideoPreview] = useState<string | null>(
+    null,
+  );
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewedItems, setReviewedItems] = useState<Set<number>>(new Set());
   const [confirmingReceive, setConfirmingReceive] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
 
   // Return state
   const [returnModal, setReturnModal] = useState(false);
@@ -222,6 +228,8 @@ export default function OrderDetailPage() {
     setReviewGhiChu("");
     setReviewFile(null);
     setReviewPreview(null);
+    setReviewVideoFile(null);
+    setReviewVideoPreview(null);
     setReviewModal(true);
   };
 
@@ -230,6 +238,14 @@ export default function OrderDetailPage() {
     if (file) {
       setReviewFile(file);
       setReviewPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleReviewVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setReviewVideoFile(file);
+      setReviewVideoPreview(URL.createObjectURL(file));
     }
   };
 
@@ -246,6 +262,7 @@ export default function OrderDetailPage() {
       formData.append("soSao", reviewSoSao.toString());
       if (reviewGhiChu) formData.append("ghiTru", reviewGhiChu);
       if (reviewFile) formData.append("file", reviewFile);
+      if (reviewVideoFile) formData.append("videoFile", reviewVideoFile);
       await danhGiaService.create(formData);
       toast.success("Đánh giá thành công!");
       setReviewModal(false);
@@ -585,7 +602,8 @@ export default function OrderDetailPage() {
                               <FiStar size={12} /> Đánh giá sản phẩm
                             </button>
                           )}
-                          {item.chiTietSanPhamId && item.sanPhamId && (
+                          {/* Tích năng đổi hàng */}
+                          {/* {item.chiTietSanPhamId && item.sanPhamId && (
                             <button
                               onClick={() =>
                                 openExchangeModal({
@@ -604,7 +622,7 @@ export default function OrderDetailPage() {
                             >
                               <FiRepeat size={12} /> Đổi hàng
                             </button>
-                          )}
+                          )} */}
                         </div>
                       )}
                   </div>
@@ -991,7 +1009,7 @@ export default function OrderDetailPage() {
                   Ảnh đánh giá (tuỳ chọn)
                 </label>
                 <input
-                  ref={fileInputRef}
+                  ref={imageInputRef}
                   type="file"
                   accept="image/*"
                   className="hidden"
@@ -1020,10 +1038,51 @@ export default function OrderDetailPage() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => imageInputRef.current?.click()}
                     className="flex items-center gap-2 px-4 py-2 border border-dashed border-subtle rounded-lg text-sm text-muted hover:border-accent hover:text-accent transition"
                   >
                     <FiCamera size={16} /> Chọn ảnh
+                  </button>
+                )}
+              </div>
+
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-muted mb-2 block">
+                  Video đánh giá (tuỳ chọn)
+                </label>
+                <input
+                  ref={videoInputRef}
+                  type="file"
+                  accept="video/*"
+                  className="hidden"
+                  onChange={handleReviewVideoChange}
+                />
+                {reviewVideoPreview ? (
+                  <div className="relative inline-block">
+                    <video
+                      src={reviewVideoPreview}
+                      controls
+                      className="rounded-lg border border-subtle"
+                      style={{ width: 220, maxHeight: 140 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReviewVideoFile(null);
+                        setReviewVideoPreview(null);
+                      }}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5"
+                    >
+                      <FiX size={12} />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => videoInputRef.current?.click()}
+                    className="flex items-center gap-2 px-4 py-2 border border-dashed border-subtle rounded-lg text-sm text-muted hover:border-accent hover:text-accent transition"
+                  >
+                    <FiVideo size={16} /> Chọn video
                   </button>
                 )}
               </div>

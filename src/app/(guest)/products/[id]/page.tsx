@@ -574,6 +574,13 @@ export default function ProductDetailPage() {
                             className="mt-3 w-20 h-20 rounded-lg object-cover border border-subtle"
                           />
                         )}
+                        {rv.linkVideo && (
+                          <video
+                            src={getImageUrl(rv.linkVideo)}
+                            controls
+                            className="mt-3 w-full max-w-sm rounded-lg border border-subtle"
+                          />
+                        )}
                       </div>
                     ))}
                   </div>

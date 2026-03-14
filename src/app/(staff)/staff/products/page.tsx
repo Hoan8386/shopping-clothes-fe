@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   ResSanPhamDTO,
   ResChiTietSanPhamDTO,
@@ -41,6 +41,9 @@ export default function StaffProductsPage() {
   );
   const [variants, setVariants] = useState<ResChiTietSanPhamDTO[]>([]);
   const [variantsLoading, setVariantsLoading] = useState(false);
+  const [storeVariants, setStoreVariants] = useState<ResChiTietSanPhamDTO[]>(
+    [],
+  );
 
   useEffect(() => {
     Promise.all([
@@ -51,6 +54,16 @@ export default function StaffProductsPage() {
       setCategories(Array.isArray(cats) ? cats : []);
       setBrands(Array.isArray(brs) ? brs : []);
     });
+  }, []);
+
+  useEffect(() => {
+    productVariantService
+      .getByCurrentStore()
+      .then((data) => setStoreVariants(Array.isArray(data) ? data : []))
+      .catch(() => {
+        toast.error("Không thể tải tồn kho theo cửa hàng");
+        setStoreVariants([]);
+      });
   }, []);
 
   const fetchProducts = useCallback(async () => {
@@ -79,7 +92,9 @@ export default function StaffProductsPage() {
     setVariants([]);
     setVariantsLoading(true);
     try {
-      const data = await productVariantService.getByProduct(product.id);
+      const data = await productVariantService.getByProductCurrentStore(
+        product.id,
+      );
       setVariants(Array.isArray(data) ? data : []);
     } catch {
       toast.error("Không thể tải biến thể sản phẩm");
@@ -110,6 +125,14 @@ export default function StaffProductsPage() {
   }, {});
 
   const totalStock = variants.reduce((sum, v) => sum + (v.soLuong || 0), 0);
+
+  const stockByProduct = useMemo(() => {
+    return storeVariants.reduce<Record<number, number>>((acc, item) => {
+      const current = acc[item.sanPhamId] ?? 0;
+      acc[item.sanPhamId] = current + (item.soLuong ?? 0);
+      return acc;
+    }, {});
+  }, [storeVariants]);
 
   return (
     <div className="relative space-y-5">
@@ -271,7 +294,9 @@ export default function StaffProductsPage() {
                       <td className="px-4 py-3 text-right text-red-500">
                         {p.giaGiam > 0 ? formatCurrency(p.giaGiam) : "—"}
                       </td>
-                      <td className="px-4 py-3 text-center">{p.soLuong}</td>
+                      <td className="px-4 py-3 text-center">
+                        {stockByProduct[p.id] ?? 0}
+                      </td>
                       <td className="px-4 py-3 text-center">
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor(p.trangThai)}`}
