@@ -15,6 +15,7 @@ import {
   FiArrowLeft,
   FiMenu,
   FiX,
+  FiShuffle,
 } from "react-icons/fi";
 
 const menuItems = [
@@ -24,6 +25,7 @@ const menuItems = [
   { href: "/staff/returns", label: "Trả hàng", icon: FiRotateCcw },
   // { href: "/staff/exchanges", label: "Đổi hàng", icon: FiRepeat },
   { href: "/staff/inventory", label: "Kho hàng", icon: FiPackage },
+  { href: "/staff/transfers", label: "Luân chuyển", icon: FiShuffle },
   { href: "/staff/employees", label: "Nhân viên", icon: FiUsers },
 ];
 
@@ -56,6 +58,10 @@ const pageTitles: Record<string, { title: string; description: string }> = {
   "/staff/employees": {
     title: "Nhân viên",
     description: "Xem thông tin nhân viên cùng cửa hàng.",
+  },
+  "/staff/transfers": {
+    title: "Luân chuyển",
+    description: "Quản lý luân chuyển hàng hóa giữa các cửa hàng.",
   },
 };
 

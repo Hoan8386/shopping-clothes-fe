@@ -122,6 +122,16 @@ export const productVariantService = {
   delete: async (id: number) => {
     await apiClient.delete(`/chi-tiet-san-pham/${id}`);
   },
+
+  getStoresWithInventoryForImport: async (sanPhamId: number) => {
+    const res = await apiClient.get<RestResponse<ResChiTietSanPhamDTO[]>>(
+      `/chi-tiet-san-pham/san-pham/${sanPhamId}`
+    );
+    const variants = res.data.data ?? [];
+    return variants
+      .filter((item) => (item.soLuong ?? 0) > 0)
+      .sort((a, b) => (b.soLuong ?? 0) - (a.soLuong ?? 0));
+  },
 };
 
 export const variantImageService = {

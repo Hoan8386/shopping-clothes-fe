@@ -13,15 +13,22 @@ import {
   ProductSearchParams,
 } from "@/services/product.service";
 import {
+  donLuanChuyenService,
+  loaiDonLuanChuyenService,
+} from "@/services/transfer.service";
+import { nhanVienService } from "@/services/employee.service";
+import {
   kieuSanPhamService,
   boSuuTapService,
   thuongHieuService,
+  cuaHangService,
 } from "@/services/common.service";
 import { formatCurrency, getImageUrl } from "@/lib/utils";
 import Pagination from "@/components/ui/Pagination";
 import Loading from "@/components/ui/Loading";
+import { StoreWithInventoryModal } from "@/components/transfer/StoreWithInventoryModal";
 import toast from "react-hot-toast";
-import { FiSearch, FiX, FiPackage } from "react-icons/fi";
+import { FiSearch, FiX, FiPackage, FiRepeat } from "react-icons/fi";
 
 export default function StaffProductsPage() {
   const [products, setProducts] = useState<ResSanPhamDTO[]>([]);
@@ -44,6 +51,25 @@ export default function StaffProductsPage() {
   const [storeVariants, setStoreVariants] = useState<ResChiTietSanPhamDTO[]>(
     [],
   );
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [currentStoreId, setCurrentStoreId] = useState<number | null>(null);
+  const [currentStoreName, setCurrentStoreName] = useState<string>("");
+
+  useEffect(() => {
+    nhanVienService
+      .getAll()
+      .then((data) => {
+        const current = (data || []).find((item) => item.cuaHang?.id);
+        if (current?.cuaHang?.id) {
+          setCurrentStoreId(current.cuaHang.id);
+          setCurrentStoreName(current.cuaHang.tenCuaHang || "");
+        }
+      })
+      .catch(() => {
+        setCurrentStoreId(null);
+        setCurrentStoreName("");
+      });
+  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -107,6 +133,59 @@ export default function StaffProductsPage() {
     e.preventDefault();
     setSearch(searchInput);
     setPage(1);
+  };
+
+  const handleCreateImportOrder = async (
+    sourceVariant: ResChiTietSanPhamDTO,
+    quantity: number,
+  ) => {
+    if (!selectedProduct) {
+      toast.error("Không xác định sản phẩm cần nhập");
+      return;
+    }
+
+    if (!currentStoreId) {
+      toast.error("Không xác định được cửa hàng hiện tại của nhân viên");
+      return;
+    }
+
+    const [types, stores] = await Promise.all([
+      loaiDonLuanChuyenService.getAll(),
+      cuaHangService.getAll(),
+    ]);
+
+    const sourceStore = (stores || []).find(
+      (store) => store.tenCuaHang === sourceVariant.tenCuaHang,
+    );
+
+    if (!sourceStore?.id) {
+      toast.error("Không tìm thấy cửa hàng nguồn để tạo đơn nhập");
+      return;
+    }
+
+    const transferType = (types || [])[0];
+    if (!transferType?.id) {
+      toast.error("Chưa có loại đơn luân chuyển");
+      return;
+    }
+
+    await donLuanChuyenService.create({
+      cuaHangDatId: currentStoreId,
+      cuaHangGuiId: sourceStore.id,
+      loaiDonLuanChuyenId: transferType.id,
+      tenDon: `Luân chuyển ${selectedProduct.tenSanPham} từ ${sourceVariant.tenCuaHang}`,
+      ghiTru: `Yêu cầu luân chuyển ${quantity} sản phẩm`,
+      chiTietDonLuanChuyens: [
+        {
+          chiTietSanPhamId: sourceVariant.id,
+          soLuong: quantity,
+          ghiTru: `${sourceVariant.tenMauSac} / ${sourceVariant.tenKichThuoc}`,
+        },
+      ],
+    });
+
+    toast.success("Đã tạo đơn nhập hàng thành công");
+    setShowImportModal(false);
   };
 
   const statusText = (s: number) =>
@@ -419,11 +498,19 @@ export default function StaffProductsPage() {
 
               {/* Variants by color */}
               <div className="p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <FiPackage size={14} className="text-muted" />
-                  <span className="text-xs font-semibold text-muted uppercase tracking-wider">
-                    Chi tiết tồn kho theo màu sắc &amp; kích thước
-                  </span>
+                <div className="flex items-center justify-between gap-2 mb-4">
+                  <div className="flex items-center gap-2">
+                    <FiPackage size={14} className="text-muted" />
+                    <span className="text-xs font-semibold text-muted uppercase tracking-wider">
+                      Chi tiết tồn kho theo màu sắc &amp; kích thước
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setShowImportModal(true)}
+                    className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg bg-primary text-red-500 hover:bg-primary/90 transition"
+                  >
+                    <FiRepeat size={14} /> Luân chuyển
+                  </button>
                 </div>
 
                 {variantsLoading ? (
@@ -541,6 +628,18 @@ export default function StaffProductsPage() {
             )}
           </div>
         </div>
+      )}
+
+      {selectedProduct && (
+        <StoreWithInventoryModal
+          isOpen={showImportModal}
+          onClose={() => setShowImportModal(false)}
+          sanPhamId={selectedProduct.id}
+          tenSanPham={selectedProduct.tenSanPham}
+          currentStoreName={currentStoreName}
+          variantOptions={variants}
+          onSubmit={handleCreateImportOrder}
+        />
       )}
     </div>
   );

@@ -25,6 +25,7 @@ import {
   FiMenu,
   FiLogOut,
   FiExternalLink,
+  FiShuffle,
 } from "react-icons/fi";
 
 const menuGroups = [
@@ -46,6 +47,8 @@ const menuGroups = [
       { href: "/admin/returns", label: "Trả hàng", icon: FiRotateCcw },
       // { href: "/admin/exchanges", label: "Đổi hàng", icon: FiRepeat },
       { href: "/admin/inventory", label: "Phiếu nhập", icon: FiClipboard },
+      { href: "/admin/transfers", label: "Luân chuyển", icon: FiShuffle },
+      { href: "/admin/transfer-types", label: "Loại luân chuyển", icon: FiRepeat },
       { href: "/admin/employees", label: "Nhân viên", icon: FiUsers },
     ],
   },
@@ -227,6 +230,8 @@ export default function AdminLayout({
     "Đánh giá": "Theo dõi và xử lý phản hồi, đánh giá của khách hàng.",
     "Vai trò": "Quản lý vai trò trong hệ thống.",
     "Quyền hạn": "Quản lý quyền truy cập theo vai trò.",
+    "Luân chuyển": "Quản lý luân chuyển hàng hóa giữa các cửa hàng.",
+    "Loại luân chuyển": "Quản lý loại đơn luân chuyển hàng.",
   };
 
   return (

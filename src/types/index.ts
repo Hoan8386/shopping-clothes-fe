@@ -483,3 +483,60 @@ export interface ReqDoiHangDTO {
     ghiTru?: string;
   }[];
 }
+
+// ============ LOAI DON LUAN CHUYEN ============
+export interface LoaiDonLuanChuyen {
+  id: number;
+  tenLoai: string;
+  moTa: string;
+  ngayTao?: string;
+  ngayCapNhat?: string;
+}
+
+// ============ DON LUAN CHUYEN (TRANSFER) ============
+export interface ChiTietDonLuanChuyenDTO {
+  id: number;
+  chiTietSanPhamId: number;
+  tenSanPham: string;
+  hinhAnhSanPham: string;
+  mauSac: string;
+  kichThuoc: string;
+  hinhAnh: string;
+  soLuong: number;
+  trangThai: string;
+  ghiTru: string;
+  ghiTruKiemHang: string;
+}
+
+export interface DonLuanChuyen {
+  id: number;
+  tenDon: string;
+  ghiTru: string;
+  ghiTruKiemHang: string;
+  trangThai: string;
+  thoiGianGiao: string;
+  thoiGianNhan: string;
+  ngayTao: string;
+  ngayCapNhat: string;
+  cuaHangDatId: number;
+  tenCuaHangDat: string;
+  cuaHangGuiId: number;
+  tenCuaHangGui: string;
+  loaiDonLuanChuyenId: number;
+  tenLoaiDonLuanChuyen: string;
+  chiTietDonLuanChuyens: ChiTietDonLuanChuyenDTO[];
+}
+
+export interface ReqDonLuanChuyenDTO {
+  cuaHangDatId: number;
+  cuaHangGuiId: number;
+  loaiDonLuanChuyenId: number;
+  tenDon: string;
+  ghiTru?: string;
+  chiTietDonLuanChuyens: {
+    chiTietSanPhamId: number;
+    soLuong: number;
+    ghiTru?: string;
+  }[];
+}
+
