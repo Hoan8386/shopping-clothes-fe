@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
 import { authService } from "@/services/auth.service";
@@ -13,17 +13,42 @@ import {
   FiLogOut,
   FiShield,
   FiAward,
+  FiLock,
+  FiSave,
 } from "react-icons/fi";
 
 export default function AccountPage() {
-  const { user, isAuthenticated, logout } = useAuthStore();
+  const { user, isAuthenticated, logout, setUser } = useAuthStore();
   const router = useRouter();
+  const [name, setName] = useState("");
+  const [sdt, setSdt] = useState("");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [savingPassword, setSavingPassword] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
       router.push("/login");
     }
   }, [isAuthenticated, router]);
+
+  useEffect(() => {
+    if (user) {
+      setName(user.name ?? "");
+      setSdt(user.sdt ?? "");
+    }
+  }, [user]);
+
+  const avatarPreview = useMemo(() => {
+    if (avatarFile) {
+      return URL.createObjectURL(avatarFile);
+    }
+    return user?.avatar ?? null;
+  }, [avatarFile, user?.avatar]);
 
   const handleLogout = async () => {
     try {
@@ -34,6 +59,57 @@ export default function AccountPage() {
     logout();
     toast.success("Đăng xuất thành công");
     router.push("/");
+  };
+
+  const handleUpdateProfile = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    try {
+      setSavingProfile(true);
+      const updatedUser = await authService.updateProfile({
+        name: name.trim(),
+        sdt: sdt.trim(),
+        avatar: avatarFile,
+      });
+      setUser(updatedUser);
+      setAvatarFile(null);
+      toast.success("Cập nhật thông tin thành công");
+    } catch {
+      toast.error("Không thể cập nhật thông tin");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleChangePassword = async (e: FormEvent) => {
+    e.preventDefault();
+
+    if (newPassword.length < 6) {
+      toast.error("Mật khẩu mới phải có ít nhất 6 ký tự");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("Xác nhận mật khẩu không khớp");
+      return;
+    }
+
+    try {
+      setSavingPassword(true);
+      await authService.changePassword({
+        currentPassword,
+        newPassword,
+        confirmPassword,
+      });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      toast.success("Đổi mật khẩu thành công");
+    } catch {
+      toast.error("Không thể đổi mật khẩu");
+    } finally {
+      setSavingPassword(false);
+    }
   };
 
   if (!user) return null;
@@ -58,8 +134,17 @@ export default function AccountPage() {
         {/* User Profile Card */}
         <div className="border border-subtle bg-card mb-8">
           <div className="px-8 py-8 flex items-center gap-6">
-            <div className="w-20 h-20 bg-section flex items-center justify-center shrink-0">
-              <FiUser className="text-foreground" size={32} />
+            <div className="w-20 h-20 bg-section flex items-center justify-center shrink-0 overflow-hidden">
+              {avatarPreview ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarPreview}
+                  alt="avatar"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <FiUser className="text-foreground" size={32} />
+              )}
             </div>
             <div className="flex-1">
               <h3 className="text-xl font-bold text-foreground">{user.name}</h3>
@@ -74,6 +159,52 @@ export default function AccountPage() {
               )}
             </div>
           </div>
+
+          <form onSubmit={handleUpdateProfile} className="px-8 pb-8 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">
+                  Họ và tên
+                </label>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full h-11 px-3 border border-subtle bg-section text-foreground outline-none"
+                  placeholder="Nhập họ tên"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">
+                  Số điện thoại
+                </label>
+                <input
+                  value={sdt}
+                  onChange={(e) => setSdt(e.target.value)}
+                  className="w-full h-11 px-3 border border-subtle bg-section text-foreground outline-none"
+                  placeholder="0xxxxxxxxx"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Ảnh đại diện
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)}
+                className="w-full h-11 px-3 border border-subtle bg-section text-foreground outline-none file:mr-3 file:border-0 file:bg-accent file:text-white file:px-3 file:py-2"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={savingProfile}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-white font-medium disabled:opacity-60"
+            >
+              <FiSave size={16} />
+              {savingProfile ? "Đang lưu..." : "Lưu thông tin"}
+            </button>
+          </form>
 
           {user.role?.name === "KHACH_HANG" && (
             <div className="px-8 pb-8">
@@ -93,6 +224,49 @@ export default function AccountPage() {
               </div>
             </div>
           )}
+        </div>
+
+        <div className="border border-subtle bg-card mb-8 p-8">
+          <div className="flex items-center gap-2 mb-4">
+            <FiLock size={18} className="text-accent" />
+            <h3 className="text-lg font-bold text-foreground">Đổi mật khẩu</h3>
+          </div>
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className="w-full h-11 px-3 border border-subtle bg-section text-foreground outline-none"
+                placeholder="Mật khẩu hiện tại"
+                required
+              />
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full h-11 px-3 border border-subtle bg-section text-foreground outline-none"
+                placeholder="Mật khẩu mới"
+                required
+              />
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full h-11 px-3 border border-subtle bg-section text-foreground outline-none"
+                placeholder="Xác nhận mật khẩu"
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={savingPassword}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-foreground text-background font-medium disabled:opacity-60"
+            >
+              <FiLock size={16} />
+              {savingPassword ? "Đang đổi..." : "Đổi mật khẩu"}
+            </button>
+          </form>
         </div>
 
         {/* Quick Links Grid */}

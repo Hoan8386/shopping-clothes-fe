@@ -77,5 +77,19 @@ export function getOrderStatusColor(status: string | number): string {
 
 export function getPaymentStatusText(status: string | number): string {
   if (typeof status === "string") return status;
-  return status === 0 ? "Chưa thanh toán" : "Đã thanh toán";
+  const map: Record<number, string> = {
+    0: "Chưa thanh toán",
+    1: "Đã thanh toán",
+    2: "Thanh toán thất bại",
+  };
+  return map[status] || `Trạng thái ${status}`;
+}
+
+export function getPaymentMethodText(method: string | number): string {
+  if (typeof method === "string") return method;
+  const map: Record<number, string> = {
+    0: "COD/Tiền mặt",
+    1: "VNPAY",
+  };
+  return map[method] || `Phương thức ${method}`;
 }

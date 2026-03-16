@@ -38,6 +38,7 @@ export default function CheckoutPage() {
   const [selectedPromoDiem, setSelectedPromoDiem] = useState<
     number | undefined
   >();
+  const [paymentMethod, setPaymentMethod] = useState<number>(0);
   const [discountPreview, setDiscountPreview] =
     useState<ResApDungKhuyenMaiDTO | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -135,12 +136,25 @@ export default function CheckoutPage() {
     }
     try {
       setSubmitting(true);
-      await orderService.createOnline({
+      const createdOrder = await orderService.createOnline({
         sdt: sdt.trim(),
         diaChi,
         maKhuyenMaiHoaDon: selectedPromoHD,
         maKhuyenMaiDiem: selectedPromoDiem,
+        hinhThucDonHang: paymentMethod,
       });
+
+      if (paymentMethod === 1) {
+        const paymentUrl = await orderService.createVNPayPaymentUrl(
+          createdOrder.id,
+        );
+        if (paymentUrl) {
+          setCartCount(0);
+          window.location.href = paymentUrl;
+          return;
+        }
+      }
+
       setCartCount(0);
       toast.success("Đặt hàng thành công!");
       router.push("/orders");
@@ -294,6 +308,44 @@ export default function CheckoutPage() {
                     Không có mã khuyến mãi khả dụng
                   </p>
                 )}
+              </div>
+
+              <div className="bg-card border border-subtle rounded-2xl p-6 md:p-7">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-foreground mb-5 pb-3 border-b border-subtle">
+                  Phương thức thanh toán
+                </h3>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-3 rounded-xl border border-subtle px-4 py-3 cursor-pointer hover:border-accent/50 transition">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value={0}
+                      checked={paymentMethod === 0}
+                      onChange={() => setPaymentMethod(0)}
+                    />
+                    <span className="text-sm font-medium text-foreground">
+                      COD/Tiền mặt (thanh toán khi nhận hàng)
+                    </span>
+                  </label>
+                  <label className="flex items-center gap-3 rounded-xl border border-subtle px-4 py-3 cursor-pointer hover:border-accent/50 transition">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value={1}
+                      checked={paymentMethod === 1}
+                      onChange={() => setPaymentMethod(1)}
+                    />
+                    <span className="text-sm font-medium text-foreground">
+                      VNPAY
+                    </span>
+                  </label>
+                  {paymentMethod === 1 && (
+                    <p className="text-xs text-muted pl-1">
+                      Đơn hàng sẽ gắn payment_ref bằng mã đơn để đối soát thanh
+                      toán VNPAY.
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 

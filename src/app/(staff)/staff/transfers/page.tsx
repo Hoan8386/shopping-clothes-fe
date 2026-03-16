@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { DonLuanChuyen } from "@/types";
+import { CuaHang, DonLuanChuyen } from "@/types";
 import { donLuanChuyenService } from "@/services/transfer.service";
+import { cuaHangService } from "@/services/common.service";
 import { nhanVienService } from "@/services/employee.service";
 import { formatDate } from "@/lib/utils";
 import Pagination from "@/components/ui/Pagination";
@@ -51,6 +52,13 @@ export default function AdminTransfersPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [filterStatus, setFilterStatus] = useState<string | undefined>();
+  const [stores, setStores] = useState<CuaHang[]>([]);
+  const [filterCuaHangGuiId, setFilterCuaHangGuiId] = useState<
+    number | undefined
+  >();
+  const [filterCuaHangDatId, setFilterCuaHangDatId] = useState<
+    number | undefined
+  >();
 
   // Detail modal
   const [selected, setSelected] = useState<DonLuanChuyen | null>(null);
@@ -74,12 +82,20 @@ export default function AdminTransfersPage() {
         setCurrentStoreId(current?.cuaHang?.id ?? null);
       })
       .catch(() => setCurrentStoreId(null));
+
+    cuaHangService
+      .getAll()
+      .then((data) => setStores(data ?? []))
+      .catch(() => setStores([]));
   }, []);
 
   const fetchTransfers = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await donLuanChuyenService.getAll(page, 50);
+      const data = await donLuanChuyenService.getAll(page, 50, {
+        cuaHangGuiId: filterCuaHangGuiId,
+        cuaHangDatId: filterCuaHangDatId,
+      });
       let result = data?.result ?? [];
       if (filterStatus) {
         result = result.filter(
@@ -93,7 +109,7 @@ export default function AdminTransfersPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatus, page]);
+  }, [filterStatus, page, filterCuaHangGuiId, filterCuaHangDatId]);
 
   useEffect(() => {
     fetchTransfers();
@@ -170,7 +186,7 @@ export default function AdminTransfersPage() {
           </div>
           <button
             onClick={() => setShowImportModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition"
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-red-700 rounded-lg text-sm font-medium hover:bg-primary/90 transition"
           >
             <FiPlus size={16} />
             Nhập hàng
@@ -225,23 +241,63 @@ export default function AdminTransfersPage() {
       </div>
 
       {/* Filters */}
-      <div className="bg-card rounded-2xl border border-subtle p-4 flex flex-wrap gap-2">
-        {TRANSFER_STATUSES.map((s) => (
-          <button
-            key={String(s.value)}
-            onClick={() => {
-              setFilterStatus(s.value);
+      <div className="bg-card rounded-2xl border border-subtle p-4 space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <select
+            value={filterCuaHangGuiId ?? ""}
+            onChange={(e) => {
+              setFilterCuaHangGuiId(
+                e.target.value ? Number(e.target.value) : undefined,
+              );
               setPage(1);
             }}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
-              filterStatus === s.value
-                ? "bg-accent text-white"
-                : "bg-section text-muted hover:text-foreground"
-            }`}
+            className="h-10 px-3 rounded-lg bg-section border border-subtle text-sm"
           >
-            {s.label}
-          </button>
-        ))}
+            <option value="">Lọc theo cửa hàng gửi</option>
+            {stores.map((store) => (
+              <option key={store.id} value={store.id}>
+                {store.tenCuaHang}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filterCuaHangDatId ?? ""}
+            onChange={(e) => {
+              setFilterCuaHangDatId(
+                e.target.value ? Number(e.target.value) : undefined,
+              );
+              setPage(1);
+            }}
+            className="h-10 px-3 rounded-lg bg-section border border-subtle text-sm"
+          >
+            <option value="">Lọc theo cửa hàng nhận</option>
+            {stores.map((store) => (
+              <option key={store.id} value={store.id}>
+                {store.tenCuaHang}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {TRANSFER_STATUSES.map((s) => (
+            <button
+              key={String(s.value)}
+              onClick={() => {
+                setFilterStatus(s.value);
+                setPage(1);
+              }}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
+                filterStatus === s.value
+                  ? "bg-accent text-red-700"
+                  : "bg-section text-muted hover:text-foreground"
+              }`}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Table */}
@@ -518,7 +574,7 @@ export default function AdminTransfersPage() {
                         setShowDetail(false);
                         openAction(selected, 4);
                       }}
-                      className="flex-1 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition flex items-center justify-center gap-2"
+                      className="flex-1 py-2.5 bg-indigo-600 text-red-700 rounded-lg text-sm font-medium hover:bg-indigo-700 transition flex items-center justify-center gap-2"
                     >
                       <FiCheck size={16} /> Xác nhận đơn
                     </button>
@@ -527,7 +583,7 @@ export default function AdminTransfersPage() {
                         setShowDetail(false);
                         openAction(selected, 3);
                       }}
-                      className="flex-1 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition flex items-center justify-center gap-2"
+                      className="flex-1 py-2.5 bg-red-600 text-red-700 rounded-lg text-sm font-medium hover:bg-red-700 transition flex items-center justify-center gap-2"
                     >
                       <FiX size={16} /> Từ chối
                     </button>
@@ -541,7 +597,7 @@ export default function AdminTransfersPage() {
                         setShowDetail(false);
                         openAction(selected, 1);
                       }}
-                      className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2"
+                      className="flex-1 py-2.5 bg-blue-600 text-red-700 rounded-lg text-sm font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2"
                     >
                       <FiTruck size={16} /> Chuyển sang Đang giao
                     </button>
@@ -555,7 +611,7 @@ export default function AdminTransfersPage() {
                         setShowDetail(false);
                         openAction(selected, 2);
                       }}
-                      className="flex-1 py-2.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition flex items-center justify-center gap-2"
+                      className="flex-1 py-2.5 bg-green-600 text-red-700 rounded-lg text-sm font-medium hover:bg-green-700 transition flex items-center justify-center gap-2"
                     >
                       <FiCheck size={16} /> Xác nhận nhận hàng
                     </button>
@@ -617,7 +673,7 @@ export default function AdminTransfersPage() {
               <button
                 onClick={handleConfirmAction}
                 disabled={updating}
-                className={`flex-1 py-2.5 text-white rounded-lg text-sm font-medium transition ${
+                className={`flex-1 py-2.5 text-red-700 rounded-lg text-sm font-medium transition ${
                   actionType === 4
                     ? "bg-indigo-600 hover:bg-indigo-700"
                     : actionType === 1

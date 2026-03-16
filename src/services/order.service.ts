@@ -37,6 +37,21 @@ export const orderService = {
     return res.data.data;
   },
 
+  createVNPayPaymentUrl: async (donHangId: number) => {
+    const res = await apiClient.post<
+      RestResponse<{ paymentUrl: string }>
+    >("/auth/vnpay/create-payment-url", { donHangId });
+    return res.data.data.paymentUrl;
+  },
+
+  confirmVNPayReturn: async (params: Record<string, string>) => {
+    const res = await apiClient.get<RestResponse<Record<string, string>>>(
+      "/auth/vnpay/return",
+      { params },
+    );
+    return res.data.data;
+  },
+
   createPOS: async (data: DonHang) => {
     const res = await apiClient.post<RestResponse<DonHang>>(
       "/don-hang/tai-quay",

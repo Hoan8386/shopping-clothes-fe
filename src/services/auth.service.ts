@@ -1,7 +1,9 @@
 import apiClient from "@/lib/api";
 import {
+  ReqChangePasswordDTO,
   ReqLoginDTO,
   ReqRegisterDTO,
+  ReqUpdateProfileDTO,
   ResLoginDTO,
   ResCreateUserDTO,
   RestResponse,
@@ -39,5 +41,34 @@ export const authService = {
   logout: async () => {
     const res = await apiClient.post("/auth/logout");
     return res.data;
+  },
+
+  changePassword: async (data: ReqChangePasswordDTO) => {
+    const res = await apiClient.put<RestResponse<void>>("/auth/change-password", data);
+    return res.data;
+  },
+
+  updateProfile: async (data: ReqUpdateProfileDTO) => {
+    const formData = new FormData();
+    if (data.name !== undefined) {
+      formData.append("name", data.name);
+    }
+    if (data.sdt !== undefined) {
+      formData.append("sdt", data.sdt);
+    }
+    if (data.avatar) {
+      formData.append("avatar", data.avatar);
+    }
+
+    const res = await apiClient.put<RestResponse<{ user: ResLoginDTO["user"] }>>(
+      "/auth/profile",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return res.data.data.user;
   },
 };

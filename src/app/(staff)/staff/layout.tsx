@@ -10,12 +10,12 @@ import {
   FiShoppingCart,
   FiPackage,
   FiRotateCcw,
-  FiRepeat,
   FiUsers,
   FiArrowLeft,
   FiMenu,
   FiX,
   FiShuffle,
+  FiClipboard,
 } from "react-icons/fi";
 
 const menuItems = [
@@ -26,6 +26,7 @@ const menuItems = [
   // { href: "/staff/exchanges", label: "Đổi hàng", icon: FiRepeat },
   { href: "/staff/inventory", label: "Kho hàng", icon: FiPackage },
   { href: "/staff/transfers", label: "Luân chuyển", icon: FiShuffle },
+  { href: "/staff/stock-checks", label: "Kiểm kê", icon: FiClipboard },
   { href: "/staff/employees", label: "Nhân viên", icon: FiUsers },
 ];
 
@@ -62,6 +63,10 @@ const pageTitles: Record<string, { title: string; description: string }> = {
   "/staff/transfers": {
     title: "Luân chuyển",
     description: "Quản lý luân chuyển hàng hóa giữa các cửa hàng.",
+  },
+  "/staff/stock-checks": {
+    title: "Kiểm kê hàng hóa",
+    description: "Tạo phiếu kiểm kê, điền số lượng thực tế và gửi duyệt.",
   },
 };
 

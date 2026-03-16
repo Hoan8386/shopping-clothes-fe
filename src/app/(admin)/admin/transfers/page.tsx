@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { DonLuanChuyen } from "@/types";
+import { CuaHang, DonLuanChuyen } from "@/types";
 import { donLuanChuyenService } from "@/services/transfer.service";
+import { cuaHangService } from "@/services/common.service";
 import { formatDate } from "@/lib/utils";
 import Pagination from "@/components/ui/Pagination";
 import Loading from "@/components/ui/Loading";
@@ -38,6 +39,13 @@ export default function AdminTransfersPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [filterStatus, setFilterStatus] = useState<string | undefined>();
+  const [stores, setStores] = useState<CuaHang[]>([]);
+  const [filterCuaHangGuiId, setFilterCuaHangGuiId] = useState<
+    number | undefined
+  >();
+  const [filterCuaHangDatId, setFilterCuaHangDatId] = useState<
+    number | undefined
+  >();
 
   // Detail modal
   const [selected, setSelected] = useState<DonLuanChuyen | null>(null);
@@ -52,10 +60,15 @@ export default function AdminTransfersPage() {
   const fetchTransfers = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await donLuanChuyenService.getAll(page, 15);
+      const data = await donLuanChuyenService.getAll(page, 15, {
+        cuaHangGuiId: filterCuaHangGuiId,
+        cuaHangDatId: filterCuaHangDatId,
+      });
       let result = data.result || [];
       if (filterStatus) {
-        result = result.filter((r: DonLuanChuyen) => r.trangThai === filterStatus);
+        result = result.filter(
+          (r: DonLuanChuyen) => r.trangThai === filterStatus,
+        );
       }
       setTransfers(result);
       setTotalPages(data.meta?.pages || 1);
@@ -64,11 +77,18 @@ export default function AdminTransfersPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, filterStatus]);
+  }, [page, filterStatus, filterCuaHangGuiId, filterCuaHangDatId]);
 
   useEffect(() => {
     fetchTransfers();
   }, [fetchTransfers]);
+
+  useEffect(() => {
+    cuaHangService
+      .getAll()
+      .then((data) => setStores(data ?? []))
+      .catch(() => setStores([]));
+  }, []);
 
   const handleViewDetail = async (id: number) => {
     try {
@@ -106,10 +126,18 @@ export default function AdminTransfersPage() {
     }
   };
 
-  const pendingCount = transfers.filter((r) => r.trangThai === "Chờ xử lý").length;
-  const shippingCount = transfers.filter((r) => r.trangThai === "Đang giao").length;
-  const receivedCount = transfers.filter((r) => r.trangThai === "Đã nhận").length;
-  const rejectedCount = transfers.filter((r) => r.trangThai === "Từ chối").length;
+  const pendingCount = transfers.filter(
+    (r) => r.trangThai === "Chờ xử lý",
+  ).length;
+  const shippingCount = transfers.filter(
+    (r) => r.trangThai === "Đang giao",
+  ).length;
+  const receivedCount = transfers.filter(
+    (r) => r.trangThai === "Đã nhận",
+  ).length;
+  const rejectedCount = transfers.filter(
+    (r) => r.trangThai === "Từ chối",
+  ).length;
 
   return (
     <div className="space-y-5">
@@ -133,44 +161,98 @@ export default function AdminTransfersPage() {
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <div className="bg-card border border-subtle rounded-xl p-4">
           <p className="text-xs text-muted uppercase tracking-wide">Tổng đơn</p>
-          <p className="text-2xl font-bold text-foreground mt-1">{transfers.length}</p>
+          <p className="text-2xl font-bold text-foreground mt-1">
+            {transfers.length}
+          </p>
         </div>
         <div className="bg-card border border-subtle rounded-xl p-4">
-          <p className="text-xs text-muted uppercase tracking-wide">Chờ xử lý</p>
-          <p className="text-2xl font-bold text-yellow-600 mt-1">{pendingCount}</p>
+          <p className="text-xs text-muted uppercase tracking-wide">
+            Chờ xử lý
+          </p>
+          <p className="text-2xl font-bold text-yellow-600 mt-1">
+            {pendingCount}
+          </p>
         </div>
         <div className="bg-card border border-subtle rounded-xl p-4">
-          <p className="text-xs text-muted uppercase tracking-wide">Đang giao</p>
-          <p className="text-2xl font-bold text-blue-600 mt-1">{shippingCount}</p>
+          <p className="text-xs text-muted uppercase tracking-wide">
+            Đang giao
+          </p>
+          <p className="text-2xl font-bold text-blue-600 mt-1">
+            {shippingCount}
+          </p>
         </div>
         <div className="bg-card border border-subtle rounded-xl p-4">
           <p className="text-xs text-muted uppercase tracking-wide">Đã nhận</p>
-          <p className="text-2xl font-bold text-green-600 mt-1">{receivedCount}</p>
+          <p className="text-2xl font-bold text-green-600 mt-1">
+            {receivedCount}
+          </p>
         </div>
         <div className="bg-card border border-subtle rounded-xl p-4">
           <p className="text-xs text-muted uppercase tracking-wide">Từ chối</p>
-          <p className="text-2xl font-bold text-red-600 mt-1">{rejectedCount}</p>
+          <p className="text-2xl font-bold text-red-600 mt-1">
+            {rejectedCount}
+          </p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-card rounded-2xl border border-subtle p-4 flex flex-wrap gap-2">
-        {TRANSFER_STATUSES.map((s) => (
-          <button
-            key={String(s.value)}
-            onClick={() => {
-              setFilterStatus(s.value);
+      <div className="bg-card rounded-2xl border border-subtle p-4 space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <select
+            value={filterCuaHangGuiId ?? ""}
+            onChange={(e) => {
+              setFilterCuaHangGuiId(
+                e.target.value ? Number(e.target.value) : undefined,
+              );
               setPage(1);
             }}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
-              filterStatus === s.value
-                ? "bg-accent text-white"
-                : "bg-section text-muted hover:text-foreground"
-            }`}
+            className="h-10 px-3 rounded-lg bg-section border border-subtle text-sm"
           >
-            {s.label}
-          </button>
-        ))}
+            <option value="">Tất cả cửa hàng gửi</option>
+            {stores.map((store) => (
+              <option key={store.id} value={store.id}>
+                {store.tenCuaHang}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filterCuaHangDatId ?? ""}
+            onChange={(e) => {
+              setFilterCuaHangDatId(
+                e.target.value ? Number(e.target.value) : undefined,
+              );
+              setPage(1);
+            }}
+            className="h-10 px-3 rounded-lg bg-section border border-subtle text-sm"
+          >
+            <option value="">Tất cả cửa hàng nhận</option>
+            {stores.map((store) => (
+              <option key={store.id} value={store.id}>
+                {store.tenCuaHang}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {TRANSFER_STATUSES.map((s) => (
+            <button
+              key={String(s.value)}
+              onClick={() => {
+                setFilterStatus(s.value);
+                setPage(1);
+              }}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
+                filterStatus === s.value
+                  ? "bg-accent text-white"
+                  : "bg-section text-muted hover:text-foreground"
+              }`}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Table */}
@@ -186,13 +268,27 @@ export default function AdminTransfersPage() {
             <table className="w-full text-sm min-w-225">
               <thead className="bg-section border-b border-subtle">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium text-muted">ID</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted">Tên đơn</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted">CH Gửi → CH Nhận</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted">Loại</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted">Ngày tạo</th>
-                  <th className="px-4 py-3 text-center font-medium text-muted">Trạng thái</th>
-                  <th className="px-4 py-3 text-center font-medium text-muted">Thao tác</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted">
+                    ID
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-muted">
+                    Tên đơn
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-muted">
+                    CH Gửi → CH Nhận
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-muted">
+                    Loại
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-muted">
+                    Ngày tạo
+                  </th>
+                  <th className="px-4 py-3 text-center font-medium text-muted">
+                    Trạng thái
+                  </th>
+                  <th className="px-4 py-3 text-center font-medium text-muted">
+                    Thao tác
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-subtle">
@@ -204,13 +300,21 @@ export default function AdminTransfersPage() {
                     </td>
                     <td className="px-4 py-3 text-muted">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-medium text-foreground">{r.tenCuaHangGui}</span>
+                        <span className="font-medium text-foreground">
+                          {r.tenCuaHangGui}
+                        </span>
                         <FiArrowRight size={12} className="text-muted" />
-                        <span className="font-medium text-foreground">{r.tenCuaHangDat}</span>
+                        <span className="font-medium text-foreground">
+                          {r.tenCuaHangDat}
+                        </span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-muted">{r.tenLoaiDonLuanChuyen}</td>
-                    <td className="px-4 py-3 text-muted">{formatDate(r.ngayTao)}</td>
+                    <td className="px-4 py-3 text-muted">
+                      {r.tenLoaiDonLuanChuyen}
+                    </td>
+                    <td className="px-4 py-3 text-muted">
+                      {formatDate(r.ngayTao)}
+                    </td>
                     <td className="px-4 py-3 text-center">
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-medium ${getTransferStatusColor(r.trangThai)}`}
@@ -293,59 +397,80 @@ export default function AdminTransfersPage() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-muted">Tên đơn: </span>
-                  <span className="font-medium text-foreground">{selected.tenDon}</span>
+                  <span className="font-medium text-foreground">
+                    {selected.tenDon}
+                  </span>
                 </div>
                 <div>
                   <span className="text-muted">Trạng thái: </span>
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getTransferStatusColor(selected.trangThai)}`}>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${getTransferStatusColor(selected.trangThai)}`}
+                  >
                     {selected.trangThai}
                   </span>
                 </div>
                 <div>
                   <span className="text-muted">CH Gửi: </span>
-                  <span className="font-medium text-foreground">{selected.tenCuaHangGui}</span>
+                  <span className="font-medium text-foreground">
+                    {selected.tenCuaHangGui}
+                  </span>
                 </div>
                 <div>
                   <span className="text-muted">CH Nhận: </span>
-                  <span className="font-medium text-foreground">{selected.tenCuaHangDat}</span>
+                  <span className="font-medium text-foreground">
+                    {selected.tenCuaHangDat}
+                  </span>
                 </div>
                 <div>
                   <span className="text-muted">Loại đơn: </span>
-                  <span className="font-medium text-foreground">{selected.tenLoaiDonLuanChuyen}</span>
+                  <span className="font-medium text-foreground">
+                    {selected.tenLoaiDonLuanChuyen}
+                  </span>
                 </div>
                 <div>
                   <span className="text-muted">Ngày tạo: </span>
-                  <span className="font-medium text-foreground">{formatDate(selected.ngayTao)}</span>
+                  <span className="font-medium text-foreground">
+                    {formatDate(selected.ngayTao)}
+                  </span>
                 </div>
                 {selected.thoiGianGiao && (
                   <div>
                     <span className="text-muted">Thời gian giao: </span>
-                    <span className="font-medium text-foreground">{formatDate(selected.thoiGianGiao)}</span>
+                    <span className="font-medium text-foreground">
+                      {formatDate(selected.thoiGianGiao)}
+                    </span>
                   </div>
                 )}
                 {selected.thoiGianNhan && (
                   <div>
                     <span className="text-muted">Thời gian nhận: </span>
-                    <span className="font-medium text-foreground">{formatDate(selected.thoiGianNhan)}</span>
+                    <span className="font-medium text-foreground">
+                      {formatDate(selected.thoiGianNhan)}
+                    </span>
                   </div>
                 )}
                 {selected.ghiTru && (
                   <div className="col-span-2">
                     <span className="text-muted">Ghi chú: </span>
-                    <span className="font-medium text-foreground">{selected.ghiTru}</span>
+                    <span className="font-medium text-foreground">
+                      {selected.ghiTru}
+                    </span>
                   </div>
                 )}
                 {selected.ghiTruKiemHang && (
                   <div className="col-span-2">
                     <span className="text-muted">Ghi chú kiểm hàng: </span>
-                    <span className="font-medium text-foreground">{selected.ghiTruKiemHang}</span>
+                    <span className="font-medium text-foreground">
+                      {selected.ghiTruKiemHang}
+                    </span>
                   </div>
                 )}
               </div>
 
               <hr className="border-subtle" />
               <h3 className="text-sm font-semibold text-foreground">
-                Chi tiết sản phẩm ({selected.chiTietDonLuanChuyens?.length || 0})
+                Chi tiết sản phẩm ({selected.chiTietDonLuanChuyens?.length || 0}
+                )
               </h3>
               <div className="space-y-3">
                 {selected.chiTietDonLuanChuyens?.map((ct) => (
@@ -371,7 +496,9 @@ export default function AdminTransfersPage() {
                         <p className="text-sm font-bold text-foreground">
                           SL: {ct.soLuong}
                         </p>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getTransferStatusColor(ct.trangThai)}`}>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${getTransferStatusColor(ct.trangThai)}`}
+                        >
                           {ct.trangThai}
                         </span>
                       </div>
@@ -430,14 +557,16 @@ export default function AdminTransfersPage() {
               {actionType === 3 && "Từ chối đơn luân chuyển?"}
             </h3>
             <p className="text-sm text-muted mb-1">
-              Đơn: <span className="font-medium">#{actionItem.id}</span> — {actionItem.tenDon}
+              Đơn: <span className="font-medium">#{actionItem.id}</span> —{" "}
+              {actionItem.tenDon}
             </p>
             <p className="text-sm text-muted mb-4">
               {actionItem.tenCuaHangGui} → {actionItem.tenCuaHangDat}
             </p>
             {actionType === 1 && (
               <p className="text-sm text-blue-700 bg-blue-50 rounded-lg p-3 mb-4">
-                Đơn sẽ chuyển sang trạng thái Đang giao. Cửa hàng gửi sẽ bắt đầu vận chuyển hàng.
+                Đơn sẽ chuyển sang trạng thái Đang giao. Cửa hàng gửi sẽ bắt đầu
+                vận chuyển hàng.
               </p>
             )}
             {actionType === 2 && (
@@ -447,7 +576,8 @@ export default function AdminTransfersPage() {
             )}
             {actionType === 3 && (
               <p className="text-sm text-red-700 bg-red-50 rounded-lg p-3 mb-4">
-                Sau khi từ chối, đơn luân chuyển sẽ bị hủy. Hành động này không thể hoàn tác.
+                Sau khi từ chối, đơn luân chuyển sẽ bị hủy. Hành động này không
+                thể hoàn tác.
               </p>
             )}
             <div className="flex gap-3">
@@ -465,17 +595,17 @@ export default function AdminTransfersPage() {
                   actionType === 1
                     ? "bg-blue-600 hover:bg-blue-700"
                     : actionType === 2
-                    ? "bg-green-600 hover:bg-green-700"
-                    : "bg-red-600 hover:bg-red-700"
+                      ? "bg-green-600 hover:bg-green-700"
+                      : "bg-red-600 hover:bg-red-700"
                 }`}
               >
                 {updating
                   ? "Đang xử lý..."
                   : actionType === 1
-                  ? "Xác nhận giao"
-                  : actionType === 2
-                  ? "Xác nhận nhận"
-                  : "Xác nhận từ chối"}
+                    ? "Xác nhận giao"
+                    : actionType === 2
+                      ? "Xác nhận nhận"
+                      : "Xác nhận từ chối"}
               </button>
             </div>
           </div>

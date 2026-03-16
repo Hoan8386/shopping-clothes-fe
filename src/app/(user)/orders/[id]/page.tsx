@@ -22,6 +22,7 @@ import {
   getOrderStatusText,
   getOrderStatusColor,
   getPaymentStatusText,
+  getPaymentMethodText,
   getImageUrl,
 } from "@/lib/utils";
 import Loading from "@/components/ui/Loading";
@@ -67,6 +68,8 @@ export default function OrderDetailPage() {
   // Return state
   const [returnModal, setReturnModal] = useState(false);
   const [returnReason, setReturnReason] = useState("");
+  const [refundMethod, setRefundMethod] = useState<number>(0);
+  const [refundBankInfo, setRefundBankInfo] = useState("");
   const [returnImageFile, setReturnImageFile] = useState<File | null>(null);
   const [returnImagePreview, setReturnImagePreview] = useState<string | null>(
     null,
@@ -305,6 +308,8 @@ export default function OrderDetailPage() {
 
     setReturnItems(items);
     setReturnReason("");
+    setRefundMethod(0);
+    setRefundBankInfo("");
     setReturnImageFile(null);
     setReturnImagePreview(null);
     setReturnModal(true);
@@ -363,12 +368,20 @@ export default function OrderDetailPage() {
       toast.error("Vui lòng nhập lý do trả hàng");
       return;
     }
+    if (refundMethod === 1 && !refundBankInfo.trim()) {
+      toast.error("Vui lòng nhập thông tin chuyển khoản để hoàn tiền");
+      return;
+    }
     setReturnSubmitting(true);
     try {
       await traHangService.create(
         {
           donHangId: order.id,
           lyDoTraHang: returnReason,
+          phuongThucHoanTien: refundMethod,
+          thongTinChuyenKhoan:
+            refundMethod === 1 ? refundBankInfo.trim() : undefined,
+          paymentRef: order.paymentRef || undefined,
           chiTietTraHangs: selected.map((i) => ({
             chiTietDonHangId: i.chiTietDonHangId,
             ghiTru: i.ghiTru || undefined,
@@ -535,7 +548,7 @@ export default function OrderDetailPage() {
                   Hình thức
                 </p>
                 <p className="font-semibold text-foreground">
-                  {String(order.hinhThucDonHang)}
+                  {getPaymentMethodText(order.hinhThucDonHang)}
                 </p>
               </div>
               <div>
@@ -544,6 +557,14 @@ export default function OrderDetailPage() {
                 </p>
                 <p className="font-semibold text-foreground">
                   {getPaymentStatusText(order.trangThaiThanhToan)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">
+                  Payment ref
+                </p>
+                <p className="font-semibold text-foreground">
+                  {order.paymentRef || "-"}
                 </p>
               </div>
               {order.nhanVien && (
@@ -810,6 +831,17 @@ export default function OrderDetailPage() {
                   <p className="text-sm text-gray-500 mb-2">
                     <span className="font-medium">Lý do:</span>{" "}
                     {ret.lyDoTraHang}
+                  </p>
+                  <p className="text-sm text-gray-500 mb-2">
+                    <span className="font-medium">Hoàn tiền:</span>{" "}
+                    {ret.phuongThucHoanTien}
+                    {ret.thongTinChuyenKhoan
+                      ? ` - ${ret.thongTinChuyenKhoan}`
+                      : ""}
+                  </p>
+                  <p className="text-sm text-gray-500 mb-2">
+                    <span className="font-medium">Payment ref:</span>{" "}
+                    {ret.paymentRef || "-"}
                   </p>
                   {ret.linkAnh && (
                     <div className="mb-3">
@@ -1193,6 +1225,46 @@ export default function OrderDetailPage() {
                   className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
                 />
               </div>
+
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-muted mb-2 block">
+                  Phương thức hoàn tiền <span className="text-red-500">*</span>
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm text-foreground">
+                    <input
+                      type="radio"
+                      checked={refundMethod === 0}
+                      onChange={() => setRefundMethod(0)}
+                    />
+                    Tiền mặt
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-foreground">
+                    <input
+                      type="radio"
+                      checked={refundMethod === 1}
+                      onChange={() => setRefundMethod(1)}
+                    />
+                    Chuyển khoản
+                  </label>
+                </div>
+              </div>
+
+              {refundMethod === 1 && (
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted mb-2 block">
+                    Thông tin chuyển khoản{" "}
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={refundBankInfo}
+                    onChange={(e) => setRefundBankInfo(e.target.value)}
+                    rows={3}
+                    placeholder="VD: Ngân hàng ACB - STK 123456789 - NGUYEN VAN A"
+                    className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="text-xs font-bold uppercase tracking-wider text-muted mb-2 block">

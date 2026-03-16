@@ -211,6 +211,12 @@ export default function AdminReturnsPage() {
                   <th className="px-4 py-3 text-right font-medium text-muted">
                     Tổng tiền
                   </th>
+                  <th className="px-4 py-3 text-left font-medium text-muted">
+                    Hoàn tiền
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-muted">
+                    Payment ref
+                  </th>
                   <th className="px-4 py-3 text-center font-medium text-muted">
                     Trạng thái
                   </th>
@@ -235,6 +241,12 @@ export default function AdminReturnsPage() {
                     </td>
                     <td className="px-4 py-3 text-right font-medium text-blue-600">
                       {formatCurrency(r.tongTien)}
+                    </td>
+                    <td className="px-4 py-3 text-muted">
+                      {r.phuongThucHoanTien}
+                    </td>
+                    <td className="px-4 py-3 text-muted">
+                      {r.paymentRef || "-"}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span
@@ -331,6 +343,21 @@ export default function AdminReturnsPage() {
                   <span className="text-muted">Tổng tiền: </span>
                   <span className="font-medium text-blue-600">
                     {formatCurrency(selected.tongTien)}
+                  </span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-muted">Phương thức hoàn tiền: </span>
+                  <span className="font-medium text-foreground">
+                    {selected.phuongThucHoanTien}
+                    {selected.thongTinChuyenKhoan
+                      ? ` - ${selected.thongTinChuyenKhoan}`
+                      : ""}
+                  </span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-muted">Payment ref: </span>
+                  <span className="font-medium text-foreground">
+                    {selected.paymentRef || "-"}
                   </span>
                 </div>
                 <div className="col-span-2">
@@ -470,6 +497,15 @@ export default function AdminReturnsPage() {
               <span className="font-medium text-blue-600">
                 {formatCurrency(actionItem.tongTien)}
               </span>
+            </p>
+            <p className="text-sm text-muted mb-4">
+              Hoàn tiền:{" "}
+              <span className="font-medium">
+                {actionItem.phuongThucHoanTien}
+              </span>
+              {actionItem.thongTinChuyenKhoan
+                ? ` - ${actionItem.thongTinChuyenKhoan}`
+                : ""}
             </p>
             {actionType === 1 ? (
               <p className="text-sm text-green-700 bg-green-50 rounded-lg p-3 mb-4">

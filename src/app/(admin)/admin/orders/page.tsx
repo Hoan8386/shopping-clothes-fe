@@ -9,6 +9,7 @@ import {
   getOrderStatusText,
   getOrderStatusColor,
   getPaymentStatusText,
+  getPaymentMethodText,
   getImageUrl,
 } from "@/lib/utils";
 import Pagination from "@/components/ui/Pagination";
@@ -168,8 +169,8 @@ export default function AdminOrdersPage() {
           className="border border-subtle bg-background text-foreground rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition"
         >
           <option value="">Tất cả hình thức</option>
-          <option value="0">Tại quầy</option>
-          <option value="1">Online</option>
+          <option value="0">COD/Tiền mặt</option>
+          <option value="1">VNPAY</option>
         </select>
       </div>
 
@@ -208,6 +209,9 @@ export default function AdminOrdersPage() {
                     Thanh toán
                   </th>
                   <th className="px-5 py-3.5 text-center text-xs font-semibold text-muted uppercase tracking-wider">
+                    Payment Ref
+                  </th>
+                  <th className="px-5 py-3.5 text-center text-xs font-semibold text-muted uppercase tracking-wider">
                     Thao tác
                   </th>
                 </tr>
@@ -231,16 +235,12 @@ export default function AdminOrdersPage() {
                       <span
                         className={`text-xs px-2 py-0.5 rounded-full ${
                           o.hinhThucDonHang === 0 ||
-                          o.hinhThucDonHang === "Tại quầy"
+                          o.hinhThucDonHang === "COD/Tiền mặt"
                             ? "bg-section text-muted"
                             : "bg-blue-500/10 text-blue-500"
                         }`}
                       >
-                        {typeof o.hinhThucDonHang === "string"
-                          ? o.hinhThucDonHang
-                          : o.hinhThucDonHang === 0
-                            ? "Tại quầy"
-                            : "Online"}
+                        {getPaymentMethodText(o.hinhThucDonHang)}
                       </span>
                     </td>
                     <td className="px-5 py-3.5 text-center">
@@ -254,6 +254,9 @@ export default function AdminOrdersPage() {
                     </td>
                     <td className="px-5 py-3.5 text-center text-xs text-muted">
                       {getPaymentStatusText(o.trangThaiThanhToan)}
+                    </td>
+                    <td className="px-5 py-3.5 text-center text-xs text-muted">
+                      {o.paymentRef || "-"}
                     </td>
                     <td className="px-5 py-3.5 text-center">
                       <div className="flex items-center justify-center gap-1">
@@ -354,11 +357,7 @@ export default function AdminOrdersPage() {
                     <div>
                       <span className="text-muted">Hình thức: </span>
                       <span className="font-medium text-foreground">
-                        {typeof selectedOrder.hinhThucDonHang === "string"
-                          ? selectedOrder.hinhThucDonHang
-                          : selectedOrder.hinhThucDonHang === 0
-                            ? "Tại quầy"
-                            : "Online"}
+                        {getPaymentMethodText(selectedOrder.hinhThucDonHang)}
                       </span>
                     </div>
                     <div>
@@ -373,6 +372,12 @@ export default function AdminOrdersPage() {
                       <span className="text-muted">Thanh toán: </span>
                       <span className="font-medium text-foreground">
                         {getPaymentStatusText(selectedOrder.trangThaiThanhToan)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted">Payment Ref: </span>
+                      <span className="font-medium text-foreground">
+                        {selectedOrder.paymentRef || "-"}
                       </span>
                     </div>
                     <div>

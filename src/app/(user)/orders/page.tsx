@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import { DonHang } from "@/types";
 import { orderService } from "@/services/order.service";
 import { useAuthStore } from "@/store/auth.store";
-import { formatCurrency, formatDate, getOrderStatusText } from "@/lib/utils";
+import {
+  formatCurrency,
+  formatDate,
+  getOrderStatusText,
+  getPaymentMethodText,
+} from "@/lib/utils";
 import Loading from "@/components/ui/Loading";
 import Pagination from "@/components/ui/Pagination";
 import Link from "next/link";
@@ -256,7 +261,13 @@ export default function OrdersPage() {
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Hình thức</p>
                       <p className="text-sm font-medium text-foreground">
-                        {String(order.hinhThucDonHang)}
+                        {getPaymentMethodText(order.hinhThucDonHang)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Payment ref</p>
+                      <p className="text-sm font-medium text-foreground">
+                        {order.paymentRef || "-"}
                       </p>
                     </div>
                     <div>

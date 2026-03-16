@@ -29,8 +29,21 @@ export interface ResLoginUser {
   email: string;
   name: string;
   sdt?: string | null;
+  avatar?: string | null;
   role: Role;
   diemTichLuy?: number | null;
+}
+
+export interface ReqChangePasswordDTO {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface ReqUpdateProfileDTO {
+  name?: string;
+  sdt?: string;
+  avatar?: File | null;
 }
 
 export interface ResLoginDTO {
@@ -159,6 +172,7 @@ export interface DonHang {
   tienGiam: number;
   tongTienGiam: number;
   tongTienTra: number;
+  paymentRef?: string | null;
   trangThai: string | number;
   trangThaiThanhToan: string | number;
   hinhThucDonHang: string | number;
@@ -174,6 +188,7 @@ export interface ReqTaoDonHangDTO {
   maKhuyenMaiHoaDon?: number;
   maKhuyenMaiDiem?: number;
   khachHangId?: number;
+  hinhThucDonHang?: number;
 }
 
 // ============ CUSTOMER ============
@@ -425,6 +440,9 @@ export interface TraHang {
   id: number;
   donHangId: number;
   lyDoTraHang: string;
+  phuongThucHoanTien: string;
+  thongTinChuyenKhoan?: string;
+  paymentRef?: string;
   linkAnh?: string;
   trangThai: string;
   tongTien: number;
@@ -436,6 +454,9 @@ export interface TraHang {
 export interface ReqTraHangDTO {
   donHangId: number;
   lyDoTraHang: string;
+  phuongThucHoanTien: number;
+  thongTinChuyenKhoan?: string;
+  paymentRef?: string;
   chiTietTraHangs: {
     chiTietDonHangId: number;
     ghiTru?: string;
@@ -538,5 +559,82 @@ export interface ReqDonLuanChuyenDTO {
     soLuong: number;
     ghiTru?: string;
   }[];
+}
+
+// ============ KIEM KE (STOCK CHECK) ============
+export interface LoaiKiemKe {
+  id: number;
+  tenLoaiKiemKe: string;
+  moTa?: string;
+  ngayTao?: string;
+  ngayCapNhat?: string;
+}
+
+export interface ReqLoaiKiemKeDTO {
+  id?: number;
+  tenLoaiKiemKe: string;
+  moTa?: string;
+}
+
+export interface KiemKeChiTiet {
+  id: number;
+  chiTietSanPhamId: number;
+  tenSanPham?: string;
+  tenMauSac?: string;
+  tenKichThuoc?: string;
+  soLuongHeThong?: number;
+  soLuongThucTe?: number;
+  chenhLech?: number;
+  ghiChu?: string;
+}
+
+export interface KiemKeHangHoa {
+  id: number;
+  tenPhieuKiemKe: string;
+  trangThai: number;
+  trangThaiText: string;
+  ghiChu?: string;
+  lyDoYeuCauKiemKeLai?: string;
+  ngayKiemKe?: string;
+  ngayXacNhan?: string;
+  ngayTao?: string;
+  ngayCapNhat?: string;
+  loaiKiemKe?: {
+    id: number;
+    tenLoaiKiemKe: string;
+  };
+  cuaHang?: {
+    id: number;
+    tenCuaHang: string;
+    diaChi?: string;
+  };
+  nhanVienTao?: {
+    id: number;
+    tenNhanVien: string;
+    email?: string;
+  };
+  nhanVienDuyet?: {
+    id: number;
+    tenNhanVien: string;
+    email?: string;
+  };
+  chiTietKiemKes: KiemKeChiTiet[];
+}
+
+export interface ReqChiTietKiemKeDTO {
+  id?: number;
+  chiTietSanPhamId: number;
+  soLuongThucTe: number;
+  ghiChu?: string;
+}
+
+export interface ReqKiemKeHangHoaDTO {
+  id?: number;
+  loaiKiemKeId?: number;
+  cuaHangId?: number;
+  tenPhieuKiemKe: string;
+  ghiChu?: string;
+  ngayKiemKe?: string;
+  chiTietKiemKes: ReqChiTietKiemKeDTO[];
 }
 

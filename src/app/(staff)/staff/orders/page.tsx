@@ -11,6 +11,7 @@ import {
   getOrderStatusText,
   getOrderStatusColor,
   getPaymentStatusText,
+  getPaymentMethodText,
   getImageUrl,
 } from "@/lib/utils";
 import Pagination from "@/components/ui/Pagination";
@@ -246,7 +247,7 @@ export default function StaffOrdersPage() {
     return n >= 0 && n <= 2;
   }).length;
   const onlineOrders = orders.filter(
-    (o) => o.hinhThucDonHang === 1 || o.hinhThucDonHang === "Online",
+    (o) => o.hinhThucDonHang === 1 || o.hinhThucDonHang === "VNPAY",
   ).length;
 
   const handleSubmitPos = async () => {
@@ -338,7 +339,7 @@ export default function StaffOrdersPage() {
         </div>
         <div className="bg-card border border-subtle rounded-xl p-4">
           <p className="text-xs text-muted uppercase tracking-wide">
-            Đơn online
+            Đơn VNPAY
           </p>
           <p className="text-xl font-bold text-foreground mt-1">
             {onlineOrders}
@@ -377,8 +378,8 @@ export default function StaffOrdersPage() {
           className="border border-subtle bg-background text-foreground rounded-lg px-3 py-1.5 text-sm"
         >
           <option value="">Tất cả hình thức</option>
-          <option value="0">Tại quầy</option>
-          <option value="1">Online</option>
+          <option value="0">COD/Tiền mặt</option>
+          <option value="1">VNPAY</option>
         </select>
       </div>
 
@@ -424,6 +425,9 @@ export default function StaffOrdersPage() {
                     Thanh toán
                   </th>
                   <th className="px-4 py-3 text-center font-medium text-muted">
+                    Payment Ref
+                  </th>
+                  <th className="px-4 py-3 text-center font-medium text-muted">
                     Thao tác
                   </th>
                 </tr>
@@ -445,16 +449,12 @@ export default function StaffOrdersPage() {
                       <span
                         className={`text-xs px-2 py-0.5 rounded-full ${
                           o.hinhThucDonHang === 0 ||
-                          o.hinhThucDonHang === "Tại quầy"
+                          o.hinhThucDonHang === "COD/Tiền mặt"
                             ? "bg-section text-muted"
                             : "bg-blue-500/10 text-blue-600"
                         }`}
                       >
-                        {typeof o.hinhThucDonHang === "string"
-                          ? o.hinhThucDonHang
-                          : o.hinhThucDonHang === 0
-                            ? "Tại quầy"
-                            : "Online"}
+                        {getPaymentMethodText(o.hinhThucDonHang)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -466,6 +466,9 @@ export default function StaffOrdersPage() {
                     </td>
                     <td className="px-4 py-3 text-center text-muted text-xs">
                       {getPaymentStatusText(o.trangThaiThanhToan)}
+                    </td>
+                    <td className="px-4 py-3 text-center text-muted text-xs">
+                      {o.paymentRef || "-"}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-center gap-2">
@@ -559,11 +562,7 @@ export default function StaffOrdersPage() {
                     <div>
                       <span className="text-muted">Hình thức: </span>
                       <span className="font-medium text-foreground">
-                        {typeof selectedOrder.hinhThucDonHang === "string"
-                          ? selectedOrder.hinhThucDonHang
-                          : selectedOrder.hinhThucDonHang === 0
-                            ? "Tại quầy"
-                            : "Online"}
+                        {getPaymentMethodText(selectedOrder.hinhThucDonHang)}
                       </span>
                     </div>
                     <div>
@@ -578,6 +577,12 @@ export default function StaffOrdersPage() {
                       <span className="text-muted">Thanh toán: </span>
                       <span className="font-medium text-foreground">
                         {getPaymentStatusText(selectedOrder.trangThaiThanhToan)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted">Payment Ref: </span>
+                      <span className="font-medium text-foreground">
+                        {selectedOrder.paymentRef || "-"}
                       </span>
                     </div>
                     <div>

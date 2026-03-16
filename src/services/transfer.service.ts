@@ -39,10 +39,22 @@ export const donLuanChuyenService = {
     return res.data.data;
   },
 
-  getAll: async (page = 1, size = 15) => {
+  getAll: async (
+    page = 1,
+    size = 15,
+    filters?: { cuaHangGuiId?: number; cuaHangDatId?: number }
+  ) => {
     const res = await apiClient.get<RestResponse<PaginationResult>>(
       "/don-luan-chuyen",
-      { params: { page: page - 1, size, sort: "ngayTao,desc" } }
+      {
+        params: {
+          page: page - 1,
+          size,
+          sort: "ngayTao,desc",
+          cuaHangGuiId: filters?.cuaHangGuiId,
+          cuaHangDatId: filters?.cuaHangDatId,
+        },
+      }
     );
     return res.data.data;
   },

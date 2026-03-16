@@ -62,6 +62,7 @@ export default function AdminBrandsPage() {
       }
       setShowModal(false);
       fetchData();
+      // @ts-expect-error
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Thao tác thất bại");
     }

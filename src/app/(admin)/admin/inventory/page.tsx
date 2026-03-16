@@ -123,6 +123,12 @@ export default function AdminInventoryPage() {
     trangThai: 0,
   });
   const [updating, setUpdating] = useState(false);
+  const [kiemKeProcessingId, setKiemKeProcessingId] = useState<number | null>(
+    null,
+  );
+  const [deletingReceiptId, setDeletingReceiptId] = useState<number | null>(
+    null,
+  );
 
   // Create modal
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -204,6 +210,7 @@ export default function AdminInventoryPage() {
     if (!confirm("Xác nhận xóa phiếu nhập này? Thao tác không thể hoàn tác."))
       return;
     try {
+      setDeletingReceiptId(id);
       await phieuNhapService.delete(id);
       toast.success("Đã xóa phiếu nhập");
       if (showDetail && selectedReceipt?.id === id) {
@@ -215,6 +222,8 @@ export default function AdminInventoryPage() {
       const msg =
         err instanceof Error ? err.message : "Xóa phiếu nhập thất bại";
       toast.error(msg);
+    } finally {
+      setDeletingReceiptId(null);
     }
   };
 
@@ -230,6 +239,19 @@ export default function AdminInventoryPage() {
 
   const handleSaveItemEdit = async (item: ChiTietPhieuNhap) => {
     if (!selectedReceipt) return;
+    if (itemEditForm.trangThai === 1) {
+      if (
+        !Number.isFinite(itemEditForm.soLuongThieu) ||
+        itemEditForm.soLuongThieu <= 0
+      ) {
+        toast.error("Số lượng thiếu phải lớn hơn 0");
+        return;
+      }
+      if (itemEditForm.soLuongThieu > item.soLuong) {
+        toast.error("Số lượng thiếu không được vượt quá số lượng đặt");
+        return;
+      }
+    }
     try {
       setSavingItem(true);
       await chiTietPhieuNhapService.update({
@@ -290,6 +312,10 @@ export default function AdminInventoryPage() {
 
   const handleConfirmAddItem = async () => {
     if (!selectedReceipt || !addItemForm.variantId) return;
+    if (!Number.isFinite(addItemForm.soLuong) || addItemForm.soLuong <= 0) {
+      toast.error("Số lượng phải lớn hơn 0");
+      return;
+    }
     try {
       setAddingItem(true);
       await chiTietPhieuNhapService.create({
@@ -371,6 +397,7 @@ export default function AdminInventoryPage() {
     )
       return;
     try {
+      setKiemKeProcessingId(id);
       await phieuNhapService.kiemKe(id);
       toast.success("Kiểm kê thành công");
       if (showDetail && selectedReceipt?.id === id) {
@@ -382,6 +409,8 @@ export default function AdminInventoryPage() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Kiểm kê thất bại";
       toast.error(msg);
+    } finally {
+      setKiemKeProcessingId(null);
     }
   };
 
@@ -446,6 +475,13 @@ export default function AdminInventoryPage() {
     }
     if (!createForm.cuaHangId || !createForm.nhaCungCapId) {
       toast.error("Vui lòng chọn cửa hàng và nhà cung cấp");
+      return;
+    }
+    const hasInvalidQuantity = nhapItems.some(
+      (item) => !Number.isFinite(item.soLuong) || item.soLuong <= 0,
+    );
+    if (hasInvalidQuantity) {
+      toast.error("Tất cả số lượng nhập phải lớn hơn 0");
       return;
     }
     try {
@@ -683,18 +719,32 @@ export default function AdminInventoryPage() {
                         {r.trangThai === 1 && (
                           <button
                             onClick={() => handleKiemKe(r.id)}
-                            className="p-2 rounded-lg text-emerald-600 hover:bg-emerald-500/10 transition"
+                            disabled={kiemKeProcessingId === r.id}
+                            className="p-2 rounded-lg text-emerald-600 hover:bg-emerald-500/10 transition disabled:opacity-50"
                             title="Kiểm kê"
                           >
-                            <FiCheckSquare size={15} />
+                            <FiCheckSquare
+                              size={15}
+                              className={
+                                kiemKeProcessingId === r.id
+                                  ? "animate-spin"
+                                  : ""
+                              }
+                            />
                           </button>
                         )}
                         <button
                           onClick={() => handleDeleteReceipt(r.id)}
-                          className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition"
+                          disabled={deletingReceiptId === r.id}
+                          className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition disabled:opacity-50"
                           title="Xóa phiếu nhập"
                         >
-                          <FiTrash2 size={15} />
+                          <FiTrash2
+                            size={15}
+                            className={
+                              deletingReceiptId === r.id ? "animate-pulse" : ""
+                            }
+                          />
                         </button>
                       </div>
                     </td>
@@ -915,7 +965,7 @@ export default function AdminInventoryPage() {
                             onChange={(e) =>
                               setAddItemForm({
                                 ...addItemForm,
-                                soLuong: Math.max(1, Number(e.target.value)),
+                                soLuong: Number(e.target.value),
                               })
                             }
                             className="w-20 border border-subtle bg-background text-foreground rounded-xl px-2 py-1.5 text-xs focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none"
@@ -1059,9 +1109,8 @@ export default function AdminInventoryPage() {
                                         onChange={(e) =>
                                           setItemEditForm({
                                             ...itemEditForm,
-                                            soLuongThieu: Math.max(
-                                              0,
-                                              Number(e.target.value),
+                                            soLuongThieu: Number(
+                                              e.target.value,
                                             ),
                                           })
                                         }
@@ -1129,9 +1178,20 @@ export default function AdminInventoryPage() {
                   {selectedReceipt.trangThai === 1 && (
                     <button
                       onClick={() => handleKiemKe(selectedReceipt.id)}
+                      disabled={kiemKeProcessingId === selectedReceipt.id}
                       className="w-full mt-2 py-2.5 bg-accent text-white rounded-xl text-sm hover:bg-accent-hover flex items-center justify-center gap-2 font-medium transition"
                     >
-                      <FiCheckSquare size={16} /> Thực hiện kiểm kê
+                      <FiCheckSquare
+                        size={16}
+                        className={
+                          kiemKeProcessingId === selectedReceipt.id
+                            ? "animate-spin"
+                            : ""
+                        }
+                      />
+                      {kiemKeProcessingId === selectedReceipt.id
+                        ? "Đang kiểm kê..."
+                        : "Thực hiện kiểm kê"}
                     </button>
                   )}
 
@@ -1458,10 +1518,7 @@ export default function AdminInventoryPage() {
                             value={item.soLuong}
                             onChange={(e) => {
                               const updated = [...nhapItems];
-                              updated[idx].soLuong = Math.max(
-                                1,
-                                Number(e.target.value),
-                              );
+                              updated[idx].soLuong = Number(e.target.value);
                               setNhapItems(updated);
                             }}
                             className="w-16 border border-subtle bg-background text-foreground rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none"
