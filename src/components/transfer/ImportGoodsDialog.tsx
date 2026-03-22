@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ResChiTietSanPhamDTO } from "@/types";
 import { productVariantService } from "@/services/product.service";
+import { donLuanChuyenService } from "@/services/transfer.service";
 import {
   FiLoader,
   FiMapPin,
@@ -15,7 +16,8 @@ import toast from "react-hot-toast";
 interface ImportGoodsDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onProductSelect?: (product: ResChiTietSanPhamDTO) => void;
+  currentStoreId?: number | null;
+  onSuccess?: () => void;
 }
 
 type DialogStep = "select-product" | "select-store" | "confirm";
@@ -23,7 +25,8 @@ type DialogStep = "select-product" | "select-store" | "confirm";
 export function ImportGoodsDialog({
   isOpen,
   onClose,
-  onProductSelect,
+  currentStoreId,
+  onSuccess,
 }: ImportGoodsDialogProps) {
   const [step, setStep] = useState<DialogStep>("select-product");
   const [loading, setLoading] = useState(false);
@@ -46,8 +49,19 @@ export function ImportGoodsDialog({
 
   useEffect(() => {
     if (isOpen && step === "select-product") {
-      // You would fetch available products here
-      // For now, this is a placeholder
+      const fetchProducts = async () => {
+        try {
+          setLoading(true);
+          const data = await productVariantService.getAll();
+          const uniqueProducts = Array.from(new Map(data.map((p) => [p.sanPhamId, p])).values());
+          setProductsWithInventory(uniqueProducts);
+        } catch (error) {
+          toast.error("Không thể tải danh sách sản phẩm");
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchProducts();
     }
   }, [isOpen, step]);
 
@@ -71,10 +85,36 @@ export function ImportGoodsDialog({
     }
   };
 
-  const handleConfirmImport = () => {
-    if (selectedStore && onProductSelect) {
-      onProductSelect(selectedStore);
+  const handleConfirmImport = async () => {
+    if (!selectedStore || !selectedProduct) return;
+    if (!currentStoreId) {
+      toast.error("Không xác định được cửa hàng của bạn");
+      return;
+    }
+    try {
+      setLoading(true);
+      await donLuanChuyenService.create({
+        cuaHangDatId: currentStoreId,
+        cuaHangGuiId: selectedStore.maCuaHang,
+        loaiDonLuanChuyenId: 1,
+        tenDon: "Nhập hàng: " + selectedProduct.tenSanPham,
+        ghiTru: "",
+        chiTietDonLuanChuyens: [
+          {
+            chiTietSanPhamId: selectedStore.id,
+            soLuong: quantity,
+            ghiTru: ""
+          }
+        ]
+      });
+      toast.success("Tạo đơn luân chuyển thành công!");
+      if (onSuccess) onSuccess();
       handleClose();
+    } catch (error) {
+      console.error("Lỗi tạo đơn luân chuyển", error);
+      toast.error("Tạo đơn thất bại");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -149,14 +189,23 @@ export function ImportGoodsDialog({
                       <div
                         key={product.id}
                         onClick={() => handleProductSelect(product)}
-                        className="p-4 border border-subtle rounded-lg hover:bg-section cursor-pointer transition"
+                        className="p-4 border border-subtle rounded-lg hover:bg-section cursor-pointer transition flex items-center gap-4"
                       >
-                        <p className="font-semibold text-foreground">
-                          {product.tenSanPham}
-                        </p>
-                        <p className="text-sm text-muted mt-1">
-                          {product.tenMauSac} / {product.tenKichThuoc}
-                        </p>
+                        {product.hinhAnhUrls && product.hinhAnhUrls.length > 0 ? (
+                          <img src={product.hinhAnhUrls[0]} alt={product.tenSanPham} className="w-12 h-12 rounded-md object-cover border border-subtle shrink-0" />
+                        ) : (
+                          <div className="w-12 h-12 rounded-md bg-section flex justify-center items-center text-xs text-muted border border-subtle shrink-0">
+                            No img
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-semibold text-foreground">
+                            {product.tenSanPham}
+                          </p>
+                          <p className="text-sm text-muted mt-1">
+                            {product.tenMauSac} / {product.tenKichThuoc}
+                          </p>
+                        </div>
                       </div>
                     ))}
                 </div>
@@ -186,25 +235,33 @@ export function ImportGoodsDialog({
                     <div
                       key={store.id}
                       onClick={() => setSelectedStore(store)}
-                      className={`p-4 border rounded-lg cursor-pointer transition ${
+                      className={`p-4 border rounded-lg cursor-pointer transition flex items-start gap-4 ${
                         selectedStore?.id === store.id
                           ? "border-primary bg-primary/5"
                           : "border-subtle hover:bg-section"
                       }`}
                     >
-                      <div className="flex items-center justify-between">
-                        <div>
+                      {store.hinhAnhUrls && store.hinhAnhUrls.length > 0 ? (
+                        <img src={store.hinhAnhUrls[0]} alt={store.tenSanPham} className="w-16 h-16 rounded-md object-cover border border-subtle shrink-0" />
+                      ) : (
+                        <div className="w-16 h-16 rounded-md bg-section flex justify-center items-center text-xs text-muted border border-subtle shrink-0">
+                          No img
+                        </div>
+                      )}
+                      
+                      <div className="flex-1 flex items-center justify-between min-w-0">
+                        <div className="pr-2 min-w-0">
                           <div className="flex items-center gap-2 mb-2">
-                            <FiMapPin className="w-4 h-4 text-primary" />
-                            <h3 className="font-semibold text-foreground">
+                            <FiMapPin className="w-4 h-4 text-primary shrink-0" />
+                            <h3 className="font-semibold text-foreground truncate">
                               {store.tenCuaHang}
                             </h3>
                           </div>
-                          <p className="text-sm text-muted">
+                          <p className="text-sm text-muted truncate">
                             {store.tenMauSac} / {store.tenKichThuoc}
                           </p>
                         </div>
-                        <div className="text-right">
+                        <div className="text-right shrink-0">
                           <p className="text-sm font-bold text-primary flex items-center gap-1 justify-end">
                             <FiPackage className="w-4 h-4" />
                             {store.soLuong} có sẵn
@@ -292,7 +349,7 @@ export function ImportGoodsDialog({
               <button
                 onClick={() => setStep("confirm")}
                 disabled={!selectedStore}
-                className="flex-1 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 py-2.5 bg-primary text-red-700 rounded-lg text-sm font-medium hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Tiếp tục
               </button>
@@ -309,7 +366,7 @@ export function ImportGoodsDialog({
               </button>
               <button
                 onClick={handleConfirmImport}
-                className="flex-1 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition"
+                className="flex-1 py-2.5 bg-primary text-red-700 rounded-lg text-sm font-medium hover:bg-primary/90 transition"
               >
                 Tạo đơn nhập hàng
               </button>

@@ -702,6 +702,8 @@ export default function AdminTransfersPage() {
       <ImportGoodsDialog
         isOpen={showImportModal}
         onClose={() => setShowImportModal(false)}
+        currentStoreId={currentStoreId}
+        onSuccess={fetchTransfers}
       />
     </div>
   );

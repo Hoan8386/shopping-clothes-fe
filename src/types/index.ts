@@ -86,6 +86,7 @@ export interface ResChiTietSanPhamDTO {
   id: number;
   sanPhamId: number;
   maPhieuNhap: number;
+  maCuaHang?: number;
   tenCuaHang: string;
   soLuong: number;
   giaBan: number;
@@ -638,3 +639,141 @@ export interface ReqKiemKeHangHoaDTO {
   chiTietKiemKes: ReqChiTietKiemKeDTO[];
 }
 
+// ============ CA LAM VIEC (SHIFTS) ============
+export interface CaLamViec {
+  id: number;
+  tenCaLam: string;
+  gioBatDau: string;  // HH:mm:ss
+  gioKetThuc: string; // HH:mm:ss
+  trangThai: number;  // 1=Hoạt động, 0=Không HĐ
+  json?: string;
+  ngayTao?: string;
+  ngayCapNhat?: string;
+}
+
+export interface ReqCaLamViecDTO {
+  id?: number;
+  tenCaLam: string;
+  gioBatDau: string;
+  gioKetThuc: string;
+  trangThai: number;
+}
+
+// ============ LICH LAM VIEC (SCHEDULES) ============
+export interface LichLamViec {
+  id: number;
+  nhanVien?: NhanVien;
+  ngayLamViec: string; // yyyy-MM-dd
+  trangThai: number;   // 1=Đang làm, 0=Nghỉ
+  json?: string;
+  ngayTao?: string;
+  ngayCapNhat?: string;
+}
+
+export interface ReqLichLamViecDTO {
+  id?: number;
+  nhanVien: { id: number };
+  ngayLamViec: string;
+  trangThai: number;
+}
+
+// ============ CHI TIET LICH LAM (SCHEDULE DETAILS) ============
+export interface ChiTietLichLam {
+  id: number;
+  lichLamViec?: LichLamViec;
+  caLamViec?: CaLamViec;
+  trangThai: number; // 1=Xác nhận, 0=Chờ duyệt
+  ngayTao?: string;
+  ngayCapNhat?: string;
+}
+
+export interface ReqChiTietLichLamDTO {
+  id?: number;
+  lichLamViec: { id: number };
+  caLamViec: { id: number };
+  trangThai: number;
+}
+
+// ============ LUONG CO BAN (BASIC SALARY) ============
+export interface LuongCoBan {
+  id: number;
+  nhanVien?: NhanVien;
+  luongCoBan: number; // VNĐ
+  ngayApDung: string; // LocalDateTime
+  trangThai: number;  // 1=Đang áp dụng, 0=Hết hiệu lực
+  json?: string;
+  ngayTao?: string;
+  ngayCapNhat?: string;
+}
+
+export interface ReqLuongCoBanDTO {
+  id?: number;
+  nhanVien: { id: number };
+  luongCoBan: number;
+  ngayApDung: string;
+  trangThai: number;
+}
+
+// ============ LUONG THUONG (BONUSES) ============
+export interface LuongThuong {
+  id: number;
+  nhanVien?: NhanVien;
+  tienThuong: number;  // VNĐ
+  ngayBatDau: string;  // LocalDateTime
+  ngayKetThuc: string; // LocalDateTime
+  trangThai: number;   // 1=Đã chi, 0=Chờ chi
+  json?: string;
+  ngayTao?: string;
+  ngayCapNhat?: string;
+}
+
+export interface ReqLuongThuongDTO {
+  id?: number;
+  nhanVien: { id: number };
+  tienThuong: number;
+  ngayBatDau: string;
+  ngayKetThuc: string;
+  trangThai: number;
+}
+
+// ============ DOI CA (SHIFT SWAPS) ============
+export interface DoiCa {
+  id: number;
+  lichLamViec?: LichLamViec;
+  chiTietLichLam?: ChiTietLichLam;
+  nhanVienNhanCa?: NhanVien;
+  trangThai: number; // 0=Chờ, 1=Đồng ý, 2=Từ chối
+  json?: string;
+  ngayTao?: string;
+  ngayCapNhat?: string;
+}
+
+export interface ReqDoiCaDTO {
+  id?: number;
+  lichLamViec: { id: number };
+  chiTietLichLam: { id: number };
+  nhanVienNhanCa: { id: number };
+  trangThai: number;
+}
+
+// ============ LOI PHAT SINH (INCIDENTS) ============
+export interface LoiPhatSinh {
+  id: number;
+  lichLamViec?: LichLamViec;
+  chiTietLichLam?: ChiTietLichLam;
+  tenLoiPhatSinh: string; // Mô tả lỗi
+  soTienTru: number;      // VNĐ
+  trangThai: number;      // 1=Đã xử lý, 0=Chờ xử lý
+  json?: string;
+  ngayTao?: string;
+  ngayCapNhat?: string;
+}
+
+export interface ReqLoiPhatSinhDTO {
+  id?: number;
+  lichLamViec: { id: number };
+  chiTietLichLam: { id: number };
+  tenLoiPhatSinh: string;
+  soTienTru: number;
+  trangThai: number;
+}

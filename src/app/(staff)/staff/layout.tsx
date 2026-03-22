@@ -16,6 +16,9 @@ import {
   FiX,
   FiShuffle,
   FiClipboard,
+  FiClock,
+  FiCalendar,
+  FiRepeat,
 } from "react-icons/fi";
 
 const menuItems = [
@@ -23,11 +26,13 @@ const menuItems = [
   { href: "/staff/products", label: "Sản phẩm", icon: FiBox },
   { href: "/staff/orders", label: "Đơn hàng", icon: FiShoppingCart },
   { href: "/staff/returns", label: "Trả hàng", icon: FiRotateCcw },
-  // { href: "/staff/exchanges", label: "Đổi hàng", icon: FiRepeat },
   { href: "/staff/inventory", label: "Kho hàng", icon: FiPackage },
   { href: "/staff/transfers", label: "Luân chuyển", icon: FiShuffle },
   { href: "/staff/stock-checks", label: "Kiểm kê", icon: FiClipboard },
   { href: "/staff/employees", label: "Nhân viên", icon: FiUsers },
+  { href: "/staff/ca-lam-viec", label: "Ca làm việc", icon: FiClock },
+  { href: "/staff/lich-lam-viec", label: "Lịch làm việc", icon: FiCalendar },
+  { href: "/staff/doi-ca", label: "Đổi ca", icon: FiRepeat },
 ];
 
 const pageTitles: Record<string, { title: string; description: string }> = {
@@ -67,6 +72,18 @@ const pageTitles: Record<string, { title: string; description: string }> = {
   "/staff/stock-checks": {
     title: "Kiểm kê hàng hóa",
     description: "Tạo phiếu kiểm kê, điền số lượng thực tế và gửi duyệt.",
+  },
+  "/staff/ca-lam-viec": {
+    title: "Ca làm việc",
+    description: "Xem danh sách các ca làm việc trong hệ thống.",
+  },
+  "/staff/lich-lam-viec": {
+    title: "Lịch làm việc",
+    description: "Xem và quản lý lịch làm việc của bạn.",
+  },
+  "/staff/doi-ca": {
+    title: "Đổi ca",
+    description: "Tạo và quản lý yêu cầu đổi ca.",
   },
 };
 

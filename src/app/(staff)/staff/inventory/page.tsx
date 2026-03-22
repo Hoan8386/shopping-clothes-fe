@@ -516,12 +516,12 @@ export default function StaffInventoryPage() {
             Phiếu nhập hàng từ nhà cung cấp
           </p>
         </div>
-        <button
+        {/* <button
           onClick={openCreateModal}
           className="flex items-center gap-2 bg-accent text-white px-4 py-2 rounded-lg text-sm hover:bg-accent-hover transition"
         >
           <FiPlus size={16} /> Tạo phiếu nhập
-        </button>
+        </button> */}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
