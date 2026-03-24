@@ -29,6 +29,7 @@ export default function AdminEmployeesPage() {
   const [stores, setStores] = useState<CuaHang[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterStoreId, setFilterStoreId] = useState<number | undefined>();
 
   // Modal
   const [showModal, setShowModal] = useState(false);
@@ -131,7 +132,11 @@ export default function AdminEmployeesPage() {
     }
   };
 
-  const activeCount = employees.filter((e) => e.trangThai === 1).length;
+  const filteredEmployees = employees.filter((emp) => 
+    filterStoreId ? emp.cuaHang?.id === filterStoreId : true
+  );
+
+  const activeCount = filteredEmployees.filter((e) => e.trangThai === 1).length;
 
   return (
     <div className="space-y-5">
@@ -153,6 +158,22 @@ export default function AdminEmployeesPage() {
         </button>
       </div>
 
+      {/* Filters */}
+      <div className="bg-card rounded-2xl border border-subtle p-4">
+        <select
+          value={filterStoreId ?? ""}
+          onChange={(e) => setFilterStoreId(e.target.value ? Number(e.target.value) : undefined)}
+          className="h-10 px-3 rounded-lg bg-section border border-subtle text-sm md:w-1/3 w-full"
+        >
+          <option value="">Tất cả cửa hàng</option>
+          {stores.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.tenCuaHang}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         <div className="bg-card border border-subtle rounded-xl p-4">
@@ -160,7 +181,7 @@ export default function AdminEmployeesPage() {
             Tổng nhân viên
           </p>
           <p className="text-2xl font-bold text-foreground mt-1">
-            {employees.length}
+            {filteredEmployees.length}
           </p>
         </div>
         <div className="bg-card border border-subtle rounded-xl p-4">
@@ -174,7 +195,7 @@ export default function AdminEmployeesPage() {
             Nghỉ việc
           </p>
           <p className="text-2xl font-bold text-red-600 mt-1">
-            {employees.length - activeCount}
+            {filteredEmployees.length - activeCount}
           </p>
         </div>
       </div>
@@ -182,7 +203,7 @@ export default function AdminEmployeesPage() {
       {/* Table */}
       {loading ? (
         <Loading />
-      ) : employees.length === 0 ? (
+      ) : filteredEmployees.length === 0 ? (
         <div className="text-center py-16 text-muted">
           Chưa có nhân viên nào
         </div>
@@ -190,7 +211,7 @@ export default function AdminEmployeesPage() {
         <div className="bg-card rounded-2xl border border-subtle overflow-hidden">
           <div className="px-4 py-3 border-b border-subtle bg-section/60 text-xs text-muted flex items-center gap-2">
             <FiUsers size={14} />
-            <span>Tổng cộng {employees.length} nhân viên.</span>
+            <span>Tổng cộng {filteredEmployees.length} nhân viên.</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-225">
@@ -226,7 +247,7 @@ export default function AdminEmployeesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-subtle">
-                {employees.map((emp) => (
+                {filteredEmployees.map((emp) => (
                   <tr key={emp.id} className="hover:bg-section transition">
                     <td className="px-4 py-3 font-semibold">#{emp.id}</td>
                     <td className="px-4 py-3 font-medium text-foreground">

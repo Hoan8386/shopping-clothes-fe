@@ -63,27 +63,61 @@ export const lichLamViecService = {
     return res.data.data;
   },
 
+  getByCuaHangId: async (cuaHangId: number): Promise<LichLamViec[]> => {
+    const res = await apiClient.get<RestResponse<LichLamViec[]>>(
+      `/lich-lam-viec/cua-hang/${cuaHangId}`
+    );
+    return res.data.data;
+  },
+
+  getByCuaHangAndMonth: async (cuaHangId: number, year: number, month: number): Promise<LichLamViec[]> => {
+    const res = await apiClient.get<RestResponse<LichLamViec[]>>(
+      `/lich-lam-viec/cua-hang/${cuaHangId}/thang`,
+      { params: { year, month } }
+    );
+    return res.data.data;
+  },
+
   create: async (data: ReqLichLamViecDTO): Promise<LichLamViec> => {
     const res = await apiClient.post<RestResponse<LichLamViec>>("/lich-lam-viec", data);
     return res.data.data;
   },
 
-  importExcel: async (file: File): Promise<LichLamViec[]> => {
+  importExcel: async (cuaHangId: number, file: File): Promise<LichLamViec[]> => {
     const formData = new FormData();
     formData.append("file", file);
     const res = await apiClient.post<RestResponse<LichLamViec[]>>(
-      "/lich-lam-viec/import",
+      `/lich-lam-viec/cua-hang/${cuaHangId}/import`,
       formData,
       { headers: { "Content-Type": "multipart/form-data" } }
     );
     return res.data.data;
   },
 
-  downloadTemplate: async (): Promise<Blob> => {
-    const res = await apiClient.get("/lich-lam-viec/download-template", {
+  downloadTemplate: async (cuaHangId: number, year: number, month: number): Promise<Blob> => {
+    const res = await apiClient.get(`/lich-lam-viec/cua-hang/${cuaHangId}/download-template`, {
+      params: { year, month },
       responseType: "blob",
     });
     return res.data;
+  },
+
+  updateDayStatus: async (cuaHangId: number, date: string, status: number): Promise<void> => {
+    await apiClient.put(`/lich-lam-viec/cua-hang/${cuaHangId}/ngay/trang-thai`, null, {
+      params: { date, status }
+    });
+  },
+
+  addShift: async (cuaHangId: number, nhanVienId: number, caLamViecId: number, date: string): Promise<void> => {
+    await apiClient.post(`/lich-lam-viec/cua-hang/${cuaHangId}/ngay/ca-lam-viec`, null, {
+      params: { nhanVienId, caLamViecId, date }
+    });
+  },
+
+  removeShift: async (cuaHangId: number, nhanVienId: number, caLamViecId: number, date: string): Promise<void> => {
+    await apiClient.delete(`/lich-lam-viec/cua-hang/${cuaHangId}/ngay/ca-lam-viec`, {
+      params: { nhanVienId, caLamViecId, date }
+    });
   },
 
   update: async (data: ReqLichLamViecDTO): Promise<LichLamViec> => {

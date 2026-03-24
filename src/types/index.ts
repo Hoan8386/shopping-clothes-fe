@@ -32,6 +32,8 @@ export interface ResLoginUser {
   avatar?: string | null;
   role: Role;
   diemTichLuy?: number | null;
+  cuaHangId?: number;
+  nhanVienId?: number;
 }
 
 export interface ReqChangePasswordDTO {
