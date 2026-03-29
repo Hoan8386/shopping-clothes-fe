@@ -679,6 +679,47 @@ export interface ReqLichLamViecDTO {
   trangThai: number;
 }
 
+export interface LichLamViecThangCaLamInfo {
+  id: number;
+  tenCaLam: string;
+  gioBatDau: string;
+  gioKetThuc: string;
+  trangThai: number;
+}
+
+export interface LichLamViecThangChiTietCaLam {
+  id: number;
+  trangThai: number;
+  caLamViec: LichLamViecThangCaLamInfo;
+}
+
+export interface LichLamViecThangNhanVienInfo {
+  id: number;
+  tenNhanVien: string;
+  email?: string;
+  soDienThoai?: string;
+}
+
+export interface LichLamViecThangNhanVienTrongNgay {
+  lichLamViecId: number;
+  trangThaiLich: number;
+  nhanVien: LichLamViecThangNhanVienInfo;
+  chiTietCaLams: LichLamViecThangChiTietCaLam[];
+}
+
+export interface LichLamViecThangNgay {
+  ngayLamViec: string;
+  trangThaiNgay: number;
+  chiTietNhanViens: LichLamViecThangNhanVienTrongNgay[];
+}
+
+export interface LichLamViecThangResponse {
+  cuaHangId: number;
+  year: number;
+  month: number;
+  ngayLichLams: LichLamViecThangNgay[];
+}
+
 // ============ CHI TIET LICH LAM (SCHEDULE DETAILS) ============
 export interface ChiTietLichLam {
   id: number;
@@ -745,6 +786,8 @@ export interface DoiCa {
   chiTietLichLam?: ChiTietLichLam;
   nhanVienNhanCa?: NhanVien;
   trangThai: number; // 0=Chờ, 1=Đồng ý, 2=Từ chối
+  lyDo?: string;
+  phanHoi?: string;
   json?: string;
   ngayTao?: string;
   ngayCapNhat?: string;
@@ -756,6 +799,8 @@ export interface ReqDoiCaDTO {
   chiTietLichLam: { id: number };
   nhanVienNhanCa: { id: number };
   trangThai: number;
+  lyDo?: string;
+  phanHoi?: string;
 }
 
 // ============ LOI PHAT SINH (INCIDENTS) ============
@@ -765,6 +810,7 @@ export interface LoiPhatSinh {
   chiTietLichLam?: ChiTietLichLam;
   tenLoiPhatSinh: string; // Mô tả lỗi
   soTienTru: number;      // VNĐ
+  hinhAnh?: string;       // URL ảnh lỗi
   trangThai: number;      // 1=Đã xử lý, 0=Chờ xử lý
   json?: string;
   ngayTao?: string;
@@ -777,5 +823,6 @@ export interface ReqLoiPhatSinhDTO {
   chiTietLichLam: { id: number };
   tenLoiPhatSinh: string;
   soTienTru: number;
+  hinhAnh?: string;
   trangThai: number;
 }

@@ -76,6 +76,7 @@ export default function AdminInventoryPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [filterStoreId, setFilterStoreId] = useState<number | undefined>();
   const [filterStatus, setFilterStatus] = useState<number | undefined>();
   const [searchName, setSearchName] = useState("");
 
@@ -150,6 +151,7 @@ export default function AdminInventoryPage() {
     try {
       setLoading(true);
       const params: PhieuNhapSearchParams = { page, size: 15 };
+      if (filterStoreId !== undefined) params.cuaHangId = filterStoreId;
       if (filterStatus !== undefined) params.trangThai = filterStatus;
       if (searchName.trim()) params.tenPhieuNhap = searchName.trim();
       const data = await phieuNhapService.getAll(params);
@@ -160,7 +162,7 @@ export default function AdminInventoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, filterStatus, searchName]);
+  }, [page, filterStoreId, filterStatus, searchName]);
 
   useEffect(() => {
     fetchReceipts();
@@ -574,6 +576,28 @@ export default function AdminInventoryPage() {
 
       {/* Filters */}
       <div className="bg-card rounded-2xl border border-subtle p-4 space-y-3">
+        <div className="w-full sm:max-w-sm">
+          <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">
+            Cửa hàng
+          </label>
+          <select
+            value={filterStoreId ?? ""}
+            onChange={(e) => {
+              setFilterStoreId(
+                e.target.value !== "" ? Number(e.target.value) : undefined,
+              );
+              setPage(1);
+            }}
+            className="w-full border border-subtle bg-background text-foreground rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition"
+          >
+            <option value="">Tất cả cửa hàng</option>
+            {stores.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.tenCuaHang}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="flex flex-wrap gap-2">
           {[
             { label: "Tất cả", value: undefined },
@@ -636,7 +660,9 @@ export default function AdminInventoryPage() {
         <Loading />
       ) : receipts.length === 0 ? (
         <div className="text-center py-16 text-muted">
-          Không có phiếu nhập nào
+          {filterStoreId
+            ? "Không có phiếu nhập cho cửa hàng đã chọn"
+            : "Không có phiếu nhập nào"}
         </div>
       ) : (
         <div className="bg-card rounded-2xl border border-subtle overflow-hidden">

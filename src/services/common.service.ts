@@ -126,7 +126,10 @@ export const cuaHangService = {
     >("/cua-hang");
     const payload = res.data.data;
     if (Array.isArray(payload)) return payload;
-    return payload?.result ?? [];
+    if (payload && typeof payload === "object" && "result" in payload) {
+      return (payload as any).result as CuaHang[];
+    }
+    return [];
   },
   getById: async (id: number) => {
     const res = await apiClient.get<RestResponse<CuaHang>>(`/cua-hang/${id}`);
@@ -314,6 +317,7 @@ export const permissionService = {
 
 // ============ PhieuNhap ============
 export interface PhieuNhapSearchParams {
+  cuaHangId?: number;
   tenPhieuNhap?: string;
   trangThai?: number;
   tenCuaHang?: string;

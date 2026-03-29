@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { DonHang } from "@/types";
+import { CuaHang, DonHang } from "@/types";
 import { orderService, OrderSearchParams } from "@/services/order.service";
+import { cuaHangService } from "@/services/common.service";
 import {
   formatCurrency,
   formatDate,
@@ -42,9 +43,11 @@ function getStatusNumber(status: string | number): number {
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<DonHang[]>([]);
+  const [stores, setStores] = useState<CuaHang[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [filterStoreId, setFilterStoreId] = useState<number | undefined>();
   const [filterStatus, setFilterStatus] = useState<number | undefined>();
   const [filterType, setFilterType] = useState<number | undefined>();
 
@@ -64,6 +67,7 @@ export default function AdminOrdersPage() {
       const params: OrderSearchParams = {
         page,
         size: 15,
+        cuaHangId: filterStoreId,
         trangThai: filterStatus,
         hinhThucDonHang: filterType,
       };
@@ -75,11 +79,24 @@ export default function AdminOrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, filterStatus, filterType]);
+  }, [page, filterStoreId, filterStatus, filterType]);
 
   useEffect(() => {
     fetchOrders();
   }, [fetchOrders]);
+
+  useEffect(() => {
+    const fetchStores = async () => {
+      try {
+        const data = await cuaHangService.getAll();
+        setStores(data);
+      } catch {
+        toast.error("Không thể tải danh sách cửa hàng");
+      }
+    };
+
+    fetchStores();
+  }, []);
 
   const openDetail = async (id: number) => {
     try {
@@ -140,6 +157,28 @@ export default function AdminOrdersPage() {
 
       {/* Filters */}
       <div className="bg-card rounded-2xl border border-subtle p-4 flex flex-wrap gap-3 items-center">
+        <div className="w-full sm:w-auto sm:min-w-72">
+          <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">
+            Cửa hàng
+          </label>
+          <select
+            value={filterStoreId ?? ""}
+            onChange={(e) => {
+              setFilterStoreId(
+                e.target.value !== "" ? Number(e.target.value) : undefined,
+              );
+              setPage(1);
+            }}
+            className="w-full border border-subtle bg-background text-foreground rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition"
+          >
+            <option value="">Tất cả cửa hàng</option>
+            {stores.map((store) => (
+              <option key={store.id} value={store.id}>
+                {store.tenCuaHang}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="flex gap-2 flex-wrap">
           {ORDER_STATUSES.map((f) => (
             <button
@@ -179,7 +218,9 @@ export default function AdminOrdersPage() {
       ) : orders.length === 0 ? (
         <div className="text-center py-16 text-muted">
           <FiPackage className="mx-auto mb-2" size={24} />
-          Không có đơn hàng nào
+          {filterStoreId
+            ? "Không có đơn hàng cho cửa hàng đã chọn"
+            : "Không có đơn hàng nào"}
         </div>
       ) : (
         <div className="bg-card rounded-2xl border border-subtle overflow-hidden">
@@ -192,6 +233,9 @@ export default function AdminOrdersPage() {
                   </th>
                   <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
                     Khách hàng
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
+                    Cửa hàng
                   </th>
                   <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
                     Ngày tạo
@@ -224,6 +268,9 @@ export default function AdminOrdersPage() {
                     </td>
                     <td className="px-5 py-3.5 text-muted">
                       {o.khachHang?.tenKhachHang || "—"}
+                    </td>
+                    <td className="px-5 py-3.5 text-muted">
+                      {o.cuaHang?.tenCuaHang || "—"}
                     </td>
                     <td className="px-5 py-3.5 text-muted">
                       {formatDate(o.ngayTao)}

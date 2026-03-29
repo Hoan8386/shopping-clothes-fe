@@ -6,6 +6,7 @@ import {
   LichLamViec,
   ReqLichLamViecDTO,
   ChiTietLichLam,
+  LichLamViecThangResponse,
   ReqChiTietLichLamDTO,
   LuongCoBan,
   ReqLuongCoBanDTO,
@@ -70,8 +71,8 @@ export const lichLamViecService = {
     return res.data.data;
   },
 
-  getByCuaHangAndMonth: async (cuaHangId: number, year: number, month: number): Promise<LichLamViec[]> => {
-    const res = await apiClient.get<RestResponse<LichLamViec[]>>(
+  getByCuaHangAndMonth: async (cuaHangId: number, year: number, month: number): Promise<LichLamViecThangResponse> => {
+    const res = await apiClient.get<RestResponse<LichLamViecThangResponse>>(
       `/lich-lam-viec/cua-hang/${cuaHangId}/thang`,
       { params: { year, month } }
     );
@@ -279,6 +280,25 @@ export const loiPhatSinhService = {
       `/loi-phat-sinh/lich-lam-viec/${lichLamViecId}`
     );
     return res.data.data;
+  },
+  
+  getByCuaHang: async (cuaHangId: number, year?: number, month?: number): Promise<LoiPhatSinh[]> => {
+    const res = await apiClient.get<RestResponse<LoiPhatSinh[]>>(
+      `/loi-phat-sinh/cua-hang/${cuaHangId}`,
+      { params: { year, month } }
+    );
+    return res.data.data;
+  },
+
+  uploadImage: async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await apiClient.post<RestResponse<{ imageUrl: string }>>(
+      "/loi-phat-sinh/upload-image",
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
+    return res.data.data.imageUrl;
   },
 
   create: async (data: ReqLoiPhatSinhDTO): Promise<LoiPhatSinh> => {

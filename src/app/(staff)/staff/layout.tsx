@@ -19,6 +19,7 @@ import {
   FiClock,
   FiCalendar,
   FiRepeat,
+  FiAlertCircle,
 } from "react-icons/fi";
 
 const menuItems = [
@@ -33,6 +34,7 @@ const menuItems = [
   { href: "/staff/ca-lam-viec", label: "Ca làm việc", icon: FiClock },
   { href: "/staff/lich-lam-viec", label: "Lịch làm việc", icon: FiCalendar },
   { href: "/staff/doi-ca", label: "Đổi ca", icon: FiRepeat },
+  { href: "/staff/error-reports", label: "Báo cáo lỗi", icon: FiAlertCircle },
 ];
 
 const pageTitles: Record<string, { title: string; description: string }> = {
@@ -84,6 +86,11 @@ const pageTitles: Record<string, { title: string; description: string }> = {
   "/staff/doi-ca": {
     title: "Đổi ca",
     description: "Tạo và quản lý yêu cầu đổi ca.",
+  },
+  "/staff/error-reports": {
+    title: "Báo cáo lỗi phát sinh",
+    description:
+      "Báo cáo sự cố, lỗi và hư hỏng phát sinh trong quá trình làm việc.",
   },
 };
 

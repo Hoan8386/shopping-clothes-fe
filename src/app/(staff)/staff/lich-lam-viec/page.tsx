@@ -1,13 +1,23 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { LichLamViec, ChiTietLichLam, CaLamViec, NhanVien } from "@/types";
+import {
+  LichLamViec,
+  ChiTietLichLam,
+  CaLamViec,
+  NhanVien,
+  DoiCa,
+  LichLamViecThangResponse,
+  LichLamViecThangNgay,
+  LichLamViecThangNhanVienTrongNgay,
+  LichLamViecThangChiTietCaLam,
+} from "@/types";
 import {
   lichLamViecService,
-  chiTietLichLamService,
   caLamViecService,
   doiCaService,
 } from "@/services/schedule.service";
+import { nhanVienService } from "@/services/employee.service";
 import { useAuthStore } from "@/store/auth.store";
 import Loading from "@/components/ui/Loading";
 import toast from "react-hot-toast";
@@ -20,8 +30,6 @@ import {
   FiClock,
   FiRefreshCw,
 } from "react-icons/fi";
-
-const DAYS_VI = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
 function getDaysInMonth(year: number, month: number) {
   return new Date(year, month, 0).getDate();
@@ -51,14 +59,16 @@ export default function StaffLichLamViecPage() {
     ctId: number;
     shiftName: string;
   } | null>(null);
-  const [swapToEmpId, setSwapToEmpId] = useState<number | "">(""); 
+  const [swapToEmpId, setSwapToEmpId] = useState<number | "">("");
+  const [swapReason, setSwapReason] = useState("");
   const [swapping, setSwapping] = useState(false);
+  const [swapCandidates, setSwapCandidates] = useState<NhanVien[]>([]);
+  const [currentNhanVienId, setCurrentNhanVienId] = useState<number>(0);
+  const [daySwapHistory, setDaySwapHistory] = useState<DoiCa[]>([]);
+  const [loadingSwapHistory, setLoadingSwapHistory] = useState(false);
 
   // Store name extracted from schedule data
   const [storeName, setStoreName] = useState("");
-
-  // The current logged-in employee's ID
-  const currentNhanVienId = user?.id ?? 0;
 
   // Load shifts on mount
   useEffect(() => {
@@ -68,6 +78,46 @@ export default function StaffLichLamViecPage() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (!user) {
+      setSwapCandidates([]);
+      setCurrentNhanVienId(0);
+      return;
+    }
+
+    nhanVienService
+      .getAll()
+      .then((d) => {
+        const employees = d ?? [];
+        const myEmail = (user.email ?? "").toLowerCase();
+
+        const me =
+          employees.find((emp) => emp.id === user.nhanVienId) ??
+          employees.find((emp) => emp.email?.toLowerCase() === myEmail);
+
+        const resolvedNhanVienId = user.nhanVienId ?? me?.id ?? 0;
+        const resolvedCuaHangId = user.cuaHangId ?? me?.cuaHang?.id;
+
+        setCurrentNhanVienId(resolvedNhanVienId);
+
+        if (!resolvedNhanVienId || !resolvedCuaHangId) {
+          setSwapCandidates([]);
+          return;
+        }
+
+        const candidates = employees.filter(
+          (emp) =>
+            emp.id !== resolvedNhanVienId &&
+            emp.cuaHang?.id === resolvedCuaHangId &&
+            emp.trangThai === 1,
+        );
+        setSwapCandidates(candidates);
+      })
+      .catch(() => {
+        setSwapCandidates([]);
+      });
+  }, [user]);
+
   // Load schedules — cuaHangId=0 triggers backend SecurityContext resolution
   const fetchSchedules = useCallback(async () => {
     try {
@@ -75,31 +125,93 @@ export default function StaffLichLamViecPage() {
       const data = await lichLamViecService.getByCuaHangAndMonth(
         0,
         currentYear,
-        currentMonth
+        currentMonth,
       );
-      setSchedules(data ?? []);
+
+      const monthData: LichLamViecThangResponse | null = data ?? null;
+      const flattenedSchedules: LichLamViec[] = [];
+      const allDetails: ChiTietLichLam[] = [];
+      const lichLamMap = new Map<string, LichLamViec>();
+
+      (monthData?.ngayLichLams ?? []).forEach(
+        (dayItem: LichLamViecThangNgay) => {
+          (dayItem.chiTietNhanViens ?? []).forEach(
+            (nvItem: LichLamViecThangNhanVienTrongNgay) => {
+              if (nvItem?.nhanVien?.id !== currentNhanVienId) {
+                return;
+              }
+
+              const key = `${dayItem.ngayLamViec}-${nvItem.lichLamViecId}`;
+
+              // Chỉ tạo 1 LichLamViec duy nhất cho mỗi ngày + lichLamViecId
+              if (!lichLamMap.has(key)) {
+                const lichLam: LichLamViec = {
+                  id: nvItem.lichLamViecId,
+                  ngayLamViec: dayItem.ngayLamViec,
+                  trangThai: nvItem.trangThaiLich,
+                  nhanVien: nvItem.nhanVien
+                    ? {
+                        id: nvItem.nhanVien.id,
+                        tenNhanVien: nvItem.nhanVien.tenNhanVien,
+                        email: nvItem.nhanVien.email ?? "",
+                        soDienThoai: nvItem.nhanVien.soDienThoai ?? "",
+                        trangThai: 1,
+                      }
+                    : undefined,
+                };
+                lichLamMap.set(key, lichLam);
+              }
+
+              (nvItem.chiTietCaLams ?? []).forEach(
+                (caItem: LichLamViecThangChiTietCaLam) => {
+                  allDetails.push({
+                    id: caItem.id,
+                    trangThai: caItem.trangThai,
+                    lichLamViec: { id: nvItem.lichLamViecId } as LichLamViec,
+                    caLamViec: caItem.caLamViec
+                      ? {
+                          id: caItem.caLamViec.id,
+                          tenCaLam: caItem.caLamViec.tenCaLam,
+                          gioBatDau: caItem.caLamViec.gioBatDau,
+                          gioKetThuc: caItem.caLamViec.gioKetThuc,
+                          trangThai: caItem.caLamViec.trangThai,
+                        }
+                      : undefined,
+                  });
+                },
+              );
+            },
+          );
+        },
+      );
+
+      flattenedSchedules.push(...lichLamMap.values());
+
+      // Dedup lần cuối dựa vào id để loại bỏ trùng lặp hoàn toàn
+      const finalSchedules = Array.from(
+        new Map(flattenedSchedules.map((s) => [s.id, s])).values(),
+      );
+      // Dedup details dựa vào id
+      const finalDetails = Array.from(
+        new Map(allDetails.map((d) => [d.id, d])).values(),
+      );
+
+      setSchedules(finalSchedules);
+      setDetails(finalDetails);
 
       // Extract store name from first schedule
-      if (data && data.length > 0) {
-        const cuaHang = data[0].nhanVien?.cuaHang;
-        if (cuaHang && (cuaHang as any).tenCuaHang) {
-          setStoreName((cuaHang as any).tenCuaHang);
+      if (finalSchedules && finalSchedules.length > 0) {
+        const cuaHang = finalSchedules[0].nhanVien?.cuaHang;
+        if (cuaHang?.tenCuaHang) {
+          setStoreName(cuaHang.tenCuaHang);
         }
       }
-
-      // Load all schedule details in parallel
-      const detailResults = await Promise.all(
-        (data ?? []).map((lich) =>
-          chiTietLichLamService.getByLichLamViec(lich.id).catch(() => [] as ChiTietLichLam[])
-        )
-      );
-      setDetails(detailResults.flat());
     } catch {
       toast.error("Không thể tải lịch làm việc");
     } finally {
       setLoading(false);
     }
-  }, [currentYear, currentMonth]);
+  }, [currentYear, currentMonth, currentNhanVienId]);
 
   useEffect(() => {
     fetchSchedules();
@@ -178,6 +290,10 @@ export default function StaffLichLamViecPage() {
   // Handle shift swap request
   const handleSwapSubmit = async () => {
     if (!swapTarget || !swapToEmpId) return;
+    if (!swapReason.trim()) {
+      toast.error("Vui lòng nhập lý do đổi ca");
+      return;
+    }
     try {
       setSwapping(true);
       await doiCaService.create({
@@ -185,10 +301,12 @@ export default function StaffLichLamViecPage() {
         chiTietLichLam: { id: swapTarget.ctId },
         nhanVienNhanCa: { id: Number(swapToEmpId) },
         trangThai: 0,
+        lyDo: swapReason.trim(),
       });
       toast.success("Đã gửi yêu cầu đổi ca! Chờ Admin duyệt.");
       setSwapTarget(null);
       setSwapToEmpId("");
+      setSwapReason("");
     } catch {
       toast.error("Không thể gửi yêu cầu đổi ca");
     } finally {
@@ -227,17 +345,50 @@ export default function StaffLichLamViecPage() {
     : [];
   const selectedDayShifts = selectedDay ? getDayShiftSummary(selectedDay) : [];
 
+  useEffect(() => {
+    const fetchDaySwapHistory = async () => {
+      if (selectedDay === null) {
+        setDaySwapHistory([]);
+        return;
+      }
+
+      const dateStr = `${currentYear}-${String(currentMonth).padStart(2, "0")}-${String(selectedDay).padStart(2, "0")}`;
+      const daySchedules = schedules.filter((s) => s.ngayLamViec === dateStr);
+      if (daySchedules.length === 0) {
+        setDaySwapHistory([]);
+        return;
+      }
+
+      try {
+        setLoadingSwapHistory(true);
+        const scheduleIds = Array.from(
+          new Set(daySchedules.map((s) => s.id).filter(Boolean)),
+        );
+
+        const results = await Promise.all(
+          scheduleIds.map((id) => doiCaService.getByLichLamViec(id)),
+        );
+
+        const merged = results.flat().filter(Boolean);
+        const deduped = Array.from(
+          new Map(merged.map((item) => [item.id, item])).values(),
+        );
+        deduped.sort((a, b) => (b.id ?? 0) - (a.id ?? 0));
+        setDaySwapHistory(deduped);
+      } catch {
+        setDaySwapHistory([]);
+      } finally {
+        setLoadingSwapHistory(false);
+      }
+    };
+
+    fetchDaySwapHistory();
+  }, [selectedDay, schedules, currentYear, currentMonth]);
+
   // All unique employees in this month (for swap target dropdown)
   const allEmployeesInMonth = Array.from(
-    new Map(
-      schedules
-        .map((s) => s.nhanVien)
-        .filter(Boolean)
-        .map((nv) => [nv!.id, nv])
-    ).values()
-  ).sort((a, b) =>
-    (a!.tenNhanVien || "").localeCompare(b!.tenNhanVien || "")
-  );
+    new Map(swapCandidates.map((nv) => [nv.id, nv])).values(),
+  ).sort((a, b) => (a.tenNhanVien || "").localeCompare(b.tenNhanVien || ""));
 
   return (
     <div className="space-y-5">
@@ -289,9 +440,8 @@ export default function StaffLichLamViecPage() {
               <FiUsers size={14} />
               <span className="font-semibold text-foreground">
                 {
-                  new Set(
-                    schedules.map((s) => s.nhanVien?.id).filter(Boolean)
-                  ).size
+                  new Set(schedules.map((s) => s.nhanVien?.id).filter(Boolean))
+                    .size
                 }
               </span>{" "}
               nhân viên
@@ -307,27 +457,48 @@ export default function StaffLichLamViecPage() {
         </div>
       </div>
 
+      {/* Day Status Legend */}
+      <div className="bg-card rounded-2xl border border-subtle p-5 lg:p-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-5 h-5 rounded-lg bg-linear-to-br from-accent to-accent/60" />
+          <p className="text-sm font-bold text-foreground uppercase tracking-wider">
+            Chú thích trạng thái ngày
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="flex items-center gap-3 px-4 py-3 bg-sky-200/80 rounded-xl border border-sky-300">
+            <div className="w-3 h-3 rounded-full bg-sky-600" />
+            <span className="text-sm font-semibold text-sky-900">
+              Ngày thường
+            </span>
+          </div>
+          <div className="flex items-center gap-3 px-4 py-3 bg-gray-200 rounded-xl border border-gray-300">
+            <div className="w-3 h-3 rounded-full bg-gray-600" />
+            <span className="text-sm font-semibold text-gray-900">
+              Ngày nghỉ
+            </span>
+          </div>
+          <div className="flex items-center gap-3 px-4 py-3 bg-rose-300/80 rounded-xl border border-rose-400">
+            <div className="w-3 h-3 rounded-full bg-rose-600" />
+            <span className="text-sm font-semibold text-rose-900">Ngày lễ</span>
+          </div>
+        </div>
+      </div>
+
       {/* Calendar Grid */}
       {loading ? (
         <Loading />
       ) : (
-        <div className="bg-card rounded-2xl border border-subtle overflow-hidden">
-          {/* Day headers */}
-          <div className="grid grid-cols-7 border-b border-subtle">
-            {DAYS_VI.map((d, i) => (
+        <div className="bg-card rounded-3xl border border-subtle p-4 lg:p-6 overflow-hidden shadow-sm">
+          <div className="grid grid-cols-7 gap-3">
+            {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
               <div
                 key={d}
-                className={`py-3 text-center text-xs font-semibold uppercase tracking-wider ${
-                  i >= 5 ? "text-red-500" : "text-muted"
-                } bg-section border-r border-subtle last:border-r-0`}
+                className="text-center text-sm font-semibold text-muted"
               >
                 {d}
               </div>
             ))}
-          </div>
-
-          {/* Day cells */}
-          <div className="grid grid-cols-7">
             {Array.from({ length: totalCells }).map((_, idx) => {
               const day = idx - firstDay + 1;
               const isValidDay = day >= 1 && day <= daysInMonth;
@@ -335,8 +506,8 @@ export default function StaffLichLamViecPage() {
               const daySchedules = isValidDay ? getSchedulesForDay(day) : [];
               const hasSchedule = daySchedules.length > 0;
 
-              const totalWorkingEmployees = new Set(
-                dayShifts.flatMap((s) => s.employees.map((e) => e.id))
+              const employeeCount = new Set(
+                daySchedules.map((s) => s.nhanVien?.id).filter(Boolean),
               ).size;
 
               const isHoliday = daySchedules.some((s) => s.trangThai === 0);
@@ -344,104 +515,69 @@ export default function StaffLichLamViecPage() {
 
               // Check if current user is working this day
               const iAmWorking = dayShifts.some((shift) =>
-                shift.employees.some((emp) => emp.id === currentNhanVienId)
+                shift.employees.some((emp) => emp.id === currentNhanVienId),
               );
 
-              let cellBgClass =
-                "bg-white dark:bg-card hover:bg-gray-50 dark:hover:bg-section/50";
+              const isDayToday = isToday(day);
+              let dayBgClass = "bg-white";
               if (!isValidDay) {
-                cellBgClass = "bg-section/30";
+                dayBgClass = "bg-white";
               } else if (isFestival) {
-                cellBgClass =
-                  "bg-red-200 dark:bg-red-900/50 hover:bg-red-300 dark:hover:bg-red-800/60 cursor-pointer";
+                dayBgClass = "bg-rose-300/80";
               } else if (isHoliday) {
-                cellBgClass =
-                  "bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600 cursor-pointer";
+                dayBgClass = "bg-gray-200";
               } else if (iAmWorking) {
-                cellBgClass =
-                  "bg-blue-200 dark:bg-blue-900/40 hover:bg-blue-300 dark:hover:bg-blue-800/60 cursor-pointer ring-2 ring-inset ring-blue-400/50";
+                dayBgClass = "bg-blue-200/80";
               } else if (hasSchedule) {
-                cellBgClass =
-                  "bg-blue-100/50 dark:bg-blue-900/20 hover:bg-blue-200/60 dark:hover:bg-blue-800/40 cursor-pointer";
+                dayBgClass = "bg-sky-200/60";
               }
 
               return (
                 <div
                   key={idx}
-                  className={`min-h-28 lg:min-h-32 border-r border-b border-subtle last:border-r-0 p-1.5 lg:p-2 transition-colors ${cellBgClass}`}
+                  className={`h-24 md:h-28 rounded-2xl border border-white/60 shadow-sm flex flex-col items-center justify-start gap-1 cursor-pointer transition duration-200 p-2 ${dayBgClass} ${
+                    isDayToday ? "ring-2 ring-accent/40" : ""
+                  }`}
                   onClick={() => {
                     if (isValidDay && hasSchedule) setSelectedDay(day);
                   }}
                 >
                   {isValidDay && (
                     <>
-                      {/* Day number */}
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className={`text-sm font-semibold inline-flex items-center justify-center w-7 h-7 rounded-full ${
-                              isToday(day)
-                                ? "bg-accent text-white"
-                                : idx % 7 >= 5
-                                  ? "text-red-500"
-                                  : "text-foreground"
-                            }`}
-                          >
-                            {day}
-                          </span>
-                          {isHoliday && (
-                            <span
-                              className="text-[9px] font-bold text-white bg-gray-500 px-1.5 py-0.5 rounded-sm shadow-sm"
-                              title="Ngày nghỉ"
-                            >
-                              NGHỈ
-                            </span>
-                          )}
-                          {isFestival && (
-                            <span
-                              className="text-[9px] font-bold text-white bg-red-500 px-1.5 py-0.5 rounded-sm shadow-sm"
-                              title="Ngày lễ"
-                            >
-                              LỄ
-                            </span>
-                          )}
-                        </div>
-
-                        {iAmWorking && (
-                          <span className="text-[9px] bg-blue-500 text-white font-bold px-1.5 py-0.5 rounded shadow-sm">
-                            CA TÔI
-                          </span>
-                        )}
-                      </div>
-
-                      {totalWorkingEmployees > 0 && (
-                        <span className="text-[10px] bg-accent/10 text-accent px-1.5 py-0.5 rounded-full font-medium">
-                          {totalWorkingEmployees} NV
+                      <span className="text-base font-semibold text-foreground">
+                        {day}
+                      </span>
+                      {/* {isHoliday && (
+                        <span className="text-xs font-semibold text-gray-700">
+                          NGHI
                         </span>
                       )}
-
-                      {/* Shift chips */}
-                      <div className="mt-1.5 flex flex-col gap-1">
-                        {dayShifts.slice(0, 3).map(({ shift, employees }) => (
-                          <div
-                            key={shift.id}
-                            className={`flex items-center justify-between text-[10px] lg:text-[11px] px-1.5 py-0.5 rounded shadow-sm font-semibold tracking-tight ${getShiftColor(shift.id)}`}
-                            title={`${shift.tenCaLam}: ${employees.map((e) => e.name).join(", ")}`}
-                          >
-                            <span className="truncate max-w-[65%]">
-                              {shift.tenCaLam}
+                      {isFestival && (
+                        <span className="text-xs font-semibold text-rose-700">
+                          LỄ
+                        </span>
+                      )} */}
+                      {iAmWorking && (
+                        <span className="text-xs font-bold bg-blue-500 text-white px-2 py-0.5 rounded">
+                          CA TÔI
+                        </span>
+                      )}
+                      {hasSchedule && (
+                        <div className="text-xs text-foreground/70 space-y-0.5">
+                          <div className="flex items-center gap-1">
+                            <span className="font-semibold">
+                              {employeeCount}
                             </span>
-                            <span className="opacity-80 flex-shrink-0">
-                              {employees.length} NV
+                            <span>NV</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="font-semibold">
+                              {dayShifts.length}
                             </span>
+                            <span>ca</span>
                           </div>
-                        ))}
-                        {dayShifts.length > 3 && (
-                          <div className="text-[10px] font-medium text-foreground/60 text-center bg-black/5 dark:bg-white/10 rounded py-0.5">
-                            +{dayShifts.length - 3} ca khác
-                          </div>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -453,26 +589,37 @@ export default function StaffLichLamViecPage() {
 
       {/* Shift Legend */}
       {shifts.length > 0 && (
-        <div className="bg-card rounded-2xl border border-subtle p-4">
-          <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
-            Chú thích ca làm
-          </p>
-          <div className="flex flex-wrap gap-2 mt-3">
+        <div className="bg-card rounded-2xl border border-subtle p-5 lg:p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-5 h-5 rounded-lg bg-linear-to-br from-accent to-accent/60" />
+            <p className="text-sm font-bold text-foreground uppercase tracking-wider">
+              Chú thích ca làm việc
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {shifts
               .filter((s) => s.trangThai === 1)
               .map((s) => (
                 <div
                   key={s.id}
-                  className={`text-xs px-3 py-1.5 rounded-lg shadow-sm font-medium flex items-center gap-2 border-[0.5px] border-black/5 dark:border-white/5 ${getShiftColor(s.id)}`}
+                  className={`px-4 py-3 rounded-xl border-l-4 transition-all hover:shadow-md ${getShiftColor(s.id)}`}
                 >
-                  <FiClock size={13} className="opacity-70" />
-                  <span>
-                    {s.tenCaLam}{" "}
-                    <span className="opacity-70 ml-1 font-normal">
-                      ({s.gioBatDau?.slice(0, 5)} - {s.gioKetThuc?.slice(0, 5)}
-                      )
-                    </span>
-                  </span>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-1">
+                      <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center shrink-0">
+                        <FiClock size={14} className="text-accent" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-foreground truncate">
+                          {s.tenCaLam}
+                        </p>
+                        <p className="text-xs text-muted font-medium">
+                          {s.gioBatDau?.slice(0, 5)} -{" "}
+                          {s.gioKetThuc?.slice(0, 5)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ))}
           </div>
@@ -508,6 +655,7 @@ export default function StaffLichLamViecPage() {
                   setSelectedDay(null);
                   setSwapTarget(null);
                   setSwapToEmpId("");
+                  setSwapReason("");
                 }}
                 className="p-2 text-muted hover:text-foreground hover:bg-section rounded-lg transition"
               >
@@ -603,13 +751,18 @@ export default function StaffLichLamViecPage() {
                             {isSwapping && (
                               <div className="px-4 py-3 bg-amber-50/80 dark:bg-amber-900/10 border-t border-amber-200/50 dark:border-amber-800/30 space-y-2">
                                 <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">
-                                  Chọn nhân viên bạn muốn đổi ca "{shift.tenCaLam}":
+                                  Chọn nhân viên bạn muốn đổi ca &quot;
+                                  {shift.tenCaLam}&quot;:
                                 </p>
                                 <div className="flex items-center gap-2">
                                   <select
                                     value={swapToEmpId}
                                     onChange={(e) =>
-                                      setSwapToEmpId(Number(e.target.value))
+                                      setSwapToEmpId(
+                                        e.target.value
+                                          ? Number(e.target.value)
+                                          : "",
+                                      )
                                     }
                                     className="flex-1 h-9 text-sm border border-amber-200 dark:border-amber-700/50 bg-white dark:bg-card rounded-lg px-2 focus:outline-none focus:ring-2 focus:ring-amber-400/40"
                                   >
@@ -617,18 +770,28 @@ export default function StaffLichLamViecPage() {
                                       -- Chọn nhân viên --
                                     </option>
                                     {allEmployeesInMonth
-                                      .filter(
-                                        (e) => e!.id !== currentNhanVienId
-                                      )
+                                      .filter((e) => e.id !== currentNhanVienId)
                                       .map((e) => (
-                                        <option key={e!.id} value={e!.id}>
-                                          {e!.tenNhanVien}
+                                        <option key={e.id} value={e.id}>
+                                          {e.tenNhanVien}
                                         </option>
                                       ))}
                                   </select>
+                                  <input
+                                    value={swapReason}
+                                    onChange={(e) =>
+                                      setSwapReason(e.target.value)
+                                    }
+                                    placeholder="Nhập lý do đổi ca"
+                                    className="flex-1 h-9 text-sm border border-amber-200 dark:border-amber-700/50 bg-white dark:bg-card rounded-lg px-2 focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+                                  />
                                   <button
                                     onClick={handleSwapSubmit}
-                                    disabled={!swapToEmpId || swapping}
+                                    disabled={
+                                      !swapToEmpId ||
+                                      !swapReason.trim() ||
+                                      swapping
+                                    }
                                     className="h-9 px-4 text-sm font-bold bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50 transition shadow-sm"
                                   >
                                     {swapping ? "Đang gửi..." : "Gửi"}
@@ -637,6 +800,7 @@ export default function StaffLichLamViecPage() {
                                     onClick={() => {
                                       setSwapTarget(null);
                                       setSwapToEmpId("");
+                                      setSwapReason("");
                                     }}
                                     className="h-9 px-2 text-muted hover:text-red-500 transition"
                                   >
@@ -657,6 +821,78 @@ export default function StaffLichLamViecPage() {
                   </div>
                 ))
               )}
+
+              <div className="rounded-xl border border-subtle overflow-hidden">
+                <div className="px-4 py-3 bg-section border-b border-subtle">
+                  <h3 className="font-semibold text-sm text-foreground">
+                    Lịch sử đổi ca trong ngày
+                  </h3>
+                </div>
+                <div className="p-4 space-y-3">
+                  {loadingSwapHistory ? (
+                    <p className="text-sm text-muted">
+                      Đang tải lịch sử đổi ca...
+                    </p>
+                  ) : daySwapHistory.length === 0 ? (
+                    <p className="text-sm text-muted">
+                      Chưa có yêu cầu đổi ca nào trong ngày này.
+                    </p>
+                  ) : (
+                    daySwapHistory.map((item) => {
+                      const statusColor =
+                        item.trangThai === 1
+                          ? "bg-green-100 text-green-700"
+                          : item.trangThai === 2
+                            ? "bg-red-100 text-red-700"
+                            : "bg-yellow-100 text-yellow-700";
+                      const statusText =
+                        item.trangThai === 1
+                          ? "Đồng ý"
+                          : item.trangThai === 2
+                            ? "Từ chối"
+                            : "Chờ duyệt";
+
+                      return (
+                        <div
+                          key={item.id}
+                          className="rounded-lg border border-subtle p-3 space-y-1.5"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm font-semibold text-foreground">
+                              Yêu cầu #{item.id}
+                            </p>
+                            <span
+                              className={`text-xs px-2 py-1 rounded-full font-medium ${statusColor}`}
+                            >
+                              {statusText}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted">
+                            Nhân viên nhận ca:{" "}
+                            <span className="font-medium text-foreground">
+                              {item.nhanVienNhanCa?.tenNhanVien ?? "—"}
+                            </span>
+                          </p>
+                          <p className="text-xs text-muted">
+                            Lý do:{" "}
+                            <span className="font-medium text-foreground">
+                              {item.lyDo || "—"}
+                            </span>
+                          </p>
+                          {item.trangThai === 2 && (
+                            <p className="text-xs text-muted">
+                              Phản hồi:{" "}
+                              <span className="font-medium text-foreground">
+                                {item.phanHoi || "—"}
+                              </span>
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>

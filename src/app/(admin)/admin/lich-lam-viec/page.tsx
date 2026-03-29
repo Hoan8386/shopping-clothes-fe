@@ -1,13 +1,20 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { LichLamViec, ChiTietLichLam, CaLamViec, CuaHang } from "@/types";
+import {
+  LichLamViec,
+  ChiTietLichLam,
+  CaLamViec,
+  CuaHang,
+  NhanVien,
+  LichLamViecThangResponse,
+} from "@/types";
 import {
   lichLamViecService,
-  chiTietLichLamService,
   caLamViecService,
 } from "@/services/schedule.service";
 import { cuaHangService } from "@/services/common.service";
+import { nhanVienService } from "@/services/employee.service";
 import Loading from "@/components/ui/Loading";
 import toast from "react-hot-toast";
 import {
@@ -17,21 +24,10 @@ import {
   FiDownload,
   FiX,
   FiCalendar,
-  FiUsers,
   FiClock,
   FiMapPin,
 } from "react-icons/fi";
-
-const DAYS_VI = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
-
-function getDaysInMonth(year: number, month: number) {
-  return new Date(year, month, 0).getDate();
-}
-
-function getFirstDayOfWeek(year: number, month: number) {
-  const day = new Date(year, month - 1, 1).getDay();
-  return day === 0 ? 6 : day - 1; // Monday = 0
-}
+import dayjs from "dayjs";
 
 export default function AdminLichLamViecPage() {
   const [stores, setStores] = useState<CuaHang[]>([]);
@@ -42,6 +38,10 @@ export default function AdminLichLamViecPage() {
   const [schedules, setSchedules] = useState<LichLamViec[]>([]);
   const [shifts, setShifts] = useState<CaLamViec[]>([]);
   const [details, setDetails] = useState<ChiTietLichLam[]>([]);
+  const [storeEmployees, setStoreEmployees] = useState<NhanVien[]>([]);
+  const [dayStatusByDate, setDayStatusByDate] = useState<
+    Record<string, number>
+  >({});
   const [loading, setLoading] = useState(false);
   const [loadingStores, setLoadingStores] = useState(true);
 
@@ -59,7 +59,11 @@ export default function AdminLichLamViecPage() {
     const dateStr = `${currentYear}-${String(currentMonth).padStart(2, "0")}-${String(selectedDay).padStart(2, "0")}`;
     try {
       setUpdatingStatus(true);
-      await lichLamViecService.updateDayStatus(selectedStoreId, dateStr, status);
+      await lichLamViecService.updateDayStatus(
+        selectedStoreId,
+        dateStr,
+        status,
+      );
       toast.success("Cập nhật trạng thái thành công");
       await fetchSchedules();
     } catch {
@@ -69,14 +73,28 @@ export default function AdminLichLamViecPage() {
     }
   };
 
-  const handleToggleShift = async (empId: number, shiftId: number, isAdd: boolean) => {
+  const handleToggleShift = async (
+    empId: number,
+    shiftId: number,
+    isAdd: boolean,
+  ) => {
     if (!selectedStoreId || !selectedDay) return;
     const dateStr = `${currentYear}-${String(currentMonth).padStart(2, "0")}-${String(selectedDay).padStart(2, "0")}`;
     try {
       if (isAdd) {
-        await lichLamViecService.addShift(selectedStoreId, empId, shiftId, dateStr);
+        await lichLamViecService.addShift(
+          selectedStoreId,
+          empId,
+          shiftId,
+          dateStr,
+        );
       } else {
-        await lichLamViecService.removeShift(selectedStoreId, empId, shiftId, dateStr);
+        await lichLamViecService.removeShift(
+          selectedStoreId,
+          empId,
+          shiftId,
+          dateStr,
+        );
       }
       toast.success(isAdd ? "Thêm ca thành công" : "Xóa ca thành công");
       if (isAdd) {
@@ -108,20 +126,77 @@ export default function AdminLichLamViecPage() {
     if (!selectedStoreId) return;
     try {
       setLoading(true);
+      // Gọi 1 API duy nhất, LichLamViec đã kèm theo chi tiết
       const data = await lichLamViecService.getByCuaHangAndMonth(
         selectedStoreId,
         currentYear,
-        currentMonth
+        currentMonth,
       );
-      setSchedules(data ?? []);
 
-      // Load all schedule details in parallel
-      const detailResults = await Promise.all(
-        (data ?? []).map((lich) =>
-          chiTietLichLamService.getByLichLamViec(lich.id).catch(() => [] as ChiTietLichLam[])
-        )
+      const monthData: LichLamViecThangResponse | null = data ?? null;
+      const flattenedSchedules: LichLamViec[] = [];
+      const allDetails: ChiTietLichLam[] = [];
+      const nextDayStatusByDate: Record<string, number> = {};
+      const lichLamMap = new Map<string, LichLamViec>();
+
+      (monthData?.ngayLichLams ?? []).forEach((dayItem) => {
+        nextDayStatusByDate[dayItem.ngayLamViec] = dayItem.trangThaiNgay;
+
+        (dayItem.chiTietNhanViens ?? []).forEach((nvItem) => {
+          const key = `${dayItem.ngayLamViec}-${nvItem.lichLamViecId}`;
+
+          // Chỉ tạo 1 LichLamViec duy nhất cho mỗi ngày + lichLamViecId
+          if (!lichLamMap.has(key)) {
+            const lichLam: LichLamViec = {
+              id: nvItem.lichLamViecId,
+              ngayLamViec: dayItem.ngayLamViec,
+              trangThai: nvItem.trangThaiLich,
+              nhanVien: nvItem.nhanVien
+                ? {
+                    id: nvItem.nhanVien.id,
+                    tenNhanVien: nvItem.nhanVien.tenNhanVien,
+                    email: nvItem.nhanVien.email ?? "",
+                    soDienThoai: nvItem.nhanVien.soDienThoai ?? "",
+                    trangThai: 1,
+                  }
+                : undefined,
+            };
+            lichLamMap.set(key, lichLam);
+          }
+
+          (nvItem.chiTietCaLams ?? []).forEach((caItem) => {
+            allDetails.push({
+              id: caItem.id,
+              trangThai: caItem.trangThai,
+              lichLamViec: { id: nvItem.lichLamViecId } as LichLamViec,
+              caLamViec: caItem.caLamViec
+                ? {
+                    id: caItem.caLamViec.id,
+                    tenCaLam: caItem.caLamViec.tenCaLam,
+                    gioBatDau: caItem.caLamViec.gioBatDau,
+                    gioKetThuc: caItem.caLamViec.gioKetThuc,
+                    trangThai: caItem.caLamViec.trangThai,
+                  }
+                : undefined,
+            });
+          });
+        });
+      });
+
+      flattenedSchedules.push(...lichLamMap.values());
+
+      // Dedup lần cuối dựa vào id để loại bỏ trùng lặp hoàn toàn
+      const finalSchedules = Array.from(
+        new Map(flattenedSchedules.map((s) => [s.id, s])).values(),
       );
-      setDetails(detailResults.flat());
+      // Dedup details dựa vào id
+      const finalDetails = Array.from(
+        new Map(allDetails.map((d) => [d.id, d])).values(),
+      );
+
+      setSchedules(finalSchedules);
+      setDetails(finalDetails);
+      setDayStatusByDate(nextDayStatusByDate);
     } catch {
       toast.error("Không thể tải lịch làm việc");
     } finally {
@@ -130,8 +205,33 @@ export default function AdminLichLamViecPage() {
   }, [selectedStoreId, currentYear, currentMonth]);
 
   useEffect(() => {
-    fetchSchedules();
-  }, [fetchSchedules]);
+    if (selectedStoreId) {
+      fetchSchedules();
+    }
+  }, [selectedStoreId, fetchSchedules]);
+
+  useEffect(() => {
+    if (!selectedStoreId) {
+      setStoreEmployees([]);
+      return;
+    }
+
+    nhanVienService
+      .getAll()
+      .then((employees) => {
+        const filtered = (employees ?? [])
+          .filter(
+            (emp) => emp.cuaHang?.id === selectedStoreId && emp.trangThai === 1,
+          )
+          .sort((a, b) =>
+            (a.tenNhanVien || "").localeCompare(b.tenNhanVien || "", "vi"),
+          );
+        setStoreEmployees(filtered);
+      })
+      .catch(() => {
+        toast.error("Không thể tải danh sách nhân viên của cửa hàng");
+      });
+  }, [selectedStoreId]);
 
   // Month navigation
   const prevMonth = () => {
@@ -165,7 +265,10 @@ export default function AdminLichLamViecPage() {
   // Get unique shift summaries for a day
   const getDayShiftSummary = (day: number) => {
     const daySchedules = getSchedulesForDay(day);
-    const shiftMap = new Map<number, { shift: CaLamViec; employees: { id: number; name: string }[] }>();
+    const shiftMap = new Map<
+      number,
+      { shift: CaLamViec; employees: { id: number; name: string }[] }
+    >();
 
     for (const sch of daySchedules) {
       const schDetails = getDetailsForSchedule(sch.id);
@@ -198,7 +301,10 @@ export default function AdminLichLamViecPage() {
     if (!file) return;
     try {
       setImporting(true);
-      const result = await lichLamViecService.importExcel(selectedStoreId, file);
+      const result = await lichLamViecService.importExcel(
+        selectedStoreId,
+        file,
+      );
       toast.success(`Import thành công ${result?.length ?? 0} bản ghi`);
       fetchSchedules();
     } catch {
@@ -212,7 +318,11 @@ export default function AdminLichLamViecPage() {
   const handleDownloadTemplate = async () => {
     if (!selectedStoreId) return;
     try {
-      const blob = await lichLamViecService.downloadTemplate(selectedStoreId, currentYear, currentMonth);
+      const blob = await lichLamViecService.downloadTemplate(
+        selectedStoreId,
+        currentYear,
+        currentMonth,
+      );
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -225,23 +335,32 @@ export default function AdminLichLamViecPage() {
   };
 
   // Calendar grid calculations
-  const daysInMonth = getDaysInMonth(currentYear, currentMonth);
-  const firstDay = getFirstDayOfWeek(currentYear, currentMonth);
-  const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
-  const today = new Date();
-  const isToday = (day: number) =>
-    today.getFullYear() === currentYear &&
-    today.getMonth() + 1 === currentMonth &&
-    today.getDate() === day;
+  const dayjsDate = dayjs(
+    `${currentYear}-${String(currentMonth).padStart(2, "0")}-01`,
+  );
+  const daysInMonth = dayjsDate.daysInMonth();
+  const startWeekday = dayjsDate.day();
+  const totalCells = startWeekday + daysInMonth;
+  const calendarCells = Array.from({ length: totalCells }, (_, idx) => {
+    if (idx < startWeekday) return null;
+    return idx - startWeekday + 1;
+  });
+  const today = dayjs();
+  const isToday = (day: number) => {
+    const checkDate = dayjs(
+      `${currentYear}-${String(currentMonth).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+    );
+    return checkDate.isSame(today, "day");
+  };
 
-  // Shift color palette
+  // Shift color palette - Better colors for each shift
   const shiftColors = [
-    "bg-white/90 dark:bg-black/40 text-blue-700 dark:text-blue-300 border-l-4 border-l-blue-500",
-    "bg-white/90 dark:bg-black/40 text-emerald-700 dark:text-emerald-300 border-l-4 border-l-emerald-500",
-    "bg-white/90 dark:bg-black/40 text-amber-700 dark:text-amber-300 border-l-4 border-l-amber-500",
-    "bg-white/90 dark:bg-black/40 text-purple-700 dark:text-purple-300 border-l-4 border-l-purple-500",
-    "bg-white/90 dark:bg-black/40 text-rose-700 dark:text-rose-300 border-l-4 border-l-rose-500",
-    "bg-white/90 dark:bg-black/40 text-cyan-700 dark:text-cyan-300 border-l-4 border-l-cyan-500",
+    "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-l-4 border-l-blue-500",
+    "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-l-4 border-l-emerald-500",
+    "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-l-4 border-l-amber-500",
+    "bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border-l-4 border-l-purple-500",
+    "bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300 border-l-4 border-l-rose-500",
+    "bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 border-l-4 border-l-cyan-500",
   ];
 
   const getShiftColor = (shiftId: number) => {
@@ -250,417 +369,547 @@ export default function AdminLichLamViecPage() {
   };
 
   // Day detail modal data
-  const selectedDaySchedules = selectedDay ? getSchedulesForDay(selectedDay) : [];
   const selectedDayShifts = selectedDay ? getDayShiftSummary(selectedDay) : [];
 
-  const selectedStoreName = stores.find((s) => s.id === selectedStoreId)?.tenCuaHang ?? "";
-  
-  const allEmployeesInMonth = Array.from(
-    new Map(
-      schedules
-        .map((s) => s.nhanVien)
-        .filter(Boolean)
-        .map((nv) => [nv!.id, nv])
-    ).values()
-  ).sort((a, b) => (a!.tenNhanVien || "").localeCompare(b!.tenNhanVien || ""));
+  const selectedDateKey = selectedDay
+    ? `${currentYear}-${String(currentMonth).padStart(2, "0")}-${String(selectedDay).padStart(2, "0")}`
+    : "";
+
+  const selectedDayStatus = selectedDateKey
+    ? (dayStatusByDate[selectedDateKey] ?? 1)
+    : 1;
+
+  const selectedStoreName =
+    stores.find((s) => s.id === selectedStoreId)?.tenCuaHang ?? "";
+
+  const allEmployeesInMonth = storeEmployees;
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-card rounded-2xl border border-subtle p-4 lg:p-5">
-        <div>
-          <h1 className="text-lg font-bold text-foreground flex items-center gap-2">
-            <FiCalendar className="text-accent" size={20} />
-            Quản lý lịch làm việc
-          </h1>
-          <p className="text-sm text-muted mt-1">
-            Chọn cửa hàng để xem lịch làm việc nhân viên theo tháng.
-          </p>
-        </div>
+    <div className="relative space-y-6">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-24 -right-28 h-72 w-72 rounded-full bg-linear-to-br from-rose-200/40 via-orange-100/40 to-transparent blur-2xl" />
+        <div className="absolute top-40 -left-24 h-72 w-72 rounded-full bg-linear-to-br from-emerald-200/30 via-teal-100/30 to-transparent blur-2xl" />
       </div>
+      <div className="relative space-y-6">
+        {/* Header */}
+        <div className="flex flex-wrap items-start justify-between gap-5 bg-linear-to-r from-section via-card to-section rounded-3xl border border-subtle p-6 lg:p-8 shadow-sm">
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-subtle bg-card/70 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-muted">
+              Bang dieu phoi lich lam viec
+            </div>
+            <h1 className="mt-4 text-3xl font-bold text-foreground flex items-center gap-3 font-sans tracking-tight">
+              <div className="w-11 h-11 rounded-2xl bg-linear-to-br from-accent to-accent/60 flex items-center justify-center shadow-sm">
+                <FiCalendar className="text-white" size={22} />
+              </div>
+              Quản lý lịch làm việc
+            </h1>
+            <p className="text-sm text-muted mt-3 leading-relaxed">
+              Theo dõi ca làm, cập nhật trạng thái ngày và điều phối nhân viên
+              theo từng cửa hàng trong tháng.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="rounded-2xl border border-subtle bg-card/80 px-4 py-3 shadow-sm">
+              <p className="text-[11px] uppercase tracking-widest text-muted">
+                Thang hien tai
+              </p>
+              <p className="text-lg font-bold text-foreground">
+                {currentMonth}/{currentYear}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-subtle bg-card/80 px-4 py-3 shadow-sm min-w-48">
+              <p className="text-[11px] uppercase tracking-widest text-muted">
+                Cua hang
+              </p>
+              <p className="text-sm font-semibold text-foreground truncate">
+                {selectedStoreName || "Chua chon"}
+              </p>
+            </div>
+          </div>
+        </div>
 
-      {/* Store Selector */}
-      <div className="bg-card rounded-2xl border border-subtle p-4 lg:p-5">
-        <label className="block text-sm font-medium text-foreground mb-2 flex items-center gap-2">
-          <FiMapPin size={14} className="text-accent" />
-          Chọn cửa hàng
-        </label>
-        {loadingStores ? (
-          <Loading />
-        ) : (
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <select
-              value={selectedStoreId ?? ""}
-              onChange={(e) => {
-                const val = e.target.value ? Number(e.target.value) : null;
-                setSelectedStoreId(val);
-              }}
-              className="h-10 px-3 rounded-lg bg-section border border-subtle text-sm min-w-72 focus:outline-none focus:ring-2 focus:ring-accent/40"
-            >
-              <option value="">-- Chọn cửa hàng --</option>
-              {stores.map((store) => (
-                <option key={store.id} value={store.id}>
-                  {store.tenCuaHang} — {store.diaChi}
-                </option>
-              ))}
-            </select>
-            
-            {/* Show buttons only if a store is selected */}
+        {/* Store Selector */}
+        <div className="bg-card rounded-3xl border border-subtle p-6 lg:p-7 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <div>
+              <label className="text-sm font-bold text-foreground mb-2 flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-accent/10 flex items-center justify-center">
+                  <FiMapPin size={14} className="text-accent" />
+                </div>
+                Chọn cửa hàng
+              </label>
+              <p className="text-xs text-muted">
+                Lựa chọn cửa hàng để xem và quản lý lịch làm việc theo tháng.
+              </p>
+            </div>
             {selectedStoreId && (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleDownloadTemplate}
-                  className="flex items-center gap-2 px-3 py-2 border border-subtle text-sm rounded-xl hover:bg-section transition"
-                >
-                  <FiDownload size={15} /> Tải mẫu Excel
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".xlsx,.xls"
-                  className="hidden"
-                  onChange={handleImport}
-                />
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={importing}
-                  className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white text-sm rounded-xl hover:bg-green-700 transition disabled:opacity-60"
-                >
-                  <FiUpload size={15} /> {importing ? "Đang import..." : "Import Excel"}
-                </button>
+              <div className="inline-flex items-center gap-2 rounded-full border border-subtle bg-section/60 px-3 py-1 text-xs font-semibold text-muted">
+                <FiCalendar size={14} />
+                Dang xem thang {currentMonth}/{currentYear}
               </div>
             )}
           </div>
-        )}
-      </div>
-
-      {/* Content: Show prompt or calendar */}
-      {!selectedStoreId ? (
-        <div className="bg-card rounded-2xl border border-subtle p-16 text-center">
-          <FiMapPin className="mx-auto text-muted mb-3" size={40} />
-          <p className="text-muted text-lg font-medium">Vui lòng chọn cửa hàng để xem lịch làm việc</p>
-        </div>
-      ) : (
-        <>
-          {/* Month Navigation + Stats */}
-          <div className="bg-card rounded-2xl border border-subtle p-4 lg:p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={prevMonth}
-                  className="p-2 rounded-lg border border-subtle hover:bg-section transition"
-                >
-                  <FiChevronLeft size={18} />
-                </button>
-                <div className="text-center min-w-48">
-                  <h2 className="text-lg font-bold text-foreground">
-                    Tháng {currentMonth}, {currentYear}
-                  </h2>
-                  <p className="text-xs text-muted mt-0.5">{selectedStoreName}</p>
-                </div>
-                <button
-                  onClick={nextMonth}
-                  className="p-2 rounded-lg border border-subtle hover:bg-section transition"
-                >
-                  <FiChevronRight size={18} />
-                </button>
-              </div>
-              <div className="flex items-center gap-4 text-sm">
-                <div className="flex items-center gap-1.5 text-muted">
-                  <FiUsers size={14} />
-                  <span className="font-semibold text-foreground">
-                    {new Set(schedules.map((s) => s.nhanVien?.id).filter(Boolean)).size}
-                  </span>{" "}
-                  nhân viên
-                </div>
-                <div className="flex items-center gap-1.5 text-muted">
-                  <FiCalendar size={14} />
-                  <span className="font-semibold text-foreground">
-                    {new Set(schedules.map((s) => s.ngayLamViec)).size}
-                  </span>{" "}
-                  ngày có lịch
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Calendar Grid */}
-          {loading ? (
+          {loadingStores ? (
             <Loading />
           ) : (
-            <div className="bg-card rounded-2xl border border-subtle overflow-hidden">
-              {/* Day headers */}
-              <div className="grid grid-cols-7 border-b border-subtle">
-                {DAYS_VI.map((d, i) => (
-                  <div
-                    key={d}
-                    className={`py-3 text-center text-xs font-semibold uppercase tracking-wider ${
-                      i >= 5 ? "text-red-500" : "text-muted"
-                    } bg-section border-r border-subtle last:border-r-0`}
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-col gap-2">
+                <select
+                  value={selectedStoreId ?? ""}
+                  onChange={(e) => {
+                    const val = e.target.value ? Number(e.target.value) : null;
+                    setSelectedStoreId(val);
+                  }}
+                  className="h-12 px-4 rounded-2xl bg-section border border-subtle text-sm min-w-80 focus:outline-none focus:ring-2 focus:ring-accent/40 font-semibold"
+                >
+                  <option value="">-- Chọn cửa hàng --</option>
+                  {stores.map((store) => (
+                    <option key={store.id} value={store.id}>
+                      {store.tenCuaHang} — {store.diaChi}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-[11px] text-muted">
+                  Chua chon? Hay bat dau bang viec chon mot chi nhanh.
+                </span>
+              </div>
+
+              {/* Show buttons only if a store is selected */}
+              {selectedStoreId && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={handleDownloadTemplate}
+                    className="flex items-center gap-2 px-4 py-2.5 border border-subtle text-sm font-semibold rounded-2xl hover:bg-section transition duration-200"
                   >
-                    {d}
-                  </div>
-                ))}
-              </div>
-
-              {/* Day cells */}
-              <div className="grid grid-cols-7">
-                {Array.from({ length: totalCells }).map((_, idx) => {
-                  const day = idx - firstDay + 1;
-                  const isValidDay = day >= 1 && day <= daysInMonth;
-                  const dayShifts = isValidDay ? getDayShiftSummary(day) : [];
-                  const daySchedules = isValidDay ? getSchedulesForDay(day) : [];
-                  const hasSchedule = daySchedules.length > 0;
-                  
-                  const totalWorkingEmployees = new Set(
-                    dayShifts.flatMap(s => s.employees)
-                  ).size;
-                  
-                  const isHoliday = daySchedules.some(s => s.trangThai === 0);
-                  const isFestival = daySchedules.some(s => s.trangThai === 2);
-
-                  let cellBgClass = "bg-white dark:bg-card hover:bg-gray-50 dark:hover:bg-section/50";
-                  if (!isValidDay) {
-                    cellBgClass = "bg-section/30";
-                  } else if (isFestival) {
-                    cellBgClass = "bg-red-200 dark:bg-red-900/50 hover:bg-red-300 dark:hover:bg-red-800/60 cursor-pointer";
-                  } else if (isHoliday) {
-                    cellBgClass = "bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600 cursor-pointer";
-                  } else if (hasSchedule) {
-                    cellBgClass = "bg-blue-200 dark:bg-blue-900/40 hover:bg-blue-300 dark:hover:bg-blue-800/60 cursor-pointer";
-                  }
-
-                  return (
-                    <div
-                      key={idx}
-                      className={`min-h-28 lg:min-h-32 border-r border-b border-subtle last:border-r-0 p-1.5 lg:p-2 transition-colors ${cellBgClass}`}
-                      onClick={() => {
-                        if (isValidDay && hasSchedule) setSelectedDay(day);
-                      }}
-                    >
-                      {isValidDay && (
-                        <>
-                          {/* Day number */}
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="flex items-center gap-1.5">
-                              <span
-                                className={`text-sm font-semibold inline-flex items-center justify-center w-7 h-7 rounded-full ${
-                                  isToday(day)
-                                    ? "bg-accent text-white"
-                                    : idx % 7 >= 5
-                                      ? "text-red-500"
-                                      : "text-foreground"
-                                }`}
-                              >
-                                {day}
-                              </span>
-                              {isHoliday && (
-                                <span className="text-[9px] font-bold text-white bg-gray-500 px-1.5 py-0.5 rounded-sm shadow-sm" title="Ngày nghỉ">
-                                  NGHỈ
-                                </span>
-                              )}
-                              {isFestival && (
-                                <span className="text-[9px] font-bold text-white bg-red-500 px-1.5 py-0.5 rounded-sm shadow-sm" title="Ngày lễ">
-                                  LỄ
-                                </span>
-                              )}
-                            </div>
-                            
-                            {totalWorkingEmployees > 0 && (
-                              <span className="text-[10px] bg-accent/10 text-accent px-1.5 py-0.5 rounded-full font-medium">
-                                {totalWorkingEmployees} NV
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Shift chips */}
-                          <div className="mt-1.5 flex flex-col gap-1">
-                            {dayShifts.slice(0, 3).map(({ shift, employees }) => (
-                              <div
-                                key={shift.id}
-                                className={`flex items-center justify-between text-[10px] lg:text-[11px] px-1.5 py-0.5 rounded shadow-sm font-semibold tracking-tight ${getShiftColor(shift.id)}`}
-                                title={`${shift.tenCaLam}: ${employees.map(e => e.name).join(", ")}`}
-                              >
-                                <span className="truncate max-w-[65%]">{shift.tenCaLam}</span>
-                                <span className="opacity-80 flex-shrink-0">{employees.length} NV</span>
-                              </div>
-                            ))}
-                            {dayShifts.length > 3 && (
-                              <div className="text-[10px] font-medium text-foreground/60 text-center bg-black/5 dark:bg-white/10 rounded py-0.5">
-                                +{dayShifts.length - 3} ca khác
-                              </div>
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Shift Legend */}
-          {shifts.length > 0 && (
-            <div className="bg-card rounded-2xl border border-subtle p-4">
-              <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
-                Chú thích ca làm
-              </p>
-              <div className="flex flex-wrap gap-2 mt-3">
-                {shifts
-                  .filter((s) => s.trangThai === 1)
-                  .map((s) => (
-                    <div
-                      key={s.id}
-                      className={`text-xs px-3 py-1.5 rounded-lg shadow-sm font-medium flex items-center gap-2 border-[0.5px] border-black/5 dark:border-white/5 ${getShiftColor(s.id)}`}
-                    >
-                      <FiClock size={13} className="opacity-70" />
-                      <span>
-                        {s.tenCaLam} <span className="opacity-70 ml-1 font-normal">({s.gioBatDau?.slice(0, 5)} - {s.gioKetThuc?.slice(0, 5)})</span>
-                      </span>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* Day Detail Modal */}
-      {selectedDay !== null && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-card rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-5 border-b border-subtle">
-              <div>
-                <h2 className="font-bold text-lg flex items-center gap-2 text-foreground">
-                  Ngày {selectedDay}/{currentMonth}/{currentYear}
-                  {selectedDaySchedules.some(s => s.trangThai === 0) && (
-                    <span className="text-xs font-bold text-white bg-gray-500 px-2 py-0.5 rounded-md">NGÀY NGHỈ</span>
-                  )}
-                  {selectedDaySchedules.some(s => s.trangThai === 2) && (
-                    <span className="text-xs font-bold text-white bg-red-500 px-2 py-0.5 rounded-md">NGÀY LỄ</span>
-                  )}
-                </h2>
-                <p className="text-sm text-muted mt-0.5">{selectedStoreName}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <select
-                  disabled={updatingStatus}
-                  onChange={(e) => handleUpdateDayStatus(Number(e.target.value))}
-                  value={selectedDaySchedules[0]?.trangThai ?? 1}
-                  className="h-9 px-3 border border-subtle bg-section rounded-lg text-sm focus:outline-none"
-                >
-                  <option value={1}>Ngày thường</option>
-                  <option value={0}>Ngày nghỉ</option>
-                  <option value={2}>Ngày lễ</option>
-                </select>
-                <button
-                  onClick={() => setSelectedDay(null)}
-                  className="p-2 text-muted hover:text-foreground hover:bg-section rounded-lg transition"
-                >
-                  <FiX size={20} />
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Body */}
-            <div className="overflow-y-auto p-5 space-y-4 flex-1">
-              {/* Add Shift Action */}
-              <div className="bg-section/30 p-4 border border-subtle rounded-xl flex gap-3 
-items-center flex-wrap">
-                <select
-                  value={addEmployeeId}
-                  onChange={(e) => setAddEmployeeId(Number(e.target.value))}
-                  className="h-9 flex-1 min-w-[140px] border border-subtle bg-card rounded-lg px-2 text-sm"
-                >
-                  <option value="">-- Chọn nhân viên --</option>
-                  {allEmployeesInMonth.map((emp) => (
-                    <option key={emp!.id} value={emp!.id}>
-                      {emp!.tenNhanVien}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={addShiftId}
-                  onChange={(e) => setAddShiftId(Number(e.target.value))}
-                  className="h-9 w-32 border border-subtle bg-card rounded-lg px-2 text-sm"
-                >
-                  <option value="">-- Chọn ca --</option>
-                  {shifts.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.tenCaLam}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  onClick={() => handleToggleShift(Number(addEmployeeId), Number(addShiftId), true)}
-                  disabled={!addEmployeeId || !addShiftId}
-                  className="h-9 px-4 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent/90 disabled:opacity-50 transition"
-                >
-                  Thêm
-                </button>
-              </div>
-
-              {selectedDayShifts.length === 0 ? (
-                <div className="text-center py-8 text-muted">
-                  <FiCalendar className="mx-auto mb-2" size={32} />
-                  <p>Không có nhân viên đi làm ca trong ngày này</p>
+                    <FiDownload size={16} className="text-muted" /> Tải mẫu
+                    Excel
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xlsx,.xls"
+                    className="hidden"
+                    onChange={handleImport}
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={importing}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-linear-to-r from-emerald-600 to-teal-600 text-white text-sm font-semibold rounded-2xl hover:shadow-lg transition duration-200 disabled:opacity-60"
+                  >
+                    <FiUpload size={16} />{" "}
+                    {importing ? "Đang import..." : "Import Excel"}
+                  </button>
                 </div>
-              ) : (
-                selectedDayShifts.map(({ shift, employees }) => (
-                  <div
-                    key={shift.id}
-                    className="rounded-xl border border-subtle overflow-hidden"
-                  >
-                    {/* Shift header */}
-                    <div
-                      className={`px-4 py-3 border-b border-subtle flex items-center justify-between shadow-sm ${getShiftColor(shift.id)}`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <FiClock size={14} className="opacity-80" />
-                        <span className="font-bold text-sm tracking-wide">{shift.tenCaLam}</span>
-                      </div>
-                      <span className="text-xs font-semibold opacity-80 bg-black/5 dark:bg-white/10 px-2 py-1 rounded-md">
-                        {shift.gioBatDau?.slice(0, 5)} - {shift.gioKetThuc?.slice(0, 5)}
-                      </span>
-                    </div>
-
-                    {/* Employee list */}
-                    <div className="divide-y divide-subtle">
-                      {employees.map((emp, i) => (
-                        <div
-                          key={i}
-                          className="px-4 py-2.5 flex items-center justify-between text-sm hover:bg-section/50 transition group"
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-full bg-accent/10 text-accent flex items-center justify-center text-xs font-bold">
-                              {emp.name.charAt(0).toUpperCase()}
-                            </div>
-                            <span className="font-medium text-foreground">{emp.name}</span>
-                          </div>
-                          <button
-                            onClick={() => handleToggleShift(emp.id, shift.id, false)}
-                            className="p-1.5 text-muted hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded opacity-0 group-hover:opacity-100 transition"
-                            title="Xóa khỏi ca"
-                          >
-                            <FiX size={15} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Employee count */}
-                    <div className="px-4 py-2 bg-section/50 text-xs text-muted">
-                      Tổng: {employees.length} nhân viên
-                    </div>
-                  </div>
-                ))
               )}
             </div>
-          </div>
+          )}
         </div>
-      )}
+
+        {/* Content: Show prompt or calendar */}
+        {!selectedStoreId ? (
+          <div className="bg-linear-to-br from-card via-section to-card rounded-3xl border border-subtle p-16 text-center shadow-sm">
+            <div className="w-16 h-16 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-4">
+              <FiMapPin className="text-accent" size={32} />
+            </div>
+            <p className="text-foreground text-lg font-semibold">
+              Vui lòng chọn cửa hàng
+            </p>
+            <p className="text-muted text-sm mt-2">
+              để xem lịch làm việc của nhân viên
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Month Navigation + Stats */}
+            <div className="bg-card rounded-3xl border border-subtle p-5 lg:p-6 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={prevMonth}
+                    className="p-3 rounded-2xl border border-subtle hover:bg-section transition duration-200"
+                    title="Tháng trước"
+                  >
+                    <FiChevronLeft size={20} className="text-foreground" />
+                  </button>
+                  <div className="text-center min-w-56">
+                    <h2 className="text-xl font-bold text-foreground">
+                      Tháng {currentMonth}, {currentYear}
+                    </h2>
+                    <p className="text-xs text-muted mt-1 font-medium">
+                      {selectedStoreName}
+                    </p>
+                  </div>
+                  <button
+                    onClick={nextMonth}
+                    className="p-3 rounded-2xl border border-subtle hover:bg-section transition duration-200"
+                    title="Tháng sau"
+                  >
+                    <FiChevronRight size={20} className="text-foreground" />
+                  </button>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-sky-50 dark:bg-sky-900/20 rounded-xl">
+                    <div className="w-2 h-2 rounded-full bg-sky-500" />
+                    <span className="text-sm font-semibold text-foreground">
+                      {
+                        new Set(
+                          schedules.map((s) => s.nhanVien?.id).filter(Boolean),
+                        ).size
+                      }
+                    </span>
+                    <span className="text-xs text-muted">nhân viên</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-2 bg-accent/10 rounded-xl">
+                    <div className="w-2 h-2 rounded-full bg-accent" />
+                    <span className="text-sm font-semibold text-foreground">
+                      {new Set(schedules.map((s) => s.ngayLamViec)).size}
+                    </span>
+                    <span className="text-xs text-muted">ngày có lịch</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Day Status Legend */}
+            <div className="bg-card rounded-2xl border border-subtle p-5 lg:p-6 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-5 h-5 rounded-lg bg-linear-to-br from-accent to-accent/60" />
+                <p className="text-sm font-bold text-foreground uppercase tracking-wider">
+                  Chú thích trạng thái ngày
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="flex items-center gap-3 px-4 py-3 bg-sky-200/80 rounded-xl border border-sky-300">
+                  <div className="w-3 h-3 rounded-full bg-sky-600" />
+                  <span className="text-sm font-semibold text-sky-900">
+                    Ngày thường
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 px-4 py-3 bg-gray-200 rounded-xl border border-gray-300">
+                  <div className="w-3 h-3 rounded-full bg-gray-600" />
+                  <span className="text-sm font-semibold text-gray-900">
+                    Ngày nghỉ
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 px-4 py-3 bg-rose-300/80 rounded-xl border border-rose-400">
+                  <div className="w-3 h-3 rounded-full bg-rose-600" />
+                  <span className="text-sm font-semibold text-rose-900">
+                    Ngày lễ
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Calendar */}
+            {loading ? (
+              <Loading />
+            ) : (
+              <div className="bg-card rounded-3xl border border-subtle p-4 lg:p-6 overflow-hidden shadow-sm">
+                <div className="grid grid-cols-7 gap-3">
+                  {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
+                    <div
+                      key={d}
+                      className="text-center text-sm font-semibold text-muted"
+                    >
+                      {d}
+                    </div>
+                  ))}
+                  {calendarCells.map((day, idx) => {
+                    if (!day) {
+                      return (
+                        <div
+                          key={`empty-${idx}`}
+                          className="h-24 md:h-28 rounded-2xl bg-white"
+                        />
+                      );
+                    }
+
+                    const dateStr = `${currentYear}-${String(currentMonth).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                    const dayStatus = dayStatusByDate[dateStr];
+                    const daySchedules = getSchedulesForDay(day);
+                    const dayShiftSummary = getDayShiftSummary(day);
+                    const employeeNames = Array.from(
+                      new Set(
+                        daySchedules
+                          .map((s) => s.nhanVien?.tenNhanVien?.trim())
+                          .filter((name): name is string => Boolean(name)),
+                      ),
+                    );
+
+                    let dayStatusAttr:
+                      | "festival"
+                      | "workday"
+                      | "offday"
+                      | "none" = "none";
+                    if (dayStatus === 2) {
+                      dayStatusAttr = "festival";
+                    } else if (dayStatus === 1) {
+                      dayStatusAttr = "workday";
+                    } else if (dayStatus === 0) {
+                      dayStatusAttr = "offday";
+                    }
+
+                    const isDayToday = isToday(day);
+                    const dayBgClass =
+                      dayStatusAttr === "festival"
+                        ? "bg-rose-300/80"
+                        : dayStatusAttr === "offday"
+                          ? "bg-gray-200"
+                          : dayStatusAttr === "workday"
+                            ? "bg-sky-200/80"
+                            : "bg-white";
+
+                    return (
+                      <div
+                        key={dateStr}
+                        className={`h-24 md:h-28 rounded-2xl border border-white/60 shadow-sm flex flex-col items-center justify-start gap-1 cursor-pointer transition duration-200 p-2 ${dayBgClass} ${
+                          isDayToday ? "ring-2 ring-accent/40" : ""
+                        }`}
+                        onClick={() => setSelectedDay(day)}
+                      >
+                        <span className="text-base font-semibold text-foreground">
+                          {day}
+                        </span>
+                        {dayStatusAttr === "offday" && (
+                          <span className="text-xs font-semibold text-gray-700">
+                            NGHI
+                          </span>
+                        )}
+                        {dayStatusAttr === "festival" && (
+                          <span className="text-xs font-semibold text-rose-700">
+                            LỄ
+                          </span>
+                        )}
+                        {daySchedules.length > 0 && (
+                          <div className="text-xs text-foreground/70 space-y-0.5">
+                            {employeeNames.slice(0, 2).map((name) => (
+                              <div
+                                key={name}
+                                className="max-w-20 truncate font-semibold"
+                                title={name}
+                              >
+                                {name}
+                              </div>
+                            ))}
+                            {employeeNames.length > 2 && (
+                              <div className="text-[10px] text-muted font-medium">
+                                +{employeeNames.length - 2} nhân viên
+                              </div>
+                            )}
+                            <div className="flex items-center gap-1">
+                              <span className="font-semibold">
+                                {dayShiftSummary.length}
+                              </span>
+                              <span>ca</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Shift Legend */}
+            {shifts.length > 0 && (
+              <div className="bg-card rounded-2xl border border-subtle p-5 lg:p-6 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-5 h-5 rounded-lg bg-linear-to-br from-accent to-accent/60" />
+                  <p className="text-sm font-bold text-foreground uppercase tracking-wider">
+                    Chú thích ca làm việc
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {shifts
+                    .filter((s) => s.trangThai === 1)
+                    .map((s) => (
+                      <div
+                        key={s.id}
+                        className={`px-4 py-3 rounded-xl border-l-4 transition-all hover:shadow-md ${getShiftColor(s.id)}`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-1">
+                            <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center shrink-0">
+                              <FiClock size={14} className="text-accent" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-foreground truncate">
+                                {s.tenCaLam}
+                              </p>
+                              <p className="text-xs text-muted font-medium">
+                                {s.gioBatDau?.slice(0, 5)} -{" "}
+                                {s.gioKetThuc?.slice(0, 5)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Day Detail Modal */}
+        {selectedDay !== null && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+            <div className="bg-card rounded-3xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-6 border-b border-subtle bg-linear-to-r from-section via-card to-section">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
+                      <FiCalendar size={16} className="text-accent" />
+                    </div>
+                    <h2 className="font-bold text-lg flex items-center gap-2 text-foreground">
+                      {selectedDay}/{currentMonth}/{currentYear}
+                    </h2>
+                  </div>
+                  <p className="text-sm text-muted mt-1 font-medium">
+                    {selectedStoreName}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <select
+                    disabled={updatingStatus}
+                    onChange={(e) =>
+                      handleUpdateDayStatus(Number(e.target.value))
+                    }
+                    value={selectedDayStatus}
+                    className="h-9 px-3 border border-subtle bg-section rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 font-semibold"
+                  >
+                    <option value={1}>Ngày thường</option>
+                    <option value={0}>Ngày nghỉ</option>
+                    <option value={2}>Ngày lễ</option>
+                  </select>
+                  <button
+                    onClick={() => setSelectedDay(null)}
+                    className="p-2 text-muted hover:text-foreground hover:bg-section rounded-xl transition duration-200"
+                  >
+                    <FiX size={20} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Body */}
+              <div className="overflow-y-auto p-6 space-y-4 flex-1">
+                {/* Add Shift Action */}
+                <div className="bg-linear-to-r from-accent/5 to-accent/10 p-4 border border-accent/20 rounded-2xl flex gap-2 items-center flex-wrap">
+                  <select
+                    value={addEmployeeId}
+                    onChange={(e) => setAddEmployeeId(Number(e.target.value))}
+                    className="h-10 flex-1 min-w-40 border border-subtle bg-white dark:bg-section rounded-xl px-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
+                  >
+                    <option value="">-- Chọn nhân viên --</option>
+                    {allEmployeesInMonth.map((emp) => (
+                      <option key={emp!.id} value={emp!.id}>
+                        {emp!.tenNhanVien}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={addShiftId}
+                    onChange={(e) => setAddShiftId(Number(e.target.value))}
+                    className="h-10 w-44 border border-subtle bg-white dark:bg-section rounded-xl px-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
+                  >
+                    <option value="">-- Chọn ca --</option>
+                    {shifts.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.tenCaLam}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() =>
+                      handleToggleShift(
+                        Number(addEmployeeId),
+                        Number(addShiftId),
+                        true,
+                      )
+                    }
+                    disabled={!addEmployeeId || !addShiftId}
+                    className="h-10 px-4 bg-linear-to-r from-accent to-accent/80 text-white rounded-xl text-sm font-bold hover:shadow-lg transition duration-200 disabled:opacity-50"
+                  >
+                    + Thêm
+                  </button>
+                </div>
+
+                {selectedDayShifts.length === 0 ? (
+                  <div className="text-center py-12 text-muted">
+                    <div className="w-12 h-12 rounded-full bg-muted/10 flex items-center justify-center mx-auto mb-3">
+                      <FiClock size={24} className="text-muted/40" />
+                    </div>
+                    <p className="font-medium">Không có lịch làm việc</p>
+                    <p className="text-xs mt-1">
+                      Chọn nhân viên và ca để thêm lịch
+                    </p>
+                  </div>
+                ) : (
+                  selectedDayShifts.map(({ shift, employees }) => (
+                    <div
+                      key={shift.id}
+                      className="rounded-2xl border border-subtle overflow-hidden hover:shadow-lg transition duration-200"
+                    >
+                      {/* Shift header */}
+                      <div
+                        className={`px-4 py-3 border-b border-subtle flex items-center justify-between ${getShiftColor(shift.id)}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                            <FiClock size={16} className="opacity-80" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm">
+                              {shift.tenCaLam}
+                            </p>
+                            <p className="text-xs opacity-80">
+                              {shift.gioBatDau?.slice(0, 5)} -{" "}
+                              {shift.gioKetThuc?.slice(0, 5)}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-xs font-bold bg-black/10 px-2 py-1 rounded-full">
+                          {employees.length} NV
+                        </span>
+                      </div>
+
+                      {/* Employee list */}
+                      <div className="divide-y divide-subtle bg-linear-to-b from-white/60 to-transparent dark:from-section/60">
+                        {employees.map((emp, i) => (
+                          <div
+                            key={i}
+                            className="px-4 py-3 flex items-center justify-between hover:bg-section/50 transition duration-200 group"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-linear-to-br from-accent to-accent/60 flex items-center justify-center text-white text-xs font-bold">
+                                {emp.name.charAt(0).toUpperCase()}
+                              </div>
+                              <span className="font-medium text-foreground text-sm">
+                                {emp.name}
+                              </span>
+                            </div>
+                            <button
+                              onClick={() =>
+                                handleToggleShift(emp.id, shift.id, false)
+                              }
+                              className="p-2 text-muted hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl opacity-0 group-hover:opacity-100 transition duration-200"
+                              title="Xóa khỏi ca"
+                            >
+                              <FiX size={18} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
