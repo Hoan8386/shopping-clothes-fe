@@ -17,6 +17,7 @@ import {
 } from "@/types";
 import { getImageUrl, formatCurrency } from "@/lib/utils";
 import Loading from "@/components/ui/Loading";
+import Barcode128 from "@/components/ui/Barcode128";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import {
@@ -408,6 +409,18 @@ export default function ProductDetailPage() {
                       : "Hết hàng"}
                   </span>
                 </span>
+              </div>
+            )}
+
+            {selectedVariant && (
+              <div className="bg-card border border-subtle rounded-xl p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
+                  Mã vạch sản phẩm
+                </p>
+                <Barcode128
+                  value={selectedVariant.maVach}
+                  className="flex flex-col items-start gap-2"
+                />
               </div>
             )}
 

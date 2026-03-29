@@ -101,6 +101,25 @@ export const productVariantService = {
     return res.data.data;
   },
 
+  scanByBarcode: async (maVach: string) => {
+    const res = await apiClient.get<RestResponse<ResChiTietSanPhamDTO>>(
+      "/chi-tiet-san-pham/scan",
+      { params: { maVach } },
+    );
+    return res.data.data;
+  },
+
+  scanByBarcodeImage: async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await apiClient.post<RestResponse<ResChiTietSanPhamDTO>>(
+      "/chi-tiet-san-pham/scan-image",
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+    return res.data.data;
+  },
+
   create: async (formData: FormData) => {
     const res = await apiClient.post<RestResponse<ResChiTietSanPhamDTO>>(
       "/chi-tiet-san-pham",

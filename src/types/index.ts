@@ -88,6 +88,7 @@ export interface ResChiTietSanPhamDTO {
   id: number;
   sanPhamId: number;
   maPhieuNhap: number;
+  maVach?: string;
   maCuaHang?: number;
   tenCuaHang: string;
   soLuong: number;
@@ -169,6 +170,7 @@ export interface DonHang {
   khuyenMaiDiem?: KhuyenMaiDiem;
   maKhuyenMaiHoaDon?: number;
   maKhuyenMaiDiem?: number;
+  tenNguoiMua?: string;
   sdt?: string;
   diaChi: string;
   tongTien: number;
@@ -194,6 +196,19 @@ export interface ReqTaoDonHangDTO {
   hinhThucDonHang?: number;
 }
 
+export interface ReqTaoDonHangTaiQuayItemDTO {
+  chiTietSanPhamId: number;
+  soLuong: number;
+}
+
+export interface ReqTaoDonHangTaiQuayDTO {
+  sdt?: string;
+  khachHangId?: number;
+  maKhuyenMaiHoaDon?: number;
+  maKhuyenMaiDiem?: number;
+  chiTietDonHangs: ReqTaoDonHangTaiQuayItemDTO[];
+}
+
 // ============ CUSTOMER ============
 export interface KhachHang {
   id: number;
@@ -201,6 +216,67 @@ export interface KhachHang {
   sdt: string;
   email: string;
   diemTichLuy: number;
+}
+
+export interface ResKhachHangLookupDTO {
+  id: number;
+  tenKhachHang: string;
+  sdt: string;
+  email: string;
+  diemTichLuy: number;
+}
+
+export interface ResGioHangNhanVienDTO {
+  id: number;
+  trangThai: number;
+  tenNguoiMua?: string;
+  sdt?: string;
+  khachHangId?: number;
+  tenKhachHang?: string;
+  emailKhachHang?: string;
+  diemTichLuy?: number;
+  maKhuyenMaiHoaDon?: number;
+  maKhuyenMaiDiem?: number;
+  tongSoLuong: number;
+  tongTienGoc: number;
+  tienGiamHoaDon: number;
+  tienGiamDiem: number;
+  tongTienGiam: number;
+  tongTienThanhToan: number;
+  chiTietGioHangs: ResGioHangNhanVienChiTietDTO[];
+  khuyenMaiHoaDonHopLe: ResGioHangNhanVienKhuyenMaiHoaDonDTO[];
+  khuyenMaiDiemHopLe: ResGioHangNhanVienKhuyenMaiDiemDTO[];
+}
+
+export interface ResGioHangNhanVienChiTietDTO {
+  id: number;
+  chiTietSanPhamId: number;
+  maVach?: string;
+  sanPhamId?: number;
+  tenSanPham?: string;
+  tenMauSac?: string;
+  tenKichThuoc?: string;
+  soLuong: number;
+  tonKho: number;
+  giaBan: number;
+  thanhTien: number;
+}
+
+export interface ResGioHangNhanVienKhuyenMaiHoaDonDTO {
+  id: number;
+  tenKhuyenMai: string;
+  phanTramGiam: number;
+  giamToiDa: number;
+  hoaDonToiThieu: number;
+}
+
+export interface ResGioHangNhanVienKhuyenMaiDiemDTO {
+  id: number;
+  tenKhuyenMai: string;
+  phanTramGiam: number;
+  giamToiDa: number;
+  hoaDonToiThieu: number;
+  diemToiThieu: number;
 }
 
 // ============ EMPLOYEE ============
