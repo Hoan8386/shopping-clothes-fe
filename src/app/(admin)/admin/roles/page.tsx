@@ -11,6 +11,8 @@ export default function AdminRolesPage() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Role | null>(null);
   const [form, setForm] = useState({ name: "", description: "", active: true });
@@ -62,6 +64,7 @@ export default function AdminRolesPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
     try {
       const payload = {
         ...form,
@@ -78,17 +81,22 @@ export default function AdminRolesPage() {
       fetchData();
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Thất bại");
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm("Xóa vai trò này?")) return;
+    setDeleting(true);
     try {
       await roleService.delete(id);
       toast.success("Đã xóa");
       fetchData();
     } catch {
       toast.error("Xóa thất bại");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -183,7 +191,8 @@ export default function AdminRolesPage() {
                         </button>
                         <button
                           onClick={() => handleDelete(role.id)}
-                          className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition"
+                          disabled={deleting}
+                          className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <FiTrash2 size={15} />
                         </button>
@@ -303,9 +312,10 @@ export default function AdminRolesPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition shadow-sm font-medium text-sm"
+                  disabled={saving}
+                  className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition shadow-sm font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {editing ? "Cập nhật" : "Thêm mới"}
+                  {saving ? "Đang lưu..." : editing ? "Cập nhật" : "Thêm mới"}
                 </button>
               </div>
             </form>

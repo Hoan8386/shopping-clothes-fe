@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import Image from "next/image";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   DonHang,
   ResGioHangNhanVienDTO,
@@ -99,6 +101,10 @@ interface PosItem {
 }
 
 export default function StaffOrdersPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const hasProcessedVNPayReturnRef = useRef(false);
+
   // Tab navigation
   const [activeTab, setActiveTab] = useState<"orders" | "draft-carts">(
     "orders",
@@ -114,6 +120,7 @@ export default function StaffOrdersPage() {
   // Draft carts tab
   const [draftCarts, setDraftCarts] = useState<ResGioHangNhanVienDTO[]>([]);
   const [loadingDraftCarts, setLoadingDraftCarts] = useState(false);
+  const [deletingCartId, setDeletingCartId] = useState<number | null>(null);
   const [selectedDraftCart, setSelectedDraftCart] =
     useState<ResGioHangNhanVienDTO | null>(null);
   const [showDraftCartModal, setShowDraftCartModal] = useState(false);
@@ -144,7 +151,7 @@ export default function StaffOrdersPage() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [selectedCustomer, setSelectedCustomer] =
     useState<ResKhachHangLookupDTO | null>(null);
-  const [barcodeInput, setBarcodeInput] = useState("");
+  const [productDetailCodeInput, setProductDetailCodeInput] = useState("");
   const [selectedHoaDonPromoId, setSelectedHoaDonPromoId] = useState<
     number | undefined
   >();
@@ -166,6 +173,17 @@ export default function StaffOrdersPage() {
   const [lookingUpCustomer, setLookingUpCustomer] = useState(false);
   const [submittingPos, setSubmittingPos] = useState(false);
   const [uploadingBarcodeImage, setUploadingBarcodeImage] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [capturingImage, setCapturingImage] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [capturedImageFile, setCapturedImageFile] = useState<File | null>(null);
+  const [capturedPreviewUrl, setCapturedPreviewUrl] = useState<string | null>(
+    null,
+  );
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+  const capturedPreviewUrlRef = useRef<string | null>(null);
   const [draftCheckoutPaymentMethod, setDraftCheckoutPaymentMethod] =
     useState(0);
 
@@ -212,6 +230,46 @@ export default function StaffOrdersPage() {
     }
   }, [activeTab]);
 
+  useEffect(() => {
+    if (hasProcessedVNPayReturnRef.current) return;
+
+    const txnRef = searchParams.get("vnp_TxnRef");
+    if (!txnRef || !txnRef.startsWith("GHNV_")) {
+      return;
+    }
+
+    hasProcessedVNPayReturnRef.current = true;
+
+    const queryObject = Object.fromEntries(Array.from(searchParams.entries()));
+
+    const processVNPayReturn = async () => {
+      try {
+        const data = await orderService.confirmVNPayReturn(queryObject);
+        const success = data?.success === "true";
+
+        if (success) {
+          toast.success("Thanh toán VNPAY thành công, đơn hàng đã được tạo");
+          await fetchDraftCarts();
+          fetchOrders();
+        } else {
+          toast.error(
+            "Thanh toán VNPAY chưa thành công, đơn hàng chưa được tạo",
+          );
+        }
+      } catch (err: unknown) {
+        const msg =
+          err instanceof Error
+            ? err.message
+            : "Không thể đồng bộ kết quả thanh toán VNPAY";
+        toast.error(msg);
+      } finally {
+        router.replace("/staff/orders");
+      }
+    };
+
+    processVNPayReturn();
+  }, [searchParams, router, fetchOrders]);
+
   const handleSelectDraftCart = async (cartId: number) => {
     try {
       const cart = await orderService.getDraftCartById(cartId);
@@ -237,10 +295,48 @@ export default function StaffOrdersPage() {
     }
   };
 
+  const handleDeleteDraftCart = async (cartId: number) => {
+    const confirmed = window.confirm("Bạn có chắc muốn xóa giỏ hàng này?");
+    if (!confirmed) return;
+
+    try {
+      setDeletingCartId(cartId);
+      await orderService.deleteStaffDraftCart(cartId);
+      toast.success("Đã xóa giỏ hàng");
+
+      if (selectedDraftCart?.id === cartId) {
+        setSelectedDraftCart(null);
+        setShowDraftCartModal(false);
+      }
+
+      await fetchDraftCarts();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Không thể xóa giỏ hàng";
+      toast.error(msg);
+    } finally {
+      setDeletingCartId(null);
+    }
+  };
+
   const handleCheckoutDraftCart = async () => {
     if (!selectedDraftCart) return;
     try {
       setCheckoutingDraftCart(true);
+
+      if (draftCheckoutPaymentMethod === 1) {
+        const paymentUrl = await orderService.createStaffCartVNPayPaymentUrl(
+          selectedDraftCart.id,
+        );
+        if (!paymentUrl) {
+          toast.error("Không thể tạo đường dẫn thanh toán VNPAY");
+          return;
+        }
+
+        toast.success("Đang chuyển đến cổng thanh toán VNPAY...");
+        window.location.href = paymentUrl;
+        return;
+      }
+
       await orderService.checkoutStaffCart(
         draftCheckoutPaymentMethod,
         selectedDraftCart.id,
@@ -487,41 +583,115 @@ export default function StaffOrdersPage() {
     }
   };
 
-  const handleScanBarcode = async () => {
-    if (!barcodeInput.trim()) {
-      toast.error("Vui lòng nhập mã vạch");
+  const handleAddByProductDetailCode = async () => {
+    const codeText = productDetailCodeInput.trim();
+    if (!codeText) {
+      toast.error("Vui lòng nhập mã chi tiết sản phẩm");
       return;
     }
+
+    const productDetailId = Number(codeText);
+    if (!Number.isInteger(productDetailId) || productDetailId <= 0) {
+      toast.error("Mã chi tiết sản phẩm không hợp lệ");
+      return;
+    }
+
     try {
       if (editingCartId) {
         const cart = await orderService.addStaffCartItem(
           {
-            maVach: barcodeInput.trim(),
+            chiTietSanPhamId: productDetailId,
             soLuong: 1,
           },
           editingCartId,
         );
         syncPosUIFromCart(cart);
       } else {
-        const variant = await productVariantService.scanByBarcode(
-          barcodeInput.trim(),
-        );
+        const variant = await productVariantService.getById(productDetailId);
         upsertLocalDraftItem(variant);
       }
-      setBarcodeInput("");
-      toast.success("Đã thêm sản phẩm từ mã vạch");
+      setProductDetailCodeInput("");
+      toast.success("Đã thêm sản phẩm từ mã chi tiết sản phẩm");
     } catch (err: unknown) {
       const msg =
-        err instanceof Error ? err.message : "Không quét được mã vạch";
+        err instanceof Error
+          ? err.message
+          : "Không tìm thấy sản phẩm theo mã chi tiết";
       toast.error(msg);
     }
   };
 
-  const handleScanBarcodeImage = async (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleCloseCamera = useCallback(() => {
+    const stream = cameraStreamRef.current;
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+      cameraStreamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setCameraReady(false);
+    setCameraOpen(false);
+  }, []);
+
+  const handleOpenCamera = async () => {
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        toast.error("Trình duyệt không hỗ trợ mở camera");
+        return;
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false,
+      });
+
+      cameraStreamRef.current = stream;
+      setCameraOpen(true);
+      setCameraReady(false);
+
+      requestAnimationFrame(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          void videoRef.current.play().catch(() => {
+            toast.error("Không thể phát camera");
+          });
+        }
+      });
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Không thể truy cập camera";
+      toast.error(msg);
+      handleCloseCamera();
+    }
+  };
+
+  const clearCapturedPreview = useCallback(() => {
+    setCapturedImageFile(null);
+    if (capturedPreviewUrlRef.current) {
+      URL.revokeObjectURL(capturedPreviewUrlRef.current);
+      capturedPreviewUrlRef.current = null;
+    }
+    setCapturedPreviewUrl(null);
+  }, []);
+
+  const setCapturedPreview = useCallback((file: File) => {
+    if (capturedPreviewUrlRef.current) {
+      URL.revokeObjectURL(capturedPreviewUrlRef.current);
+      capturedPreviewUrlRef.current = null;
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    capturedPreviewUrlRef.current = previewUrl;
+    setCapturedPreviewUrl(previewUrl);
+    setCapturedImageFile(file);
+  }, []);
+
+  const scanBarcodeFromImageFile = async (file: File) => {
+    if (!file || file.size === 0) {
+      toast.error("Ảnh chụp chưa hợp lệ, vui lòng chụp lại");
+      return;
+    }
 
     try {
       setUploadingBarcodeImage(true);
@@ -538,7 +708,7 @@ export default function StaffOrdersPage() {
       } else {
         upsertLocalDraftItem(variant);
       }
-      toast.success("Đã quét ảnh và thêm sản phẩm");
+      toast.success("Đã nhận diện ảnh và thêm sản phẩm");
     } catch (err: unknown) {
       const msg =
         err instanceof Error
@@ -546,10 +716,118 @@ export default function StaffOrdersPage() {
           : "Không nhận diện được mã vạch từ ảnh";
       toast.error(msg);
     } finally {
-      e.target.value = "";
       setUploadingBarcodeImage(false);
     }
   };
+
+  const handleCaptureFromCamera = async () => {
+    if (!videoRef.current || !canvasRef.current) {
+      toast.error("Camera chưa sẵn sàng");
+      return;
+    }
+
+    if (!cameraReady) {
+      toast.error("Camera đang khởi động, vui lòng thử lại");
+      return;
+    }
+
+    try {
+      setCapturingImage(true);
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const width = video.videoWidth;
+      const height = video.videoHeight;
+
+      if (!width || !height) {
+        toast.error("Chưa nhận được khung hình từ camera");
+        return;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const context = canvas.getContext("2d");
+      if (!context) {
+        toast.error("Không thể chụp ảnh từ camera");
+        return;
+      }
+
+      context.drawImage(video, 0, 0, width, height);
+
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob((result) => resolve(result), "image/jpeg", 0.92);
+      });
+
+      let captureBlob = blob;
+      if (!captureBlob || captureBlob.size === 0) {
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+        const base64 = dataUrl.split(",")[1];
+        if (!base64) {
+          toast.error("Không thể tạo ảnh chụp");
+          return;
+        }
+        const binaryString = atob(base64);
+        const binaryLength = binaryString.length;
+        const buffer = new Uint8Array(binaryLength);
+        for (let i = 0; i < binaryLength; i += 1) {
+          buffer[i] = binaryString.charCodeAt(i);
+        }
+        captureBlob = new Blob([buffer], { type: "image/jpeg" });
+      }
+
+      if (!captureBlob || captureBlob.size === 0) {
+        toast.error("Không thể tạo ảnh chụp");
+        return;
+      }
+
+      const file = new File([captureBlob], `camera-capture-${Date.now()}.jpg`, {
+        type: "image/jpeg",
+      });
+
+      if (!file.size) {
+        toast.error("Ảnh chụp rỗng, vui lòng thử lại");
+        return;
+      }
+
+      setCapturedPreview(file);
+      handleCloseCamera();
+      toast.success("Đã chụp ảnh, vui lòng xác nhận quét");
+    } finally {
+      setCapturingImage(false);
+    }
+  };
+
+  const handleScanCapturedImage = async () => {
+    if (!capturedImageFile) {
+      toast.error("Chưa có ảnh để quét");
+      return;
+    }
+
+    await scanBarcodeFromImageFile(capturedImageFile);
+    clearCapturedPreview();
+  };
+
+  const handleScanBarcodeImage = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    await scanBarcodeFromImageFile(file);
+    e.target.value = "";
+  };
+
+  useEffect(() => {
+    return () => {
+      const stream = cameraStreamRef.current;
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+      if (capturedPreviewUrlRef.current) {
+        URL.revokeObjectURL(capturedPreviewUrlRef.current);
+      }
+    };
+  }, []);
 
   const openPosModal = async () => {
     setShowPosModal(true);
@@ -563,7 +841,9 @@ export default function StaffOrdersPage() {
     setSelectedDiemPromoId(undefined);
     setHoaDonPromos([]);
     setDiemPromos([]);
-    setBarcodeInput("");
+    setProductDetailCodeInput("");
+    clearCapturedPreview();
+    handleCloseCamera();
     setProductSearch("");
     setSearchResults([]);
     setSelectedProduct(null);
@@ -575,7 +855,9 @@ export default function StaffOrdersPage() {
       const cart = await orderService.getDraftCartById(cartId);
       setShowPosModal(true);
       setEditingCartId(cart.id);
-      setBarcodeInput("");
+      setProductDetailCodeInput("");
+      clearCapturedPreview();
+      handleCloseCamera();
       setProductSearch("");
       setSearchResults([]);
       setSelectedProduct(null);
@@ -843,6 +1125,7 @@ export default function StaffOrdersPage() {
       }
     }
 
+    handleCloseCamera();
     setShowPosModal(false);
     if (activeTab === "draft-carts") {
       fetchDraftCarts();
@@ -1107,10 +1390,18 @@ export default function StaffOrdersPage() {
           ) : (
             <div className="grid grid-cols-1 gap-3">
               {draftCarts.map((cart) => (
-                <button
+                <div
                   key={cart.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => openExistingCartForEdit(cart.id)}
-                  className="text-left p-4 bg-card border border-subtle rounded-lg hover:border-accent hover:bg-section transition"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      openExistingCartForEdit(cart.id);
+                    }
+                  }}
+                  className="text-left p-4 bg-card border border-subtle rounded-lg hover:border-accent hover:bg-section transition cursor-pointer"
                 >
                   <div className="flex items-start justify-between">
                     <div>
@@ -1130,19 +1421,32 @@ export default function StaffOrdersPage() {
                         {formatCurrency(cart.tongTienThanhToan || 0)}
                       </span>
                       <p className="text-xs text-muted mt-1">Tổng thanh toán</p>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSelectDraftCart(cart.id);
-                        }}
-                        className="mt-2 text-xs px-2 py-1 rounded border border-subtle hover:bg-section"
-                      >
-                        Thanh toán
-                      </button>
+                      <div className="mt-2 flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteDraftCart(cart.id);
+                          }}
+                          disabled={deletingCartId === cart.id}
+                          className="text-xs px-2 py-1 rounded border border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {deletingCartId === cart.id ? "Đang xóa..." : "Xóa"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelectDraftCart(cart.id);
+                          }}
+                          className="text-xs px-2 py-1 rounded border border-subtle hover:bg-section"
+                        >
+                          Thanh toán
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           )}
@@ -1678,27 +1982,27 @@ export default function StaffOrdersPage() {
                 </div>
               </div>
 
-              {/* Barcode scan input */}
+              {/* Product detail code and image scan */}
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">
-                  Quét/Nhập mã vạch để thêm nhanh
+                  Nhập mã chi tiết sản phẩm để thêm nhanh
                 </label>
                 <div className="flex gap-2">
                   <input
-                    value={barcodeInput}
-                    onChange={(e) => setBarcodeInput(e.target.value)}
+                    value={productDetailCodeInput}
+                    onChange={(e) => setProductDetailCodeInput(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
-                        handleScanBarcode();
+                        handleAddByProductDetailCode();
                       }
                     }}
-                    placeholder="Nhập mã vạch Code 128..."
+                    placeholder="Ví dụ: 100245"
                     className="flex-1 border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
                   />
                   <button
                     type="button"
-                    onClick={handleScanBarcode}
+                    onClick={handleAddByProductDetailCode}
                     className="px-3 py-2 rounded-lg bg-foreground text-background text-sm hover:opacity-90"
                   >
                     Thêm
@@ -1706,15 +2010,104 @@ export default function StaffOrdersPage() {
                 </div>
                 <div className="mt-2">
                   <label className="block text-xs text-muted mb-1">
-                    Hoặc tải ảnh mã vạch để server quét
+                    Tải ảnh hoặc chụp bằng camera để quét mã vạch từ ảnh
                   </label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleScanBarcodeImage}
-                    disabled={uploadingBarcodeImage}
-                    className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-xs file:mr-3 file:border-0 file:bg-accent file:text-white file:px-2 file:py-1 file:rounded file:cursor-pointer disabled:opacity-50"
-                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleScanBarcodeImage}
+                      disabled={uploadingBarcodeImage || capturingImage}
+                      className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-xs file:mr-3 file:border-0 file:bg-accent file:text-white file:px-2 file:py-1 file:rounded file:cursor-pointer disabled:opacity-50"
+                    />
+                    {!cameraOpen ? (
+                      <button
+                        type="button"
+                        onClick={handleOpenCamera}
+                        disabled={uploadingBarcodeImage || capturingImage}
+                        className="px-3 py-2 rounded-lg border border-subtle text-sm hover:bg-section disabled:opacity-50"
+                      >
+                        Mở camera
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleCloseCamera}
+                        disabled={capturingImage}
+                        className="px-3 py-2 rounded-lg border border-subtle text-sm hover:bg-section disabled:opacity-50"
+                      >
+                        Đóng camera
+                      </button>
+                    )}
+                  </div>
+
+                  {cameraOpen && (
+                    <div className="mt-2 rounded-lg border border-subtle p-2 space-y-2">
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        onLoadedData={() => setCameraReady(true)}
+                        className="w-full max-h-64 rounded-md bg-black object-cover"
+                      />
+                      <canvas ref={canvasRef} className="hidden" />
+                      <button
+                        type="button"
+                        onClick={handleCaptureFromCamera}
+                        disabled={
+                          uploadingBarcodeImage ||
+                          capturingImage ||
+                          !cameraReady
+                        }
+                        className="w-full px-3 py-2 rounded-lg bg-accent text-white text-sm hover:bg-accent-hover disabled:opacity-50"
+                      >
+                        {capturingImage
+                          ? "Đang chụp ảnh..."
+                          : cameraReady
+                            ? "Chụp ảnh để quét"
+                            : "Đang khởi động camera..."}
+                      </button>
+                    </div>
+                  )}
+
+                  {capturedPreviewUrl && (
+                    <div className="mt-2 rounded-lg border border-subtle p-2 space-y-2">
+                      <p className="text-xs text-muted">
+                        Ảnh đã chụp (preview)
+                      </p>
+                      <Image
+                        src={capturedPreviewUrl}
+                        alt="Ảnh chụp mã vạch"
+                        width={1280}
+                        height={720}
+                        unoptimized
+                        className="w-full max-h-64 rounded-md object-cover border border-subtle"
+                      />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={handleScanCapturedImage}
+                          disabled={uploadingBarcodeImage || capturingImage}
+                          className="px-3 py-2 rounded-lg bg-accent text-white text-sm hover:bg-accent-hover disabled:opacity-50"
+                        >
+                          Quét ảnh này
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            clearCapturedPreview();
+                            handleOpenCamera();
+                          }}
+                          disabled={uploadingBarcodeImage || capturingImage}
+                          className="px-3 py-2 rounded-lg border border-subtle text-sm hover:bg-section disabled:opacity-50"
+                        >
+                          Chụp lại
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {uploadingBarcodeImage && (
                     <p className="text-xs text-muted mt-1">
                       Đang tải ảnh và quét mã vạch trên server...

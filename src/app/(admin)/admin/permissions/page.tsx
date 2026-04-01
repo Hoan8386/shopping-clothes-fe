@@ -22,6 +22,8 @@ export default function AdminPermissionsPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Permission | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [search, setSearch] = useState("");
   const [filterModule, setFilterModule] = useState("");
   const [filterMethod, setFilterMethod] = useState("");
@@ -90,6 +92,7 @@ export default function AdminPermissionsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      setSaving(true);
       if (editing) {
         await permissionService.update({ id: editing.id, ...form });
         toast.success("Cập nhật thành công");
@@ -101,17 +104,22 @@ export default function AdminPermissionsPage() {
       fetchData();
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Thất bại");
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm("Xóa quyền này?")) return;
     try {
+      setDeleting(true);
       await permissionService.delete(id);
       toast.success("Đã xóa");
       fetchData();
     } catch {
       toast.error("Xóa thất bại");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -242,7 +250,8 @@ export default function AdminPermissionsPage() {
                           </button>
                           <button
                             onClick={() => handleDelete(item.id)}
-                            className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition"
+                            disabled={deleting}
+                            className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <FiTrash2 size={15} />
                           </button>
@@ -293,6 +302,7 @@ export default function AdminPermissionsPage() {
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition"
                   required
+                  disabled={saving}
                 />
               </div>
               <div>

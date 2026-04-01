@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
+import {
+  ChangeEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Loading from "@/components/ui/Loading";
 import { formatDate } from "@/lib/utils";
 import {
@@ -21,6 +29,7 @@ import {
 } from "@/services/stock-check.service";
 import toast from "react-hot-toast";
 import {
+  FiCamera,
   FiEdit,
   FiEye,
   FiFilePlus,
@@ -92,6 +101,19 @@ export default function StaffStockChecksPage() {
     ngayKiemKe: "",
   });
   const [rows, setRows] = useState<FormRow[]>([]);
+  const [productDetailCodeInput, setProductDetailCodeInput] = useState("");
+  const [uploadingBarcodeImage, setUploadingBarcodeImage] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [capturingImage, setCapturingImage] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [capturedImageFile, setCapturedImageFile] = useState<File | null>(null);
+  const [capturedPreviewUrl, setCapturedPreviewUrl] = useState<string | null>(
+    null,
+  );
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+  const capturedPreviewUrlRef = useRef<string | null>(null);
 
   const variantById = useMemo(
     () => new Map(variants.map((item) => [item.id, item])),
@@ -140,6 +162,269 @@ export default function StaffStockChecksPage() {
   const canEdit = (item: KiemKeHangHoa) =>
     item.trangThai === DRAFT || item.trangThai === RECHECK;
 
+  const clearCapturedPreview = useCallback(() => {
+    setCapturedImageFile(null);
+    if (capturedPreviewUrlRef.current) {
+      URL.revokeObjectURL(capturedPreviewUrlRef.current);
+      capturedPreviewUrlRef.current = null;
+    }
+    setCapturedPreviewUrl(null);
+  }, []);
+
+  const setCapturedPreview = useCallback((file: File) => {
+    if (capturedPreviewUrlRef.current) {
+      URL.revokeObjectURL(capturedPreviewUrlRef.current);
+      capturedPreviewUrlRef.current = null;
+    }
+    const previewUrl = URL.createObjectURL(file);
+    capturedPreviewUrlRef.current = previewUrl;
+    setCapturedPreviewUrl(previewUrl);
+    setCapturedImageFile(file);
+  }, []);
+
+  const handleCloseCamera = useCallback(() => {
+    const stream = cameraStreamRef.current;
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+      cameraStreamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setCameraReady(false);
+    setCameraOpen(false);
+  }, []);
+
+  const resetQuickScanState = useCallback(() => {
+    setProductDetailCodeInput("");
+    clearCapturedPreview();
+    handleCloseCamera();
+  }, [clearCapturedPreview, handleCloseCamera]);
+
+  const upsertRowByVariant = useCallback((variant: ResChiTietSanPhamDTO) => {
+    setRows((prev) => {
+      const existingIndex = prev.findIndex(
+        (row) => row.chiTietSanPhamId === variant.id,
+      );
+
+      if (existingIndex >= 0) {
+        return prev.map((row, idx) =>
+          idx === existingIndex
+            ? {
+                ...row,
+                soLuongThucTe: Math.max(0, (row.soLuongThucTe || 0) + 1),
+              }
+            : row,
+        );
+      }
+
+      return [
+        ...prev,
+        {
+          sanPhamId: variant.sanPhamId,
+          chiTietSanPhamId: variant.id,
+          soLuongThucTe: 1,
+          ghiChu: "",
+        },
+      ];
+    });
+  }, []);
+
+  const handleAddByProductDetailCode = async () => {
+    const codeText = productDetailCodeInput.trim();
+    if (!codeText) {
+      toast.error("Vui lòng nhập mã chi tiết sản phẩm");
+      return;
+    }
+
+    const productDetailId = Number(codeText);
+    if (!Number.isInteger(productDetailId) || productDetailId <= 0) {
+      toast.error("Mã chi tiết sản phẩm không hợp lệ");
+      return;
+    }
+
+    try {
+      const fromCache = variantById.get(productDetailId);
+      const variant =
+        fromCache || (await productVariantService.getById(productDetailId));
+      upsertRowByVariant(variant);
+      setProductDetailCodeInput("");
+      toast.success("Đã thêm sản phẩm vào chi tiết kiểm kê");
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Không tìm thấy chi tiết sản phẩm theo mã";
+      toast.error(message);
+    }
+  };
+
+  const scanBarcodeFromImageFile = async (file: File) => {
+    if (!file || file.size === 0) {
+      toast.error("Ảnh chưa hợp lệ, vui lòng thử lại");
+      return;
+    }
+
+    try {
+      setUploadingBarcodeImage(true);
+      const variant = await productVariantService.scanByBarcodeImage(file);
+      upsertRowByVariant(variant);
+      toast.success("Đã quét mã từ ảnh và thêm vào phiếu kiểm kê");
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Không nhận diện được mã vạch từ ảnh";
+      toast.error(message);
+    } finally {
+      setUploadingBarcodeImage(false);
+    }
+  };
+
+  const handleScanBarcodeImage = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    await scanBarcodeFromImageFile(file);
+    e.target.value = "";
+  };
+
+  const handleOpenCamera = async () => {
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        toast.error("Trình duyệt không hỗ trợ mở camera");
+        return;
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false,
+      });
+
+      cameraStreamRef.current = stream;
+      setCameraOpen(true);
+      setCameraReady(false);
+
+      requestAnimationFrame(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          void videoRef.current.play().catch(() => {
+            toast.error("Không thể phát camera");
+          });
+        }
+      });
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Không thể truy cập camera";
+      toast.error(message);
+      handleCloseCamera();
+    }
+  };
+
+  const handleCaptureFromCamera = async () => {
+    if (!videoRef.current || !canvasRef.current) {
+      toast.error("Camera chưa sẵn sàng");
+      return;
+    }
+    if (!cameraReady) {
+      toast.error("Camera đang khởi động, vui lòng thử lại");
+      return;
+    }
+
+    try {
+      setCapturingImage(true);
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const width = video.videoWidth;
+      const height = video.videoHeight;
+
+      if (!width || !height) {
+        toast.error("Chưa nhận được khung hình từ camera");
+        return;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const context = canvas.getContext("2d");
+      if (!context) {
+        toast.error("Không thể chụp ảnh từ camera");
+        return;
+      }
+
+      context.drawImage(video, 0, 0, width, height);
+
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob((result) => resolve(result), "image/jpeg", 0.92);
+      });
+
+      let captureBlob = blob;
+      if (!captureBlob || captureBlob.size === 0) {
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+        const base64 = dataUrl.split(",")[1];
+        if (!base64) {
+          toast.error("Không thể tạo ảnh chụp");
+          return;
+        }
+        const binaryString = atob(base64);
+        const binaryLength = binaryString.length;
+        const buffer = new Uint8Array(binaryLength);
+        for (let i = 0; i < binaryLength; i += 1) {
+          buffer[i] = binaryString.charCodeAt(i);
+        }
+        captureBlob = new Blob([buffer], { type: "image/jpeg" });
+      }
+
+      if (!captureBlob || captureBlob.size === 0) {
+        toast.error("Không thể tạo ảnh chụp");
+        return;
+      }
+
+      const file = new File([captureBlob], `camera-capture-${Date.now()}.jpg`, {
+        type: "image/jpeg",
+      });
+
+      if (!file.size) {
+        toast.error("Ảnh chụp rỗng, vui lòng thử lại");
+        return;
+      }
+
+      setCapturedPreview(file);
+      handleCloseCamera();
+      toast.success("Đã chụp ảnh, vui lòng xác nhận quét");
+    } finally {
+      setCapturingImage(false);
+    }
+  };
+
+  const handleScanCapturedImage = async () => {
+    if (!capturedImageFile) {
+      toast.error("Chưa có ảnh để quét");
+      return;
+    }
+
+    await scanBarcodeFromImageFile(capturedImageFile);
+    clearCapturedPreview();
+  };
+
+  useEffect(() => {
+    if (!showForm) {
+      resetQuickScanState();
+    }
+  }, [showForm, resetQuickScanState]);
+
+  useEffect(() => {
+    return () => {
+      const stream = cameraStreamRef.current;
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+      if (capturedPreviewUrlRef.current) {
+        URL.revokeObjectURL(capturedPreviewUrlRef.current);
+      }
+    };
+  }, []);
+
   const openCreate = () => {
     setEditing(null);
     setForm({
@@ -149,6 +434,7 @@ export default function StaffStockChecksPage() {
       ngayKiemKe: toInputDateTime(new Date().toISOString()),
     });
     setRows([]);
+    resetQuickScanState();
     setShowForm(true);
   };
 
@@ -168,6 +454,7 @@ export default function StaffStockChecksPage() {
         ghiChu: ct.ghiChu ?? "",
       })),
     );
+    resetQuickScanState();
     setShowForm(true);
   };
 
@@ -479,6 +766,140 @@ export default function StaffStockChecksPage() {
                 </div>
 
                 <div className="bg-section border border-subtle rounded-xl p-4">
+                  <div className="mb-4 space-y-2">
+                    <label className="block text-sm font-medium text-foreground">
+                      Nhập mã chi tiết sản phẩm để thêm nhanh
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        value={productDetailCodeInput}
+                        onChange={(e) =>
+                          setProductDetailCodeInput(e.target.value)
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddByProductDetailCode();
+                          }
+                        }}
+                        placeholder="Ví dụ: 100245"
+                        className="flex-1 border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddByProductDetailCode}
+                        className="px-3 py-2 rounded-lg bg-foreground text-background text-sm hover:opacity-90"
+                      >
+                        Thêm
+                      </button>
+                    </div>
+
+                    <label className="block text-xs text-muted mt-2">
+                      Tải ảnh hoặc chụp camera để quét mã vạch
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleScanBarcodeImage}
+                        disabled={uploadingBarcodeImage || capturingImage}
+                        className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-xs file:mr-3 file:border-0 file:bg-accent file:text-white file:px-2 file:py-1 file:rounded file:cursor-pointer disabled:opacity-50"
+                      />
+                      {!cameraOpen ? (
+                        <button
+                          type="button"
+                          onClick={handleOpenCamera}
+                          disabled={uploadingBarcodeImage || capturingImage}
+                          className="px-3 py-2 rounded-lg border border-subtle text-sm hover:bg-section disabled:opacity-50 inline-flex items-center justify-center gap-1.5"
+                        >
+                          <FiCamera size={14} /> Mở camera
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleCloseCamera}
+                          disabled={capturingImage}
+                          className="px-3 py-2 rounded-lg border border-subtle text-sm hover:bg-section disabled:opacity-50"
+                        >
+                          Đóng camera
+                        </button>
+                      )}
+                    </div>
+
+                    {cameraOpen && (
+                      <div className="rounded-lg border border-subtle p-2 space-y-2">
+                        <video
+                          ref={videoRef}
+                          autoPlay
+                          playsInline
+                          muted
+                          onLoadedData={() => setCameraReady(true)}
+                          className="w-full max-h-64 rounded-md bg-black object-cover"
+                        />
+                        <canvas ref={canvasRef} className="hidden" />
+                        <button
+                          type="button"
+                          onClick={handleCaptureFromCamera}
+                          disabled={
+                            uploadingBarcodeImage ||
+                            capturingImage ||
+                            !cameraReady
+                          }
+                          className="w-full px-3 py-2 rounded-lg bg-accent text-white text-sm hover:bg-accent-hover disabled:opacity-50"
+                        >
+                          {capturingImage
+                            ? "Đang chụp ảnh..."
+                            : cameraReady
+                              ? "Chụp ảnh để quét"
+                              : "Đang khởi động camera..."}
+                        </button>
+                      </div>
+                    )}
+
+                    {capturedPreviewUrl && (
+                      <div className="rounded-lg border border-subtle p-2 space-y-2">
+                        <p className="text-xs text-muted">
+                          Ảnh đã chụp (preview)
+                        </p>
+                        <Image
+                          src={capturedPreviewUrl}
+                          alt="Ảnh chụp mã vạch"
+                          width={1280}
+                          height={720}
+                          unoptimized
+                          className="w-full max-h-64 rounded-md object-cover border border-subtle"
+                        />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={handleScanCapturedImage}
+                            disabled={uploadingBarcodeImage || capturingImage}
+                            className="px-3 py-2 rounded-lg bg-accent text-white text-sm hover:bg-accent-hover disabled:opacity-50"
+                          >
+                            Quét ảnh này
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              clearCapturedPreview();
+                              handleOpenCamera();
+                            }}
+                            disabled={uploadingBarcodeImage || capturingImage}
+                            className="px-3 py-2 rounded-lg border border-subtle text-sm hover:bg-section disabled:opacity-50"
+                          >
+                            Chụp lại
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {uploadingBarcodeImage && (
+                      <p className="text-xs text-muted">
+                        Đang tải ảnh và quét mã vạch trên server...
+                      </p>
+                    )}
+                  </div>
+
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="font-medium text-foreground">
                       Chi tiết kiểm kê

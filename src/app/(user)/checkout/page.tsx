@@ -136,25 +136,24 @@ export default function CheckoutPage() {
     }
     try {
       setSubmitting(true);
-      const createdOrder = await orderService.createOnline({
+      const payload = {
         sdt: sdt.trim(),
         diaChi,
         maKhuyenMaiHoaDon: selectedPromoHD,
         maKhuyenMaiDiem: selectedPromoDiem,
         hinhThucDonHang: paymentMethod,
-      });
+      };
 
       if (paymentMethod === 1) {
-        const paymentUrl = await orderService.createVNPayPaymentUrl(
-          createdOrder.id,
-        );
+        const paymentUrl =
+          await orderService.createOnlineVNPayPaymentUrl(payload);
         if (paymentUrl) {
-          setCartCount(0);
           window.location.href = paymentUrl;
           return;
         }
       }
 
+      await orderService.createOnline(payload);
       setCartCount(0);
       toast.success("Đặt hàng thành công!");
       router.push("/orders");
@@ -341,8 +340,7 @@ export default function CheckoutPage() {
                   </label>
                   {paymentMethod === 1 && (
                     <p className="text-xs text-muted pl-1">
-                      Đơn hàng sẽ gắn payment_ref bằng mã đơn để đối soát thanh
-                      toán VNPAY.
+                      Hệ thống chỉ tạo đơn sau khi VNPAY callback thành công.
                     </p>
                   )}
                 </div>

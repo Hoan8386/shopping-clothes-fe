@@ -98,6 +98,7 @@ export default function StaffInventoryPage() {
     trangThai: 0,
   });
   const [savingItem, setSavingItem] = useState(false);
+  const [deletingItemId, setDeletingItemId] = useState<number | null>(null);
 
   // Detail - add item
   const [showAddItem, setShowAddItem] = useState(false);
@@ -298,12 +299,15 @@ export default function StaffInventoryPage() {
     if (!selectedReceipt) return;
     if (!confirm("Xác nhận xóa mặt hàng này?")) return;
     try {
+      setDeletingItemId(itemId);
       await chiTietPhieuNhapService.delete(itemId);
       toast.success("Đã xóa mặt hàng");
       await refreshDetailItems(selectedReceipt.id);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Xóa mặt hàng thất bại";
       toast.error(msg);
+    } finally {
+      setDeletingItemId(null);
     }
   };
 
@@ -1130,9 +1134,13 @@ export default function StaffInventoryPage() {
                             {canManageItems(selectedReceipt.trangThai) && (
                               <button
                                 onClick={() => handleDeleteItem(item.id)}
-                                className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1"
+                                disabled={deletingItemId === item.id}
+                                className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                <FiTrash2 size={11} /> Xóa
+                                <FiTrash2 size={11} />{" "}
+                                {deletingItemId === item.id
+                                  ? "Đang xóa..."
+                                  : "Xóa"}
                               </button>
                             )}
                           </div>

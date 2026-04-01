@@ -11,6 +11,7 @@ import { FiTrash2, FiStar } from "react-icons/fi";
 export default function AdminReviewsPage() {
   const [reviews, setReviews] = useState<ResDanhGiaSanPhamDTO[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -35,12 +36,15 @@ export default function AdminReviewsPage() {
 
   const handleDelete = async (id: number) => {
     if (!confirm("Xóa đánh giá này?")) return;
+    setDeleting(true);
     try {
       await danhGiaService.delete(id);
       toast.success("Đã xóa");
       fetchReviews();
     } catch {
       toast.error("Xóa thất bại");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -110,7 +114,7 @@ export default function AdminReviewsPage() {
                     </td>
                     <td className="px-5 py-3.5">{renderStars(r.soSao)}</td>
                     <td className="px-5 py-3.5 text-muted max-w-[300px] truncate">
-                      {r.ghiChu}
+                      {r.ghiTru}
                     </td>
                     <td className="px-5 py-3.5 text-muted">
                       {formatDate(r.ngayTao)}
@@ -118,7 +122,8 @@ export default function AdminReviewsPage() {
                     <td className="px-5 py-3.5 text-center">
                       <button
                         onClick={() => handleDelete(r.id)}
-                        className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition"
+                        disabled={deleting}
+                        className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <FiTrash2 size={15} />
                       </button>

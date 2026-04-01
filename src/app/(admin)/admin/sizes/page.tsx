@@ -12,6 +12,8 @@ export default function AdminSizesPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<KichThuoc | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [name, setName] = useState("");
 
   useEffect(() => {
@@ -33,6 +35,7 @@ export default function AdminSizesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      setSaving(true);
       if (editing) {
         await kichThuocService.update({ id: editing.id, tenKichThuoc: name });
         toast.success("Cập nhật thành công");
@@ -44,17 +47,22 @@ export default function AdminSizesPage() {
       fetchData();
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Thất bại");
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm("Xóa?")) return;
     try {
+      setDeleting(true);
       await kichThuocService.delete(id);
       toast.success("Đã xóa");
       fetchData();
     } catch {
       toast.error("Xóa thất bại");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -119,7 +127,8 @@ export default function AdminSizesPage() {
                       </button>
                       <button
                         onClick={() => handleDelete(item.id)}
-                        className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition"
+                        disabled={deleting}
+                        className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <FiTrash2 size={15} />
                       </button>

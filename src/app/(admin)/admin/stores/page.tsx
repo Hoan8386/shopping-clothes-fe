@@ -19,6 +19,8 @@ const DEFAULT_LNG = 106.7009;
 export default function AdminStoresPage() {
   const [items, setItems] = useState<CuaHang[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<CuaHang | null>(null);
   const [form, setForm] = useState({
@@ -81,6 +83,7 @@ export default function AdminStoresPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
     const payload = {
       tenCuaHang: form.tenCuaHang,
       diaChi: form.diaChi,
@@ -101,17 +104,22 @@ export default function AdminStoresPage() {
       fetchData();
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Thất bại");
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm("Xóa cửa hàng này?")) return;
+    setDeleting(true);
     try {
       await cuaHangService.delete(id);
       toast.success("Đã xóa");
       fetchData();
     } catch {
       toast.error("Xóa thất bại");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -205,7 +213,8 @@ export default function AdminStoresPage() {
                       </button>
                       <button
                         onClick={() => handleDelete(item.id)}
-                        className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition"
+                        disabled={deleting}
+                        className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <FiTrash2 size={15} />
                       </button>
@@ -312,9 +321,10 @@ export default function AdminStoresPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-accent text-white rounded-xl hover:bg-accent-hover transition shadow-sm font-medium text-sm"
+                  disabled={saving}
+                  className="px-5 py-2.5 bg-accent text-white rounded-xl hover:bg-accent-hover transition shadow-sm font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {editing ? "Cập nhật" : "Thêm mới"}
+                  {saving ? "Đang lưu..." : editing ? "Cập nhật" : "Thêm mới"}
                 </button>
               </div>
             </form>

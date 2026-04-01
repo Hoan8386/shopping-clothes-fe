@@ -60,6 +60,7 @@ export default function AdminOrdersPage() {
   const [editOrder, setEditOrder] = useState<DonHang | null>(null);
   const [newStatus, setNewStatus] = useState<number>(0);
   const [updating, setUpdating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -138,11 +139,14 @@ export default function AdminOrdersPage() {
   const handleDelete = async (id: number) => {
     if (!confirm("Xóa đơn hàng này?")) return;
     try {
+      setDeleting(true);
       await orderService.delete(id);
       toast.success("Đã xóa");
       fetchOrders();
     } catch {
       toast.error("Xóa thất bại");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -323,7 +327,8 @@ export default function AdminOrdersPage() {
                         </button>
                         <button
                           onClick={() => handleDelete(o.id)}
-                          className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition"
+                          disabled={deleting}
+                          className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Xóa"
                         >
                           <FiTrash2 size={15} />

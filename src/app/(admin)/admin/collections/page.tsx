@@ -12,6 +12,8 @@ export default function AdminCollectionsPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<BoSuuTap | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState({ tenSuuTap: "", moTa: "" });
 
   useEffect(() => {
@@ -33,6 +35,7 @@ export default function AdminCollectionsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      setSaving(true);
       if (editing) {
         await boSuuTapService.update({ id: editing.id, ...form });
         toast.success("Cập nhật thành công");
@@ -44,17 +47,22 @@ export default function AdminCollectionsPage() {
       fetchData();
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Thất bại");
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm("Xóa bộ sưu tập này?")) return;
     try {
+      setDeleting(true);
       await boSuuTapService.delete(id);
       toast.success("Đã xóa");
       fetchData();
     } catch {
       toast.error("Xóa thất bại");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -128,7 +136,8 @@ export default function AdminCollectionsPage() {
                       </button>
                       <button
                         onClick={() => handleDelete(item.id)}
-                        className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition"
+                        disabled={deleting}
+                        className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <FiTrash2 size={15} />
                       </button>

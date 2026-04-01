@@ -50,6 +50,8 @@ type ExistingImageItem = {
 export default function AdminVariantsPage() {
   const [variants, setVariants] = useState<ResChiTietSanPhamDTO[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [products, setProducts] = useState<ResSanPhamDTO[]>([]);
   const [colors, setColors] = useState<MauSac[]>([]);
   const [sizes, setSizes] = useState<KichThuoc[]>([]);
@@ -475,6 +477,7 @@ export default function AdminVariantsPage() {
 
   const handleSubmit = async () => {
     try {
+      setSaving(true);
       const formData = new FormData();
       if (editing) {
         // Cập nhật: gửi đầy đủ thông tin theo từng cửa hàng
@@ -521,17 +524,22 @@ export default function AdminVariantsPage() {
       fetchVariants();
     } catch {
       toast.error("Thao tác thất bại");
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm("Bạn có chắc muốn xóa biến thể này?")) return;
     try {
+      setDeleting(true);
       await productVariantService.delete(id);
       toast.success("Đã xóa biến thể");
       fetchVariants();
     } catch {
       toast.error("Xóa thất bại");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -790,7 +798,8 @@ export default function AdminVariantsPage() {
                           </button>
                           <button
                             onClick={() => handleDelete(v.id)}
-                            className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition"
+                            disabled={deleting}
+                            className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <FiTrash2 size={16} />
                           </button>

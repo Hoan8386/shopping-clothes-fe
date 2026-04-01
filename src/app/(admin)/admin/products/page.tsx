@@ -46,6 +46,8 @@ export default function AdminProductsPage() {
   // Modal state
   const [showModal, setShowModal] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [editing, setEditing] = useState<ResSanPhamDTO | null>(null);
   const [form, setForm] = useState({
     tenSanPham: "",
@@ -357,6 +359,7 @@ export default function AdminProductsPage() {
     if (file) fd.append("file", file);
 
     try {
+      setSaving(true);
       if (editing) {
         await productService.update(fd);
         toast.success("Cập nhật thành công");
@@ -381,17 +384,22 @@ export default function AdminProductsPage() {
             ).response?.data?.message
           : undefined;
       toast.error(msg || "Thao tác thất bại");
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm("Xóa sản phẩm này?")) return;
     try {
+      setDeleting(true);
       await productService.delete(id);
       toast.success("Đã xóa");
       fetchProducts();
     } catch {
       toast.error("Xóa thất bại");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -519,7 +527,8 @@ export default function AdminProductsPage() {
                         </button>
                         <button
                           onClick={() => handleDelete(p.id)}
-                          className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition"
+                          disabled={deleting}
+                          className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Xóa"
                         >
                           <FiTrash2 size={15} />

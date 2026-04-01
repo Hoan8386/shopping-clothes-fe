@@ -111,11 +111,10 @@ export const productVariantService = {
 
   scanByBarcodeImage: async (file: File) => {
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", file, file.name || "camera-capture.jpg");
     const res = await apiClient.post<RestResponse<ResChiTietSanPhamDTO>>(
       "/chi-tiet-san-pham/scan-image",
       formData,
-      { headers: { "Content-Type": "multipart/form-data" } },
     );
     return res.data.data;
   },

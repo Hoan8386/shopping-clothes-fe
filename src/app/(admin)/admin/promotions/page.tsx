@@ -19,6 +19,8 @@ export default function AdminPromotionsPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<KhuyenMaiTheoHoaDon | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState({
     tenKhuyenMai: "",
     giamToiDa: 0,
@@ -85,6 +87,7 @@ export default function AdminPromotionsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      setSaving(true);
       if (editing) {
         await service.update({ id: editing.id, ...form });
         toast.success("Cập nhật thành công");
@@ -96,17 +99,22 @@ export default function AdminPromotionsPage() {
       fetchData();
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Thất bại");
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm("Xóa?")) return;
     try {
+      setDeleting(true);
       await service.delete(id);
       toast.success("Đã xóa");
       fetchData();
     } catch {
       toast.error("Xóa thất bại");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -212,7 +220,8 @@ export default function AdminPromotionsPage() {
                         </button>
                         <button
                           onClick={() => handleDelete(item.id)}
-                          className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition"
+                          disabled={deleting}
+                          className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <FiTrash2 size={15} />
                         </button>

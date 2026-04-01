@@ -12,6 +12,8 @@ export default function AdminCategoriesPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<KieuSanPham | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [name, setName] = useState("");
 
   useEffect(() => {
@@ -53,11 +55,14 @@ export default function AdminCategoriesPage() {
   const handleDelete = async (id: number) => {
     if (!confirm("Xóa?")) return;
     try {
+      setDeleting(true);
       await kieuSanPhamService.delete(id);
       toast.success("Đã xóa");
       fetchData();
     } catch {
       toast.error("Xóa thất bại");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -122,7 +127,8 @@ export default function AdminCategoriesPage() {
                       </button>
                       <button
                         onClick={() => handleDelete(item.id)}
-                        className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition"
+                        disabled={deleting}
+                        className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <FiTrash2 size={15} />
                       </button>

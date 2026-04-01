@@ -10,6 +10,8 @@ import { FiPlus, FiEdit, FiTrash2 } from "react-icons/fi";
 export default function AdminStockCheckTypesPage() {
   const [items, setItems] = useState<LoaiKiemKe[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<LoaiKiemKe | null>(null);
   const [form, setForm] = useState<ReqLoaiKiemKeDTO>({
@@ -51,8 +53,10 @@ export default function AdminStockCheckTypesPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
     if (!form.tenLoaiKiemKe.trim()) {
       toast.error("Vui lòng nhập tên loại kiểm kê");
+      setSaving(false);
       return;
     }
 
@@ -77,17 +81,22 @@ export default function AdminStockCheckTypesPage() {
       const message =
         error instanceof Error ? error.message : "Thao tác thất bại";
       toast.error(message);
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm("Xóa loại kiểm kê này?")) return;
+    setDeleting(true);
     try {
       await loaiKiemKeService.delete(id);
       toast.success("Đã xóa loại kiểm kê");
       fetchData();
     } catch {
       toast.error("Xóa thất bại");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -149,7 +158,8 @@ export default function AdminStockCheckTypesPage() {
                       </button>
                       <button
                         onClick={() => handleDelete(item.id)}
-                        className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition"
+                        disabled={deleting}
+                        className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <FiTrash2 size={15} />
                       </button>
@@ -216,9 +226,10 @@ export default function AdminStockCheckTypesPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-primary text-red-700 text-sm hover:bg-primary/90 transition"
+                  disabled={saving}
+                  className="px-4 py-2 rounded-lg bg-primary text-red-700 text-sm hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {editing ? "Cập nhật" : "Thêm mới"}
+                  {saving ? "Đang lưu..." : editing ? "Cập nhật" : "Thêm mới"}
                 </button>
               </div>
             </form>

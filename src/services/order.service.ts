@@ -40,6 +40,14 @@ export const orderService = {
     return res.data.data;
   },
 
+  createOnlineVNPayPaymentUrl: async (data: ReqTaoDonHangDTO) => {
+    const res = await apiClient.post<RestResponse<{ paymentUrl: string }>>(
+      "/don-hang/online/vnpay-url",
+      data,
+    );
+    return res.data.data.paymentUrl;
+  },
+
   createVNPayPaymentUrl: async (donHangId: number) => {
     const res = await apiClient.post<
       RestResponse<{ paymentUrl: string }>
@@ -147,6 +155,15 @@ export const orderService = {
     return res.data.data;
   },
 
+  createStaffCartVNPayPaymentUrl: async (cartId?: number) => {
+    const res = await apiClient.post<RestResponse<{ paymentUrl: string }>>(
+      "/gio-hang-nhan-vien/thanh-toan/vnpay-url",
+      {},
+      { params: cartId ? { cartId } : undefined },
+    );
+    return res.data.data.paymentUrl;
+  },
+
   getAllDraftCarts: async () => {
     const res = await apiClient.get<
       RestResponse<ResGioHangNhanVienDTO[]>
@@ -159,6 +176,10 @@ export const orderService = {
       `/gio-hang-nhan-vien/${id}`,
     );
     return res.data.data;
+  },
+
+  deleteStaffDraftCart: async (id: number) => {
+    await apiClient.delete(`/gio-hang-nhan-vien/${id}`);
   },
 
   createNewDraftCart: async () => {
