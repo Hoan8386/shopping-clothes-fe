@@ -383,7 +383,8 @@ export interface KhuyenMaiTheoHoaDon {
   id: number;
   tenKhuyenMai: string;
   giamToiDa: number;
-  hoaDonToiDa: number;
+  hoaDonToiThieu: number;
+  hoaDonToiDa?: number;
   phanTramGiam: number;
   hinhThuc: number;
   thoiGianBatDau: string;
@@ -396,11 +397,13 @@ export interface KhuyenMaiTheoDiem {
   id: number;
   tenKhuyenMai: string;
   giamToiDa: number;
-  hoaDonToiDa: number;
+  hoaDonToiThieu: number;
+  hoaDonToiDa?: number;
   phanTramGiam: number;
   hinhThuc: number;
   thoiGianBatDau: string;
   thoiGianKetThuc: string;
+  diemToiThieu: number;
   soLuong: number;
   trangThai: number;
 }
@@ -418,6 +421,9 @@ export interface ResDanhGiaSanPhamDTO {
   ghiTru: string;
   hinhAnh: string;
   linkVideo?: string | null;
+  adminPhanHoi?: string | null;
+  adminPhanHoiBy?: string | null;
+  adminPhanHoiAt?: string | null;
   ngayTao: string;
   ngayCapNhat: string;
 }
@@ -462,6 +468,25 @@ export interface ReqChiTietPhieuNhapDTO {
   ghiTru?: string | null;
   ghiTruKiemHang?: string | null;
   trangThai?: number;
+}
+
+export interface InventorySuggestionItem {
+  chiTietSanPhamId: number;
+  sanPhamId?: number | null;
+  tenSanPham?: string | null;
+  tenMauSac?: string | null;
+  tenKichThuoc?: string | null;
+  maCuaHang?: number | null;
+  tenCuaHang?: string | null;
+  soLuong: number;
+  trangThaiTonKho: "CON_HANG" | "SAP_HET" | "DA_HET";
+}
+
+export interface InventorySuggestionResponse {
+  status: "CON_HANG" | "SAP_HET" | "DA_HET";
+  nearOutThreshold: number;
+  cuaHangId?: number | null;
+  items: InventorySuggestionItem[];
 }
 
 // ============ RBAC ============

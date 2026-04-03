@@ -1,185 +1,171 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { orderService } from "@/services/order.service";
-import { productService } from "@/services/product.service";
-import Link from "next/link";
-import {
-  FiShoppingCart,
-  FiBox,
-  FiClock,
-  FiPackage,
-  FiAlertCircle,
-  FiGift,
-} from "react-icons/fi";
+import { StatCard } from "@/components/dashboard/stat-card";
+import { BarChart } from "@/components/dashboard/chart-bar";
+import { LineChart } from "@/components/dashboard/line-chart";
+import { TopProductsTable } from "@/components/dashboard/table-top-products";
+import { adminDashboardAPI } from "@/services/dashboard.service";
 
-export default function AdminDashboard() {
-  const [stats, setStats] = useState({
-    totalOrders: 0,
-    totalProducts: 0,
-    totalRevenue: 0,
-    pendingOrders: 0,
-  });
+interface DailyStat {
+  date: string;
+  revenue: number;
+  orderCount: number;
+}
+
+interface TopProductStat {
+  productId: number;
+  productName: string;
+  quantitySold: number;
+  totalRevenue: number;
+  profitMargin: number;
+}
+
+interface AdminDashboardSummary {
+  todayRevenue: number;
+  monthRevenue: number;
+  previousMonthRevenue: number;
+  revenueGrowthPercent: number;
+  monthlyOrders: number;
+  newCustomers: number;
+  productsSold: number;
+  totalCustomers: number;
+  revenueByDay: DailyStat[];
+  ordersByDay: DailyStat[];
+  topProducts: TopProductStat[];
+}
+
+export default function AdminDashboardPage() {
+  const [summary, setSummary] = useState<AdminDashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchStats();
+    const loadSummary = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response =
+          await adminDashboardAPI.getSummary<AdminDashboardSummary>();
+        setSummary(response.data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void loadSummary();
   }, []);
 
-  const fetchStats = async () => {
-    try {
-      const [ordersData, productsData, pendingData] = await Promise.all([
-        orderService.getAll({ page: 1, size: 1 }),
-        productService.getAll({ page: 1, size: 1 }),
-        orderService.getAll({ page: 1, size: 1, trangThai: 0 }),
-      ]);
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(value || 0);
 
-      setStats({
-        totalOrders: ordersData.meta.total,
-        totalProducts: productsData.meta.total,
-        totalRevenue: 0,
-        pendingOrders: pendingData.meta.total,
-      });
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const cards = [
-    {
-      title: "Tổng đơn hàng",
-      value: stats.totalOrders,
-      icon: FiShoppingCart,
-      color: "bg-blue-500/10 text-blue-500",
-      link: "/admin/orders",
-    },
-    {
-      title: "Tổng sản phẩm",
-      value: stats.totalProducts,
-      icon: FiBox,
-      color: "bg-emerald-500/10 text-emerald-500",
-      link: "/admin/products",
-    },
-    {
-      title: "Đơn chờ xử lý",
-      value: stats.pendingOrders,
-      icon: FiClock,
-      color: "bg-orange-500/10 text-orange-500",
-      link: "/admin/orders",
-    },
-  ];
-
-  const quickActions = [
-    {
-      title: "Quản lý sản phẩm",
-      desc: "Thêm, sửa, xóa sản phẩm và quản lý chi tiết biến thể",
-      icon: FiBox,
-      link: "/admin/products",
-      color: "text-blue-600 bg-blue-100",
-    },
-    {
-      title: "Quản lý đơn hàng",
-      desc: "Xem, xác nhận, và cập nhật trạng thái đơn hàng",
-      icon: FiShoppingCart,
-      link: "/admin/orders",
-      color: "text-emerald-600 bg-emerald-100",
-    },
-    {
-      title: "Khuyến mãi",
-      desc: "Tạo mã khuyến mãi theo hóa đơn và theo điểm tích lũy",
-      icon: FiGift,
-      link: "/admin/promotions",
-      color: "text-accent bg-accent/10",
-    },
-    {
-      title: "Phiếu nhập kho",
-      desc: "Quản lý nhập hàng từ nhà cung cấp",
-      icon: FiPackage,
-      link: "/admin/inventory",
-      color: "text-orange-500 bg-orange-500/10",
-    },
-  ];
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center max-w-md">
+          <h2 className="text-lg font-semibold text-red-900">
+            Lỗi tải dữ liệu
+          </h2>
+          <p className="text-red-700 mt-2">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          >
+            Thử lại
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="bg-card border border-subtle rounded-2xl p-5 lg:p-6">
-        <h2 className="text-xl font-bold text-foreground">
-          Tổng quan quản trị
-        </h2>
-        <p className="text-sm text-muted mt-1">
-          Theo dõi nhanh hoạt động cửa hàng và truy cập các tác vụ quan trọng.
+      <div className="bg-white border border-gray-100 rounded-2xl p-5 lg:p-6 shadow-sm">
+        <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
+          Dashboard quản trị
+        </h1>
+        <p className="text-sm text-gray-600 mt-1">
+          Doanh thu, đơn hàng, khách hàng và sản phẩm bán chạy trong tháng này.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5">
-        {cards.map((card) => (
-          <Link
-            href={card.link}
-            key={card.title}
-            className="group bg-card rounded-2xl border border-subtle p-5 lg:p-6 hover:border-accent/30 hover:bg-section/60 transition"
-          >
-            <div className="flex items-start gap-4">
-              <div
-                className={`w-12 h-12 rounded-xl flex items-center justify-center ${card.color}`}
-              >
-                <card.icon size={22} />
-              </div>
-              <div>
-                <p className="text-sm text-muted mb-1">{card.title}</p>
-                <p className="text-3xl font-bold text-foreground">
-                  {loading ? (
-                    <span className="inline-block w-16 h-8 bg-section rounded animate-pulse" />
-                  ) : (
-                    card.value.toLocaleString()
-                  )}
-                </p>
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
-
-      <div>
-        <h2 className="text-lg font-bold text-foreground mb-4">
-          Truy cập nhanh
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {quickActions.map((action) => (
-            <Link
-              key={action.title}
-              href={action.link}
-              className="group bg-card rounded-2xl border border-subtle p-5 hover:border-accent/30 hover:bg-section/60 transition"
-            >
-              <div
-                className={`w-10 h-10 rounded-xl ${action.color} flex items-center justify-center mb-3`}
-              >
-                <action.icon size={20} />
-              </div>
-              <h3 className="font-semibold text-foreground mb-1 group-hover:text-accent transition">
-                {action.title}
-              </h3>
-              <p className="text-sm text-muted leading-relaxed">
-                {action.desc}
-              </p>
-            </Link>
+      {loading && !summary ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <div
+              key={i}
+              className="bg-gray-200 rounded-lg h-32 animate-pulse"
+            />
           ))}
         </div>
-      </div>
+      ) : summary ? (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <StatCard
+              title="Doanh thu hôm nay"
+              value={formatCurrency(summary.todayRevenue)}
+              bgColor="bg-blue-50"
+            />
+            <StatCard
+              title="Doanh thu tháng này"
+              value={formatCurrency(summary.monthRevenue)}
+              trend={Math.round(summary.revenueGrowthPercent)}
+              trendUp={summary.revenueGrowthPercent >= 0}
+              bgColor="bg-emerald-50"
+            />
+            <StatCard
+              title="Số đơn hàng"
+              value={summary.monthlyOrders}
+              subtitle="trong tháng"
+              bgColor="bg-orange-50"
+            />
+            <StatCard
+              title="Khách hàng mới"
+              value={summary.newCustomers}
+              bgColor="bg-purple-50"
+            />
+            <StatCard
+              title="Sản phẩm đã bán"
+              value={summary.productsSold}
+              bgColor="bg-pink-50"
+            />
+            <StatCard
+              title="Tổng số khách"
+              value={summary.totalCustomers}
+              bgColor="bg-indigo-50"
+            />
+          </div>
 
-      <div className="bg-card border border-subtle rounded-2xl p-5 flex items-start gap-4">
-        <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
-          <FiAlertCircle className="text-accent" size={20} />
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <LineChart
+              title="Doanh thu theo ngày"
+              data={summary.revenueByDay.map((item) => ({
+                label: item.date.slice(5),
+                value: Math.round(item.revenue / 1000000),
+              }))}
+            />
+            <BarChart
+              title="Đơn hàng theo ngày"
+              data={summary.ordersByDay.map((item) => ({
+                label: item.date.slice(5),
+                value: item.orderCount,
+                color: "bg-emerald-500",
+              }))}
+            />
+          </div>
+
+          <TopProductsTable data={summary.topProducts} isLoading={loading} />
+        </>
+      ) : (
+        <div className="bg-white border border-gray-200 rounded-lg p-6 text-center text-gray-600">
+          Không có dữ liệu dashboard.
         </div>
-        <div>
-          <h3 className="font-semibold text-foreground mb-1">Mẹo sử dụng</h3>
-          <p className="text-sm text-muted leading-relaxed">
-            Sử dụng menu bên trái để điều hướng giữa các trang quản lý. Các chức
-            năng được nhóm theo danh mục để dễ dàng tìm kiếm.
-          </p>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

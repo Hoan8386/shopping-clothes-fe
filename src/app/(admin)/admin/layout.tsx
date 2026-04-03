@@ -60,17 +60,30 @@ const menuGroups = [
         icon: FiRepeat,
       },
       { href: "/admin/employees", label: "Nhân viên", icon: FiUsers },
+      { href: "/admin/customers", label: "Khách hàng", icon: FiUsers },
     ],
   },
   {
     label: "Quản lý ca & lương",
     items: [
       { href: "/admin/ca-lam-viec", label: "Ca làm việc", icon: FiClock },
-      { href: "/admin/lich-lam-viec", label: "Lịch làm việc", icon: FiCalendar },
-      { href: "/admin/luong-co-ban", label: "Lương cơ bản", icon: FiDollarSign },
+      {
+        href: "/admin/lich-lam-viec",
+        label: "Lịch làm việc",
+        icon: FiCalendar,
+      },
+      {
+        href: "/admin/luong-co-ban",
+        label: "Lương cơ bản",
+        icon: FiDollarSign,
+      },
       { href: "/admin/luong-thuong", label: "Lương thưởng", icon: FiGift },
       { href: "/admin/doi-ca", label: "Đổi ca", icon: FiRepeat },
-      { href: "/admin/loi-phat-sinh", label: "Lỗi phát sinh", icon: FiAlertTriangle },
+      {
+        href: "/admin/loi-phat-sinh",
+        label: "Lỗi phát sinh",
+        icon: FiAlertTriangle,
+      },
     ],
   },
   {
@@ -255,6 +268,7 @@ export default function AdminLayout({
     "Quyền hạn": "Quản lý quyền truy cập theo vai trò.",
     "Luân chuyển": "Quản lý luân chuyển hàng hóa giữa các cửa hàng.",
     "Loại luân chuyển": "Quản lý loại đơn luân chuyển hàng.",
+    "Khách hàng": "Theo dõi danh sách khách hàng đã đăng ký trên hệ thống.",
     "Ca làm việc": "Quản lý các ca làm việc (sáng, chiều, tối) trong hệ thống.",
     "Lịch làm việc": "Quản lý lịch làm việc nhân viên, hỗ trợ import từ Excel.",
     "Lương cơ bản": "Quản lý mức lương cơ bản theo từng nhân viên.",

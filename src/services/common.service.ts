@@ -7,12 +7,14 @@ import {
   KichThuoc,
   CuaHang,
   NhaCungCap,
+  KhachHang,
   KhuyenMaiTheoHoaDon,
   KhuyenMaiTheoDiem,
   ResDanhGiaSanPhamDTO,
   PhieuNhap,
   ChiTietPhieuNhap,
   ReqChiTietPhieuNhapDTO,
+  InventorySuggestionResponse,
   RestResponse,
   ResultPaginationDTO,
   Role,
@@ -127,7 +129,7 @@ export const cuaHangService = {
     const payload = res.data.data;
     if (Array.isArray(payload)) return payload;
     if (payload && typeof payload === "object" && "result" in payload) {
-      return (payload as any).result as CuaHang[];
+      return payload.result;
     }
     return [];
   },
@@ -164,6 +166,14 @@ export const nhaCungCapService = {
   },
   delete: async (id: number) => {
     await apiClient.delete(`/nha-cung-cap/${id}`);
+  },
+};
+
+// ============ KhachHang ============
+export const khachHangService = {
+  getAll: async () => {
+    const res = await apiClient.get<RestResponse<KhachHang[]>>("/khach-hang");
+    return res.data.data ?? [];
   },
 };
 
@@ -262,9 +272,22 @@ export const danhGiaService = {
   },
   getAll: async (page = 1, size = 20) => {
     const res = await apiClient.get<
-      RestResponse<ResultPaginationDTO<ResDanhGiaSanPhamDTO>>
+      RestResponse<
+        ResultPaginationDTO<ResDanhGiaSanPhamDTO> | ResDanhGiaSanPhamDTO[]
+      >
     >("/danh-gia-san-pham", { params: { page, size } });
-    return res.data;
+    const payload = res.data.data;
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+    return payload?.result ?? [];
+  },
+  adminReply: async (id: number, noiDung: string) => {
+    const res = await apiClient.put<RestResponse<ResDanhGiaSanPhamDTO>>(
+      `/danh-gia-san-pham/${id}/phan-hoi`,
+      { noiDung }
+    );
+    return res.data.data;
   },
 };
 
@@ -341,6 +364,12 @@ export interface ReqPhieuNhapDTO {
   trangThai?: number;
 }
 
+export interface InventorySuggestionQuery {
+  status?: "CON_HANG" | "SAP_HET" | "DA_HET";
+  nearOutThreshold?: number;
+  cuaHangId?: number;
+}
+
 export const phieuNhapService = {
   getAll: async (params?: PhieuNhapSearchParams) => {
     const res = await apiClient.get<RestResponse<ResultPaginationDTO<PhieuNhap>>>(
@@ -370,6 +399,13 @@ export const phieuNhapService = {
   },
   delete: async (id: number) => {
     await apiClient.delete(`/phieu-nhap/${id}`);
+  },
+  getInventorySuggestions: async (params?: InventorySuggestionQuery) => {
+    const res = await apiClient.get<RestResponse<InventorySuggestionResponse>>(
+      "/phieu-nhap/goi-y-nhap-hang",
+      { params }
+    );
+    return res.data.data;
   },
 };
 

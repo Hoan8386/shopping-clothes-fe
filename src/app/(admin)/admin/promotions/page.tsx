@@ -12,23 +12,38 @@ import toast from "react-hot-toast";
 import { FiPlus, FiEdit, FiTrash2 } from "react-icons/fi";
 
 type PromoType = "hoaDon" | "diem";
+type PromotionItem = KhuyenMaiTheoHoaDon & { diemToiThieu?: number };
+
+type PromotionForm = {
+  tenKhuyenMai: string;
+  giamToiDa: number;
+  hoaDonToiThieu: number;
+  phanTramGiam: number;
+  hinhThuc: number;
+  thoiGianBatDau: string;
+  thoiGianKetThuc: string;
+  diemToiThieu: number;
+  soLuong: number;
+  trangThai: number;
+};
 
 export default function AdminPromotionsPage() {
   const [type, setType] = useState<PromoType>("hoaDon");
-  const [items, setItems] = useState<KhuyenMaiTheoHoaDon[]>([]);
+  const [items, setItems] = useState<PromotionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<KhuyenMaiTheoHoaDon | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<PromotionForm>({
     tenKhuyenMai: "",
     giamToiDa: 0,
-    hoaDonToiDa: 0,
+    hoaDonToiThieu: 0,
     phanTramGiam: 0,
     hinhThuc: 0,
     thoiGianBatDau: "",
     thoiGianKetThuc: "",
+    diemToiThieu: 0,
     soLuong: 0,
     trangThai: 1,
   });
@@ -44,7 +59,17 @@ export default function AdminPromotionsPage() {
     try {
       setLoading(true);
       const d = await service.getAll();
-      setItems(Array.isArray(d) ? d : []);
+      const normalized = (Array.isArray(d) ? d : []).map((item) => ({
+        ...item,
+        hoaDonToiThieu:
+          Number((item as { hoaDonToiThieu?: number }).hoaDonToiThieu) ||
+          Number((item as { hoaDonToiDa?: number }).hoaDonToiDa) ||
+          0,
+        diemToiThieu:
+          Number((item as { diemToiThieu?: number }).diemToiThieu) || 0,
+      }));
+      normalized.sort((a, b) => b.id - a.id);
+      setItems(normalized);
     } catch {
       toast.error("Lỗi tải dữ liệu");
     } finally {
@@ -57,27 +82,29 @@ export default function AdminPromotionsPage() {
     setForm({
       tenKhuyenMai: "",
       giamToiDa: 0,
-      hoaDonToiDa: 0,
+      hoaDonToiThieu: 0,
       phanTramGiam: 0,
       hinhThuc: 0,
       thoiGianBatDau: "",
       thoiGianKetThuc: "",
+      diemToiThieu: 0,
       soLuong: 0,
       trangThai: 1,
     });
     setShowModal(true);
   };
 
-  const openEdit = (item: KhuyenMaiTheoHoaDon) => {
+  const openEdit = (item: PromotionItem) => {
     setEditing(item);
     setForm({
       tenKhuyenMai: item.tenKhuyenMai,
       giamToiDa: item.giamToiDa,
-      hoaDonToiDa: item.hoaDonToiDa,
+      hoaDonToiThieu: item.hoaDonToiThieu ?? item.hoaDonToiDa ?? 0,
       phanTramGiam: item.phanTramGiam,
       hinhThuc: item.hinhThuc,
       thoiGianBatDau: item.thoiGianBatDau?.slice(0, 16) || "",
       thoiGianKetThuc: item.thoiGianKetThuc?.slice(0, 16) || "",
+      diemToiThieu: item.diemToiThieu ?? 0,
       soLuong: item.soLuong,
       trangThai: item.trangThai,
     });
@@ -86,13 +113,48 @@ export default function AdminPromotionsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (form.phanTramGiam < 0 || form.phanTramGiam > 100) {
+      toast.error("% giảm phải từ 0 đến 100");
+      return;
+    }
+    if (form.giamToiDa < 0) {
+      toast.error("Giảm tối đa không được âm");
+      return;
+    }
+    if (form.hoaDonToiThieu < 0) {
+      toast.error("Hóa đơn tối thiểu không được âm");
+      return;
+    }
+    if (form.soLuong < 0) {
+      toast.error("Số lượng không được âm");
+      return;
+    }
+    if (type === "diem" && form.diemToiThieu < 0) {
+      toast.error("Điểm tối thiểu không được âm");
+      return;
+    }
+    if (form.thoiGianBatDau && form.thoiGianKetThuc) {
+      const start = new Date(form.thoiGianBatDau).getTime();
+      const end = new Date(form.thoiGianKetThuc).getTime();
+      if (start >= end) {
+        toast.error("Thời gian bắt đầu phải trước thời gian kết thúc");
+        return;
+      }
+    }
+
+    const payload = {
+      ...form,
+      diemToiThieu: type === "diem" ? form.diemToiThieu : 0,
+    };
+
     try {
       setSaving(true);
       if (editing) {
-        await service.update({ id: editing.id, ...form });
+        await service.update({ id: editing.id, ...payload });
         toast.success("Cập nhật thành công");
       } else {
-        await service.create(form);
+        await service.create(payload);
         toast.success("Thêm thành công");
       }
       setShowModal(false);
@@ -274,6 +336,8 @@ export default function AdminPromotionsPage() {
                     onChange={(e) =>
                       setForm({ ...form, phanTramGiam: Number(e.target.value) })
                     }
+                    min={0}
+                    max={100}
                     className="w-full border border-subtle bg-background text-foreground rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition"
                   />
                 </div>
@@ -287,6 +351,7 @@ export default function AdminPromotionsPage() {
                     onChange={(e) =>
                       setForm({ ...form, giamToiDa: Number(e.target.value) })
                     }
+                    min={0}
                     className="w-full border border-subtle bg-background text-foreground rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition"
                   />
                 </div>
@@ -294,14 +359,18 @@ export default function AdminPromotionsPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium mb-1 text-foreground">
-                    HĐ tối đa
+                    HĐ tối thiểu
                   </label>
                   <input
                     type="number"
-                    value={form.hoaDonToiDa}
+                    value={form.hoaDonToiThieu}
                     onChange={(e) =>
-                      setForm({ ...form, hoaDonToiDa: Number(e.target.value) })
+                      setForm({
+                        ...form,
+                        hoaDonToiThieu: Number(e.target.value),
+                      })
                     }
+                    min={0}
                     className="w-full border border-subtle bg-background text-foreground rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition"
                   />
                 </div>
@@ -315,10 +384,27 @@ export default function AdminPromotionsPage() {
                     onChange={(e) =>
                       setForm({ ...form, soLuong: Number(e.target.value) })
                     }
+                    min={0}
                     className="w-full border border-subtle bg-background text-foreground rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition"
                   />
                 </div>
               </div>
+              {type === "diem" && (
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-foreground">
+                    Điểm tối thiểu
+                  </label>
+                  <input
+                    type="number"
+                    value={form.diemToiThieu}
+                    onChange={(e) =>
+                      setForm({ ...form, diemToiThieu: Number(e.target.value) })
+                    }
+                    min={0}
+                    className="w-full border border-subtle bg-background text-foreground rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition"
+                  />
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium mb-1 text-foreground">

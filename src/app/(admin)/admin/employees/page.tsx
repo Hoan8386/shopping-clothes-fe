@@ -24,6 +24,9 @@ const INITIAL_FORM: ReqNhanVienDTO = {
   trangThai: 1,
 };
 
+const GMAIL_REGEX = /^[A-Za-z0-9._%+-]+@gmail\.com$/;
+const PHONE_10_DIGITS_REGEX = /^\d{10}$/;
+
 export default function AdminEmployeesPage() {
   const [employees, setEmployees] = useState<NhanVien[]>([]);
   const [stores, setStores] = useState<CuaHang[]>([]);
@@ -56,7 +59,12 @@ export default function AdminEmployeesPage() {
         cuaHangService.getAll(),
         roleService.getAll(),
       ]);
-      setEmployees(Array.isArray(empData) ? empData : []);
+      const normalizedEmployees = Array.isArray(empData) ? empData : [];
+      setEmployees(
+        normalizedEmployees.sort(
+          (a, b) => Number(b.id || 0) - Number(a.id || 0),
+        ),
+      );
       setStores(Array.isArray(storeData) ? storeData : []);
       setRoles(Array.isArray(roleData) ? roleData : []);
     } catch {
@@ -90,28 +98,69 @@ export default function AdminEmployeesPage() {
   };
 
   const handleSubmit = async () => {
-    if (!form.tenNhanVien.trim() || !form.email.trim()) {
+    const name = form.tenNhanVien?.trim() || "";
+    const email = form.email?.trim().toLowerCase() || "";
+    const phone = form.soDienThoai?.trim() || "";
+    const password = form.matKhau?.trim() || "";
+
+    if (!name || !email) {
       toast.error("Vui lòng nhập tên và email nhân viên");
       return;
     }
+
+    if (!GMAIL_REGEX.test(email)) {
+      toast.error("Email phải có định dạng @gmail.com");
+      return;
+    }
+
+    if (!PHONE_10_DIGITS_REGEX.test(phone)) {
+      toast.error("Số điện thoại phải gồm đúng 10 chữ số");
+      return;
+    }
+
+    if (!editing && !password) {
+      toast.error("Vui lòng nhập mật khẩu");
+      return;
+    }
+
+    if (password && password.length < 6) {
+      toast.error("Mật khẩu phải có ít nhất 6 ký tự");
+      return;
+    }
+
+    const payload: ReqNhanVienDTO = {
+      ...form,
+      tenNhanVien: name,
+      email,
+      soDienThoai: phone,
+      matKhau: password || undefined,
+    };
+
     try {
       setSaving(true);
       if (editing) {
-        await nhanVienService.update(form);
+        await nhanVienService.update(payload);
         toast.success("Cập nhật nhân viên thành công");
       } else {
-        if (!form.matKhau?.trim()) {
-          toast.error("Vui lòng nhập mật khẩu");
-          setSaving(false);
-          return;
-        }
-        await nhanVienService.create(form);
+        await nhanVienService.create(payload);
         toast.success("Tạo nhân viên thành công");
       }
       setShowModal(false);
       fetchData();
-    } catch {
-      toast.error("Thao tác thất bại");
+    } catch (err: unknown) {
+      const message =
+        err && typeof err === "object" && "response" in err
+          ? (
+              err as {
+                response?: { data?: { message?: string | string[] } };
+              }
+            ).response?.data?.message
+          : undefined;
+      toast.error(
+        Array.isArray(message)
+          ? message.join(", ")
+          : message || "Thao tác thất bại",
+      );
     } finally {
       setSaving(false);
     }
@@ -132,8 +181,8 @@ export default function AdminEmployeesPage() {
     }
   };
 
-  const filteredEmployees = employees.filter((emp) => 
-    filterStoreId ? emp.cuaHang?.id === filterStoreId : true
+  const filteredEmployees = employees.filter((emp) =>
+    filterStoreId ? emp.cuaHang?.id === filterStoreId : true,
   );
 
   const activeCount = filteredEmployees.filter((e) => e.trangThai === 1).length;
@@ -162,7 +211,11 @@ export default function AdminEmployeesPage() {
       <div className="bg-card rounded-2xl border border-subtle p-4">
         <select
           value={filterStoreId ?? ""}
-          onChange={(e) => setFilterStoreId(e.target.value ? Number(e.target.value) : undefined)}
+          onChange={(e) =>
+            setFilterStoreId(
+              e.target.value ? Number(e.target.value) : undefined,
+            )
+          }
           className="h-10 px-3 rounded-lg bg-section border border-subtle text-sm md:w-1/3 w-full"
         >
           <option value="">Tất cả cửa hàng</option>

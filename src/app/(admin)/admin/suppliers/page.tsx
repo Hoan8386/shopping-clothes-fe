@@ -7,6 +7,8 @@ import Loading from "@/components/ui/Loading";
 import toast from "react-hot-toast";
 import { FiPlus, FiEdit, FiTrash2 } from "react-icons/fi";
 
+const PHONE_10_DIGITS_REGEX = /^\d{10}$/;
+
 export default function AdminSuppliersPage() {
   const [items, setItems] = useState<NhaCungCap[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,7 +33,10 @@ export default function AdminSuppliersPage() {
     try {
       setLoading(true);
       const d = await nhaCungCapService.getAll();
-      setItems(Array.isArray(d) ? d : []);
+      const normalizedItems = Array.isArray(d) ? d : [];
+      setItems(
+        normalizedItems.sort((a, b) => Number(b.id || 0) - Number(a.id || 0)),
+      );
     } catch {
       toast.error("Lỗi tải dữ liệu");
     } finally {
@@ -66,13 +71,24 @@ export default function AdminSuppliersPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const phone = form.soDienThoai.trim();
+    if (!PHONE_10_DIGITS_REGEX.test(phone)) {
+      toast.error("Số điện thoại phải gồm đúng 10 chữ số");
+      return;
+    }
+
     setSaving(true);
+    const payload = {
+      ...form,
+      soDienThoai: phone,
+    };
     try {
       if (editing) {
-        await nhaCungCapService.update({ id: editing.id, ...form });
+        await nhaCungCapService.update({ id: editing.id, ...payload });
         toast.success("Cập nhật thành công");
       } else {
-        await nhaCungCapService.create(form);
+        await nhaCungCapService.create(payload);
         toast.success("Thêm thành công");
       }
       setShowModal(false);
@@ -155,7 +171,7 @@ export default function AdminSuppliersPage() {
                   </td>
                   <td className="px-5 py-3.5 text-muted">{item.soDienThoai}</td>
                   <td className="px-5 py-3.5 text-muted">{item.email}</td>
-                  <td className="px-5 py-3.5 text-muted max-w-[200px] truncate">
+                  <td className="px-5 py-3.5 text-muted max-w-50 truncate">
                     {item.diaChi}
                   </td>
                   <td className="px-5 py-3.5">
@@ -227,7 +243,10 @@ export default function AdminSuppliersPage() {
                     onChange={(e) =>
                       setForm({ ...form, soDienThoai: e.target.value })
                     }
+                    inputMode="numeric"
+                    maxLength={10}
                     className="w-full border border-subtle bg-background text-foreground rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition"
+                    placeholder="Nhập 10 chữ số"
                   />
                 </div>
                 <div>

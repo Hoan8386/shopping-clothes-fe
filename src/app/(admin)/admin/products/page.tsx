@@ -345,6 +345,21 @@ export default function AdminProductsPage() {
       return;
     }
 
+    if (form.giaVon < 0) {
+      toast.error("Giá vốn phải lớn hơn hoặc bằng 0");
+      return;
+    }
+
+    if (form.giaBan <= 0) {
+      toast.error("Giá bán phải lớn hơn 0");
+      return;
+    }
+
+    if (form.giaGiam < 0 || form.giaGiam > 100) {
+      toast.error("Giảm giá phải trong khoảng từ 0 đến 100");
+      return;
+    }
+
     const fd = new FormData();
     if (editing) fd.append("id", String(editing.id));
     fd.append("tenSanPham", form.tenSanPham);
@@ -822,6 +837,7 @@ export default function AdminProductsPage() {
                           </label>
                           <input
                             type="number"
+                            min={0}
                             value={form.giaVon}
                             onChange={(e) =>
                               setForm({
@@ -838,6 +854,7 @@ export default function AdminProductsPage() {
                           </label>
                           <input
                             type="number"
+                            min={0}
                             value={form.giaBan}
                             onChange={(e) =>
                               setForm({
@@ -855,6 +872,8 @@ export default function AdminProductsPage() {
                           </label>
                           <input
                             type="number"
+                            min={0}
+                            max={100}
                             value={form.giaGiam}
                             onChange={(e) =>
                               setForm({
