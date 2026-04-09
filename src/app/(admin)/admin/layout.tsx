@@ -7,6 +7,7 @@ import { useSession, signOut } from "next-auth/react";
 import {
   FiHome,
   FiBox,
+  FiBarChart2,
   FiShoppingCart,
   FiTag,
   FiGrid,
@@ -35,7 +36,10 @@ import {
 const menuGroups = [
   {
     label: "Tổng quan",
-    items: [{ href: "/admin", label: "Dashboard", icon: FiHome }],
+    items: [
+      { href: "/admin", label: "Dashboard", icon: FiHome },
+      { href: "/admin/reports", label: "Báo cáo thống kê", icon: FiBarChart2 },
+    ],
   },
   {
     label: "Quản lý bán hàng",
@@ -275,6 +279,7 @@ export default function AdminLayout({
     "Lương thưởng": "Quản lý bonus và kỳ thưởng của nhân viên.",
     "Đổi ca": "Quản lý yêu cầu đổi ca giữa các nhân viên.",
     "Lỗi phát sinh": "Ghi nhận và xử lý lỗi phát sinh trong ca làm việc.",
+    "Báo cáo thống kê": "Theo dõi thống kê P1/P2 và xuất Excel theo kỳ lọc.",
   };
 
   return (

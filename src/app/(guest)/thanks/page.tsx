@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { FiAlertCircle, FiCheckCircle, FiHome, FiList } from "react-icons/fi";
 import Loading from "@/components/ui/Loading";
@@ -23,6 +23,14 @@ const DEFAULT_STATE: ReturnResult = {
 };
 
 export default function ThanksPage() {
+  return (
+    <Suspense fallback={<Loading />}>
+      <ThanksPageContent />
+    </Suspense>
+  );
+}
+
+function ThanksPageContent() {
   const searchParams = useSearchParams();
   const [result, setResult] = useState<ReturnResult>(DEFAULT_STATE);
   const hasProcessedRef = useRef(false);
