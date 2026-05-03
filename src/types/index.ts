@@ -166,10 +166,12 @@ export interface DonHang {
   cuaHang?: CuaHang;
   khachHang?: KhachHang;
   nhanVien?: NhanVien;
+  vanChuyen?: VanChuyen;
   khuyenMaiHoaDon?: KhuyenMaiHoaDon;
   khuyenMaiDiem?: KhuyenMaiDiem;
   maKhuyenMaiHoaDon?: number;
   maKhuyenMaiDiem?: number;
+  vanChuyenId?: number;
   tenNguoiMua?: string;
   sdt?: string;
   diaChi: string;
@@ -190,6 +192,7 @@ export interface ReqTaoDonHangDTO {
   sdt?: string;
   diaChi?: string;
   cuaHangId?: number;
+  vanChuyenId?: number;
   maKhuyenMaiHoaDon?: number;
   maKhuyenMaiDiem?: number;
   khachHangId?: number;
@@ -370,6 +373,17 @@ export interface NhaCungCap {
   diaChi: string;
   ghiTru: string;
   trangThai: number;
+}
+
+export interface VanChuyen {
+  id: number;
+  tenVanChuyen: string;
+  soDienThoai: string;
+  website?: string;
+  ghiTru?: string;
+  trangThai: number;
+  ngayTao?: string;
+  ngayCapNhat?: string;
 }
 
 export interface HinhAnh {

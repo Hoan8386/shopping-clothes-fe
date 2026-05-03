@@ -242,6 +242,12 @@ export default function AdminOrdersPage() {
                     Cửa hàng
                   </th>
                   <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
+                    Nhân viên
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
+                    Bên vận chuyển
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
                     Ngày tạo
                   </th>
                   <th className="px-5 py-3.5 text-right text-xs font-semibold text-muted uppercase tracking-wider">
@@ -275,6 +281,12 @@ export default function AdminOrdersPage() {
                     </td>
                     <td className="px-5 py-3.5 text-muted">
                       {o.cuaHang?.tenCuaHang || "—"}
+                    </td>
+                    <td className="px-5 py-3.5 text-muted">
+                      {o.nhanVien?.tenNhanVien || "—"}
+                    </td>
+                    <td className="px-5 py-3.5 text-muted">
+                      {o.vanChuyen?.tenVanChuyen || "—"}
                     </td>
                     <td className="px-5 py-3.5 text-muted">
                       {formatDate(o.ngayTao)}
@@ -404,6 +416,12 @@ export default function AdminOrdersPage() {
                       <span className="text-muted">Cửa hàng: </span>
                       <span className="font-medium text-foreground">
                         {selectedOrder.cuaHang?.tenCuaHang || "—"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted">Bên vận chuyển: </span>
+                      <span className="font-medium text-foreground">
+                        {selectedOrder.vanChuyen?.tenVanChuyen || "—"}
                       </span>
                     </div>
                     <div>

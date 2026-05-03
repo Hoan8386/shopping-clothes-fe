@@ -577,6 +577,14 @@ export default function OrderDetailPage() {
                   </p>
                 </div>
               )}
+              <div>
+                <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">
+                  Bên vận chuyển
+                </p>
+                <p className="font-semibold text-foreground">
+                  {order.vanChuyen?.tenVanChuyen || "—"}
+                </p>
+              </div>
               {order.diaChi && (
                 <div className="col-span-2 md:col-span-3">
                   <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">
@@ -590,6 +598,12 @@ export default function OrderDetailPage() {
               {order.sdt && (
                 <div>
                   <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">
+                    <div>
+                      <span className="text-muted">Bên vận chuyển: </span>
+                      <span className="font-medium text-foreground">
+                        {selectedOrder.vanChuyen?.tenVanChuyen || "—"}
+                      </span>
+                    </div>
                     Số điện thoại
                   </p>
                   <p className="font-semibold text-foreground">{order.sdt}</p>

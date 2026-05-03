@@ -7,9 +7,11 @@ import {
   KhuyenMaiTheoHoaDon,
   KhuyenMaiTheoDiem,
   ResApDungKhuyenMaiDTO,
+  VanChuyen,
 } from "@/types";
 import { cartService } from "@/services/cart.service";
 import { orderService } from "@/services/order.service";
+import { vanChuyenService } from "@/services/common.service";
 import { useAuthStore } from "@/store/auth.store";
 import { useCartStore } from "@/store/cart.store";
 import { formatCurrency } from "@/lib/utils";
@@ -34,8 +36,12 @@ export default function CheckoutPage() {
   const [sdt, setSdt] = useState("");
   const [promoHoaDon, setPromoHoaDon] = useState<KhuyenMaiTheoHoaDon[]>([]);
   const [promoDiem, setPromoDiem] = useState<KhuyenMaiTheoDiem[]>([]);
+  const [shippingPartners, setShippingPartners] = useState<VanChuyen[]>([]);
   const [selectedPromoHD, setSelectedPromoHD] = useState<number | undefined>();
   const [selectedPromoDiem, setSelectedPromoDiem] = useState<
+    number | undefined
+  >();
+  const [selectedVanChuyenId, setSelectedVanChuyenId] = useState<
     number | undefined
   >();
   const [paymentMethod, setPaymentMethod] = useState<number>(0);
@@ -62,15 +68,17 @@ export default function CheckoutPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [cartData, promoData] = await Promise.all([
+      const [cartData, promoData, shippingData] = await Promise.all([
         cartService.getMyCart(),
         cartService
           .getKhuyenMaiHopLe()
           .catch(() => ({ khuyenMaiHoaDon: [], khuyenMaiDiem: [] })),
+        vanChuyenService.getAll().catch(() => []),
       ]);
       setCart(cartData);
       setPromoHoaDon(promoData.khuyenMaiHoaDon ?? []);
       setPromoDiem(promoData.khuyenMaiDiem ?? []);
+      setShippingPartners(shippingData ?? []);
     } catch {
       toast.error("Không thể tải dữ liệu");
     } finally {
@@ -124,6 +132,13 @@ export default function CheckoutPage() {
     fetchDiscountPreview(inheritedHdId, inheritedDiemId);
   }, [searchParams, fetchDiscountPreview]);
 
+  useEffect(() => {
+    if (selectedVanChuyenId || shippingPartners.length === 0) {
+      return;
+    }
+    setSelectedVanChuyenId(shippingPartners[0].id);
+  }, [shippingPartners, selectedVanChuyenId]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!sdt.trim()) {
@@ -134,11 +149,16 @@ export default function CheckoutPage() {
       toast.error("Vui lòng nhập địa chỉ giao hàng");
       return;
     }
+    if (!selectedVanChuyenId) {
+      toast.error("Vui lòng chọn bên vận chuyển");
+      return;
+    }
     try {
       setSubmitting(true);
       const payload = {
         sdt: sdt.trim(),
         diaChi,
+        vanChuyenId: selectedVanChuyenId,
         maKhuyenMaiHoaDon: selectedPromoHD,
         maKhuyenMaiDiem: selectedPromoDiem,
         hinhThucDonHang: paymentMethod,
@@ -253,6 +273,33 @@ export default function CheckoutPage() {
                       placeholder="Nhập địa chỉ chi tiết..."
                       required
                     />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
+                      Bên vận chuyển <span className="text-accent">*</span>
+                    </label>
+                    <select
+                      value={selectedVanChuyenId ?? ""}
+                      onChange={(e) =>
+                        setSelectedVanChuyenId(
+                          e.target.value ? Number(e.target.value) : undefined,
+                        )
+                      }
+                      className="w-full rounded-xl border border-subtle px-4 py-3 text-sm focus:outline-none focus:border-accent transition"
+                      required
+                    >
+                      <option value="">-- Chọn bên vận chuyển --</option>
+                      {shippingPartners.map((partner) => (
+                        <option key={partner.id} value={partner.id}>
+                          {partner.tenVanChuyen}
+                        </option>
+                      ))}
+                    </select>
+                    {shippingPartners.length === 0 && (
+                      <p className="mt-2 text-xs text-red-500">
+                        Chưa có bên vận chuyển nào được cấu hình.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

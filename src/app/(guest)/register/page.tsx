@@ -46,8 +46,12 @@ export default function RegisterPage() {
         sdt: phone,
         password: form.password,
       });
-      toast.success("Đăng ký thành công! Vui lòng đăng nhập.");
-      router.push("/login");
+      toast.success(
+        "Đăng ký thành công! Vui lòng kiểm tra email để xác nhận tài khoản.",
+      );
+      router.push(
+        `/login?registered=1&email=${encodeURIComponent(form.email)}`,
+      );
     } catch (error: unknown) {
       const err = error as {
         response?: { data?: { message?: string | string[]; error?: string } };

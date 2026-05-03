@@ -243,7 +243,7 @@ export default function OrdersPage() {
 
                 {/* Order Body */}
                 <div className="px-6 py-5 flex items-center justify-between">
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-6 flex-1">
+                  <div className="grid grid-cols-2 md:grid-cols-6 gap-6 flex-1">
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Tổng tiền</p>
                       <p className="text-base font-bold text-foreground">
@@ -268,6 +268,14 @@ export default function OrdersPage() {
                       <p className="text-xs text-gray-500 mb-1">Payment ref</p>
                       <p className="text-sm font-medium text-foreground">
                         {order.paymentRef || "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">
+                        Bên vận chuyển
+                      </p>
+                      <p className="text-sm font-medium text-foreground">
+                        {order.vanChuyen?.tenVanChuyen || "—"}
                       </p>
                     </div>
                     <div>

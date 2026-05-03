@@ -1253,7 +1253,7 @@ export default function StaffOrdersPage() {
                 </span>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm min-w-225">
+                <table className="w-full text-sm min-w-260">
                   <thead className="bg-section border-b border-subtle">
                     <tr>
                       <th className="px-4 py-3 text-left font-medium text-muted">
@@ -1261,6 +1261,12 @@ export default function StaffOrdersPage() {
                       </th>
                       <th className="px-4 py-3 text-left font-medium text-muted">
                         Khách hàng
+                      </th>
+                      <th className="px-4 py-3 text-left font-medium text-muted">
+                        Nhân viên
+                      </th>
+                      <th className="px-4 py-3 text-left font-medium text-muted">
+                        Bên vận chuyển
                       </th>
                       <th className="px-4 py-3 text-left font-medium text-muted">
                         Ngày tạo
@@ -1291,6 +1297,12 @@ export default function StaffOrdersPage() {
                         <td className="px-4 py-3 font-semibold">#{o.id}</td>
                         <td className="px-4 py-3 text-muted">
                           {o.khachHang?.tenKhachHang || o.tenNguoiMua || "—"}
+                        </td>
+                        <td className="px-4 py-3 text-muted">
+                          {o.nhanVien?.tenNhanVien || "—"}
+                        </td>
+                        <td className="px-4 py-3 text-muted">
+                          {o.vanChuyen?.tenVanChuyen || "—"}
                         </td>
                         <td className="px-4 py-3 text-muted">
                           {formatDate(o.ngayTao)}
@@ -1506,6 +1518,12 @@ export default function StaffOrdersPage() {
                       <span className="text-muted">Cửa hàng: </span>
                       <span className="font-medium text-foreground">
                         {selectedOrder.cuaHang?.tenCuaHang || "—"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted">Bên vận chuyển: </span>
+                      <span className="font-medium text-foreground">
+                        {selectedOrder.vanChuyen?.tenVanChuyen || "—"}
                       </span>
                     </div>
                     <div>

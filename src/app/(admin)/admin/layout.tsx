@@ -104,6 +104,11 @@ const menuGroups = [
     label: "Hệ thống",
     items: [
       { href: "/admin/stores", label: "Cửa hàng", icon: FiMapPin },
+      {
+        href: "/admin/shipping-partners",
+        label: "Bên vận chuyển",
+        icon: FiTruck,
+      },
       { href: "/admin/suppliers", label: "Nhà cung cấp", icon: FiTruck },
       { href: "/admin/promotions", label: "Khuyến mãi", icon: FiGift },
       { href: "/admin/reviews", label: "Đánh giá", icon: FiStar },
@@ -265,6 +270,7 @@ export default function AdminLayout({
     "Màu sắc": "Quản lý danh mục màu sắc dùng cho biến thể.",
     "Kích thước": "Quản lý danh mục kích thước sản phẩm.",
     "Cửa hàng": "Quản lý thông tin chi nhánh cửa hàng.",
+    "Bên vận chuyển": "Quản lý danh sách đơn vị giao hàng cho đơn online.",
     "Nhà cung cấp": "Quản lý thông tin nhà cung cấp nhập hàng.",
     "Khuyến mãi": "Thiết lập và quản lý các chương trình ưu đãi.",
     "Đánh giá": "Theo dõi và xử lý phản hồi, đánh giá của khách hàng.",

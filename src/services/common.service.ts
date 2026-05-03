@@ -7,6 +7,7 @@ import {
   KichThuoc,
   CuaHang,
   NhaCungCap,
+  VanChuyen,
   KhachHang,
   KhuyenMaiTheoHoaDon,
   KhuyenMaiTheoDiem,
@@ -166,6 +167,25 @@ export const nhaCungCapService = {
   },
   delete: async (id: number) => {
     await apiClient.delete(`/nha-cung-cap/${id}`);
+  },
+};
+
+// ============ VanChuyen ============
+export const vanChuyenService = {
+  getAll: async () => {
+    const res = await apiClient.get<RestResponse<VanChuyen[]>>("/van-chuyen");
+    return res.data.data ?? [];
+  },
+  create: async (data: Partial<VanChuyen>) => {
+    const res = await apiClient.post<RestResponse<VanChuyen>>("/van-chuyen", data);
+    return res.data.data;
+  },
+  update: async (data: Partial<VanChuyen>) => {
+    const res = await apiClient.put<RestResponse<VanChuyen>>("/van-chuyen", data);
+    return res.data.data;
+  },
+  delete: async (id: number) => {
+    await apiClient.delete(`/van-chuyen/${id}`);
   },
 };
 

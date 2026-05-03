@@ -12,6 +12,8 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const registered = searchParams.get("registered") === "1";
+  const registeredEmail = searchParams.get("email") || "";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +49,9 @@ function LoginForm() {
     <>
       {/* Breadcrumb */}
       <div className="bg-section py-8 text-center">
-        <h2 className="text-3xl font-extrabold text-foreground mb-1">Đăng nhập</h2>
+        <h2 className="text-3xl font-extrabold text-foreground mb-1">
+          Đăng nhập
+        </h2>
         <p className="text-sm text-gray-400">
           <Link href="/" className="hover:text-accent">
             Trang chủ
@@ -58,6 +62,17 @@ function LoginForm() {
       </div>
 
       <div className="max-w-md mx-auto px-4 py-14">
+        {registered && (
+          <div className="mb-6 border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            <p className="font-semibold">Đăng ký thành công.</p>
+            <p>
+              Vui lòng kiểm tra email
+              {registeredEmail ? ` ${registeredEmail}` : ""} và bấm liên kết xác
+              nhận trước khi đăng nhập.
+            </p>
+          </div>
+        )}
+
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-foreground mb-2">
