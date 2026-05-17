@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import Cookies from "js-cookie";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
@@ -50,9 +50,38 @@ const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue = [];
 };
 
+const toErrorMessage = (error: AxiosError) => {
+  const responseData = error.response?.data as
+    | { message?: string | string[]; error?: string | string[] }
+    | undefined;
+
+  if (Array.isArray(responseData?.message)) {
+    return responseData.message.join("\n");
+  }
+
+  if (typeof responseData?.message === "string" && responseData.message.trim()) {
+    return responseData.message;
+  }
+
+  if (Array.isArray(responseData?.error)) {
+    return responseData.error.join("\n");
+  }
+
+  if (typeof responseData?.error === "string" && responseData.error.trim()) {
+    return responseData.error;
+  }
+
+  if (!error.response) {
+    return "Không thể kết nối tới máy chủ";
+  }
+
+  return error.message;
+};
+
 apiClient.interceptors.response.use(
   (response) => response,
-  async (error) => {
+  async (error: AxiosError) => {
+    error.message = toErrorMessage(error);
     const originalRequest = error.config;
 
     if (error.response?.status === 401 && !originalRequest._retry) {

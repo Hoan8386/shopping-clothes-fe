@@ -164,6 +164,9 @@ export default function ProductDetailPage() {
       ? reviews.reduce((sum, r) => sum + r.soSao, 0) / reviews.length
       : 0;
 
+  const detailDescription = product?.moTa || "";
+  const detailDescriptionIsHtml = /<[^>]+>/.test(detailDescription);
+
   return (
     <>
       {/* Breadcrumb */}
@@ -524,9 +527,16 @@ export default function ProductDetailPage() {
           <div className="py-8">
             {activeTab === "description" && (
               <div className="max-w-3xl">
-                <p className="text-sm text-muted leading-relaxed whitespace-pre-line">
-                  {product.moTa || "Chưa có mô tả cho sản phẩm này."}
-                </p>
+                {detailDescriptionIsHtml ? (
+                  <div
+                    className="text-sm text-foreground space-y-2 [&_h2]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:text-sm [&_h3]:font-semibold [&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1 [&_strong]:font-semibold [&_em]:italic"
+                    dangerouslySetInnerHTML={{ __html: detailDescription }}
+                  />
+                ) : (
+                  <p className="text-sm text-foreground whitespace-pre-wrap">
+                    {detailDescription || "Chưa có mô tả cho sản phẩm này."}
+                  </p>
+                )}
               </div>
             )}
 

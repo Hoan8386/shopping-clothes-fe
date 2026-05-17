@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Placeholder from "@tiptap/extension-placeholder";
 import {
   ResSanPhamDTO,
   KieuSanPham,
@@ -31,7 +34,148 @@ import {
   FiX,
   FiImage,
   FiEye,
+  FiBold,
+  FiItalic,
+  FiList,
+  FiMenu,
+  FiType,
+  FiRotateCcw,
+  FiRotateCw,
 } from "react-icons/fi";
+
+function DescriptionEditor({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (nextValue: string) => void;
+}) {
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        heading: {
+          levels: [2, 3],
+        },
+      }),
+      Placeholder.configure({
+        placeholder: "Nhập mô tả sản phẩm...",
+      }),
+    ],
+    content: value || "",
+    immediatelyRender: false,
+    onUpdate: ({ editor: currentEditor }) => {
+      onChange(currentEditor.getHTML());
+    },
+  });
+
+  useEffect(() => {
+    if (!editor) return;
+
+    const nextValue = value || "";
+    if (editor.getHTML() !== nextValue) {
+      editor.commands.setContent(nextValue, false);
+    }
+  }, [editor, value]);
+
+  if (!editor) {
+    return (
+      <div className="rounded-lg border border-subtle bg-background px-3 py-2 text-sm text-muted">
+        Đang tải trình soạn thảo...
+      </div>
+    );
+  }
+
+  const buttonClass = (active: boolean) =>
+    [
+      "inline-flex items-center justify-center rounded-md border px-2.5 py-2 text-sm transition",
+      active
+        ? "border-accent bg-accent/10 text-accent"
+        : "border-subtle bg-background text-foreground hover:bg-section",
+    ].join(" ");
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-subtle bg-background">
+      <div className="flex flex-wrap gap-1 border-b border-subtle bg-section/40 p-2">
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          className={buttonClass(editor.isActive("bold"))}
+          title="Đậm"
+        >
+          <FiBold size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          className={buttonClass(editor.isActive("italic"))}
+          title="Nghiêng"
+        >
+          <FiItalic size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 2 }).run()
+          }
+          className={buttonClass(editor.isActive("heading", { level: 2 }))}
+          title="Tiêu đề lớn"
+        >
+          <FiType size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          className={buttonClass(editor.isActive("bulletList"))}
+          title="Danh sách bullet"
+        >
+          <FiList size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          className={buttonClass(editor.isActive("orderedList"))}
+          title="Danh sách số"
+        >
+          <FiMenu size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            editor.chain().focus().clearNodes().unsetAllMarks().run()
+          }
+          className={buttonClass(false)}
+          title="Xóa định dạng"
+        >
+          <FiTrash2 size={14} />
+        </button>
+        <div className="ml-auto flex gap-1">
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().undo().run()}
+            disabled={!editor.can().undo()}
+            className="inline-flex items-center justify-center rounded-md border border-subtle bg-background px-2.5 py-2 text-sm text-foreground transition hover:bg-section disabled:cursor-not-allowed disabled:opacity-40"
+            title="Hoàn tác"
+          >
+            <FiRotateCcw size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().redo().run()}
+            disabled={!editor.can().redo()}
+            className="inline-flex items-center justify-center rounded-md border border-subtle bg-background px-2.5 py-2 text-sm text-foreground transition hover:bg-section disabled:cursor-not-allowed disabled:opacity-40"
+            title="Làm lại"
+          >
+            <FiRotateCw size={14} />
+          </button>
+        </div>
+      </div>
+      <EditorContent
+        editor={editor}
+        className="min-h-[180px] px-3 py-3 text-sm text-foreground focus:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[180px] [&_.ProseMirror_p]:mb-2 [&_.ProseMirror_ul]:list-disc [&_.ProseMirror_ul]:pl-5 [&_.ProseMirror_ul]:space-y-1 [&_.ProseMirror_ol]:list-decimal [&_.ProseMirror_ol]:pl-5 [&_.ProseMirror_ol]:space-y-1 [&_.ProseMirror_h2]:mb-2 [&_.ProseMirror_h2]:text-lg [&_.ProseMirror_h2]:font-semibold [&_.ProseMirror_h3]:mb-2 [&_.ProseMirror_h3]:text-base [&_.ProseMirror_h3]:font-semibold"
+      />
+    </div>
+  );
+}
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<ResSanPhamDTO[]>([]);
@@ -74,6 +218,8 @@ export default function AdminProductsPage() {
   const [detailVariantLoading, setDetailVariantLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailForm, setDetailForm] = useState<typeof form | null>(null);
+  const detailDescription = detailForm?.moTa || detailProduct?.moTa || "";
+  const detailDescriptionIsHtml = /<[^>]+>/.test(detailDescription);
 
   const openDetailModal = async (product: ResSanPhamDTO) => {
     setDetailProduct(product);
@@ -644,9 +790,22 @@ export default function AdminProductsPage() {
                     </div>
                     <div>
                       <p className="text-xs text-muted mb-0.5">Mô tả</p>
-                      <p className="text-sm text-foreground whitespace-pre-wrap">
-                        {detailForm?.moTa || detailProduct.moTa || "—"}
-                      </p>
+                      {detailDescription ? (
+                        detailDescriptionIsHtml ? (
+                          <div
+                            className="text-sm text-foreground space-y-2 [&_h2]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:text-sm [&_h3]:font-semibold [&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1 [&_strong]:font-semibold [&_em]:italic"
+                            dangerouslySetInnerHTML={{
+                              __html: detailDescription,
+                            }}
+                          />
+                        ) : (
+                          <p className="text-sm text-foreground whitespace-pre-wrap">
+                            {detailDescription}
+                          </p>
+                        )
+                      ) : (
+                        <p className="text-sm text-muted">—</p>
+                      )}
                     </div>
                     <div className="grid grid-cols-3 gap-3">
                       <div>
@@ -889,14 +1048,16 @@ export default function AdminProductsPage() {
                         <label className="block text-sm font-medium mb-1 text-foreground">
                           Mô tả
                         </label>
-                        <textarea
+                        <DescriptionEditor
                           value={form.moTa}
-                          onChange={(e) =>
-                            setForm({ ...form, moTa: e.target.value })
+                          onChange={(nextValue) =>
+                            setForm({ ...form, moTa: nextValue })
                           }
-                          rows={3}
-                          className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2"
                         />
+                        <p className="mt-2 text-xs text-muted">
+                          Có thể định dạng tiêu đề, in đậm, in nghiêng và danh
+                          sách.
+                        </p>
                       </div>
                       <div className="grid grid-cols-3 gap-3">
                         <div>

@@ -1,9 +1,7 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import type { Role } from "@/types";
-
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api/v1";
+import { authService } from "@/services/auth.service";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -11,36 +9,77 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         username: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        accessToken: { label: "Access Token", type: "text" },
+        user: { label: "User", type: "text" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, _request) {
+        void _request;
+        const accessToken = credentials?.accessToken;
+        const userJson = credentials?.user;
+
+        if (accessToken && userJson) {
+          try {
+            const user = JSON.parse(userJson as string) as {
+              id: number;
+              email: string;
+              name: string;
+              sdt?: string | null;
+              avatar?: string | null;
+              role: Role;
+            };
+
+            return {
+              id: String(user.id),
+              email: user.email,
+              name: user.name,
+              sdt: user.sdt ?? undefined,
+              avatar: user.avatar ?? undefined,
+              role: user.role as Role,
+              accessToken: accessToken as string,
+            };
+          } catch {
+            return null;
+          }
+        }
+
         if (!credentials?.username || !credentials?.password) return null;
         try {
-          const res = await fetch(`${API_URL}/auth/login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              username: credentials.username,
-              password: credentials.password,
-            }),
+          const res = await authService.login({
+            username: String(credentials.username),
+            password: String(credentials.password),
           });
 
-          if (!res.ok) return null;
-
-          const json = await res.json();
-          const { access_token, user } = json.data ?? {};
+          const { access_token, user } = res ?? {};
           if (!access_token || !user) return null;
 
           return {
             id: String(user.id),
             email: user.email,
             name: user.name,
-            sdt: user.sdt,
-            avatar: user.avatar,
+            sdt: user.sdt ?? undefined,
+            avatar: user.avatar ?? undefined,
             role: user.role as Role,
             accessToken: access_token as string,
           };
-        } catch {
-          return null;
+        } catch (err) {
+          const resp = (err as {
+            response?: { data?: { message?: string | string[]; error?: string | string[] } };
+          })?.response?.data;
+
+          if (Array.isArray(resp?.message)) {
+            throw new Error(resp.message.join("\n"));
+          }
+          if (typeof resp?.message === "string" && resp.message.trim()) {
+            throw new Error(resp.message);
+          }
+          if (Array.isArray(resp?.error)) {
+            throw new Error(resp.error.join("\n"));
+          }
+          if (typeof resp?.error === "string" && resp.error.trim()) {
+            throw new Error(resp.error);
+          }
+
+          throw new Error("Đăng nhập thất bại");
         }
       },
     }),

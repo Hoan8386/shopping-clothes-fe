@@ -4,7 +4,52 @@ import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
+import { authService } from "@/services/auth.service";
 import toast from "react-hot-toast";
+
+function getErrorMessage(error: unknown) {
+  if (typeof error === "object" && error !== null) {
+    const maybeAxiosError = error as {
+      response?: {
+        data?: {
+          message?: string | string[];
+          error?: string | string[];
+        };
+      };
+      message?: string;
+    };
+
+    const responseData = maybeAxiosError.response?.data;
+
+    if (Array.isArray(responseData?.message)) {
+      return responseData.message.join("\n");
+    }
+
+    if (
+      typeof responseData?.message === "string" &&
+      responseData.message.trim()
+    ) {
+      return responseData.message;
+    }
+
+    if (Array.isArray(responseData?.error)) {
+      return responseData.error.join("\n");
+    }
+
+    if (typeof responseData?.error === "string" && responseData.error.trim()) {
+      return responseData.error;
+    }
+
+    if (
+      typeof maybeAxiosError.message === "string" &&
+      maybeAxiosError.message.trim()
+    ) {
+      return maybeAxiosError.message;
+    }
+  }
+
+  return "Đăng nhập thất bại.";
+}
 
 function LoginForm() {
   const [username, setUsername] = useState("");
@@ -24,22 +69,29 @@ function LoginForm() {
 
     setLoading(true);
     try {
+      const loginData = await authService.login({
+        username,
+        password,
+      });
+
       const result = await signIn("credentials", {
         username,
         password,
+        accessToken: loginData?.access_token,
+        user: loginData?.user ? JSON.stringify(loginData.user) : undefined,
         redirect: false,
       });
 
       if (result?.error) {
-        toast.error("Đăng nhập thất bại. Kiểm tra lại thông tin.");
+        toast.error(result.error);
       } else {
         toast.success("Đăng nhập thành công!");
         const callbackUrl = searchParams.get("callbackUrl") || "/";
         router.push(callbackUrl);
         router.refresh();
       }
-    } catch {
-      toast.error("Đăng nhập thất bại.");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error));
     } finally {
       setLoading(false);
     }

@@ -46,6 +46,50 @@ function getTransferStatusColor(status: string) {
   }
 }
 
+function getErrorMessage(error: unknown) {
+  if (typeof error === "object" && error !== null) {
+    const maybeAxiosError = error as {
+      response?: {
+        data?: {
+          message?: string | string[];
+          error?: string | string[];
+        };
+      };
+      message?: string;
+    };
+
+    const responseData = maybeAxiosError.response?.data;
+
+    if (Array.isArray(responseData?.message)) {
+      return responseData.message.join("\n");
+    }
+
+    if (
+      typeof responseData?.message === "string" &&
+      responseData.message.trim()
+    ) {
+      return responseData.message;
+    }
+
+    if (Array.isArray(responseData?.error)) {
+      return responseData.error.join("\n");
+    }
+
+    if (typeof responseData?.error === "string" && responseData.error.trim()) {
+      return responseData.error;
+    }
+
+    if (
+      typeof maybeAxiosError.message === "string" &&
+      maybeAxiosError.message.trim()
+    ) {
+      return maybeAxiosError.message;
+    }
+  }
+
+  return "Cập nhật thất bại";
+}
+
 export default function AdminTransfersPage() {
   const [transfers, setTransfers] = useState<DonLuanChuyen[]>([]);
   const [loading, setLoading] = useState(true);
@@ -144,8 +188,7 @@ export default function AdminTransfersPage() {
       setShowConfirm(false);
       fetchTransfers();
     } catch (error) {
-      console.error("Error:", error);
-      toast.error("Cập nhật thất bại");
+      toast.error(getErrorMessage(error));
     } finally {
       setUpdating(false);
     }

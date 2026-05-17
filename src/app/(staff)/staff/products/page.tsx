@@ -213,6 +213,11 @@ export default function StaffProductsPage() {
     }, {});
   }, [storeVariants]);
 
+  const selectedProductDescription = selectedProduct?.moTa || "";
+  const selectedProductDescriptionIsHtml = /<[^>]+>/.test(
+    selectedProductDescription,
+  );
+
   return (
     <div className="relative space-y-5">
       {/* Product list — always full width */}
@@ -485,14 +490,23 @@ export default function StaffProductsPage() {
                       </p>
                     </div>
                   </div>
-                  {selectedProduct.moTa && (
+                  {selectedProductDescription ? (
                     <div>
                       <p className="text-xs text-muted">Mô tả</p>
-                      <p className="text-sm text-foreground mt-0.5 line-clamp-3">
-                        {selectedProduct.moTa}
-                      </p>
+                      {selectedProductDescriptionIsHtml ? (
+                        <div
+                          className="text-sm text-foreground space-y-2 mt-0.5 [&_h2]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:text-sm [&_h3]:font-semibold [&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1 [&_strong]:font-semibold [&_em]:italic"
+                          dangerouslySetInnerHTML={{
+                            __html: selectedProductDescription,
+                          }}
+                        />
+                      ) : (
+                        <p className="text-sm text-foreground mt-0.5 whitespace-pre-wrap">
+                          {selectedProductDescription}
+                        </p>
+                      )}
                     </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
 
