@@ -29,8 +29,10 @@ export default function AdminRolesPage() {
         roleService.getAll(),
         permissionService.getAll(),
       ]);
-      setRoles(rolesData?.result || []);
-      setAllPermissions(permsData?.result || []);
+      setRoles(Array.isArray(rolesData) ? rolesData : rolesData?.result || []);
+      setAllPermissions(
+        Array.isArray(permsData) ? permsData : permsData?.result || [],
+      );
     } catch {
       toast.error("Lỗi tải dữ liệu");
     } finally {

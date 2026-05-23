@@ -45,6 +45,7 @@ export default function StaffReturnsPage() {
   const [actionType, setActionType] = useState<1 | 2>(1);
   const [showConfirm, setShowConfirm] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [openingVNPay, setOpeningVNPay] = useState(false);
 
   const fetchReturns = useCallback(async () => {
     try {
@@ -99,6 +100,22 @@ export default function StaffReturnsPage() {
       toast.error("Cập nhật thất bại");
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleCreateVNPayPayment = async () => {
+    if (!actionItem) return;
+
+    try {
+      setOpeningVNPay(true);
+      const paymentUrl = await traHangService.createVNPayPaymentUrl(
+        actionItem.id,
+      );
+      window.open(paymentUrl, "_blank", "noopener,noreferrer");
+    } catch {
+      toast.error("Không thể tạo URL thanh toán VNPAY");
+    } finally {
+      setOpeningVNPay(false);
     }
   };
 
@@ -421,7 +438,9 @@ export default function StaffReturnsPage() {
                           {ct.soLuong}
                         </td>
                         <td className="px-3 py-2 text-right font-medium text-blue-600">
-                          {formatCurrency(ct.thanhTien)}
+                          {formatCurrency(
+                            (ct.giaSanPhamGiam ?? ct.giaSanPham) * ct.soLuong,
+                          )}
                         </td>
                         <td className="px-3 py-2 text-center">
                           <span
@@ -492,6 +511,15 @@ export default function StaffReturnsPage() {
                 ? ` - ${actionItem.thongTinChuyenKhoan}`
                 : ""}
             </p>
+            {actionItem.phuongThucHoanTien === "Chuyển khoản" && (
+              <button
+                onClick={handleCreateVNPayPayment}
+                disabled={openingVNPay}
+                className="w-full py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50 mb-4"
+              >
+                {openingVNPay ? "Đang tạo link..." : "Thanh toán VNPay"}
+              </button>
+            )}
             {actionType === 1 ? (
               <p className="text-sm text-green-700 bg-green-50 rounded-lg p-3 mb-4">
                 Sau khi duyệt, yêu cầu trả hàng sẽ được chấp nhận và khách hàng

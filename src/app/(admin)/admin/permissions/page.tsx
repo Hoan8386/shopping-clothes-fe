@@ -58,7 +58,7 @@ export default function AdminPermissionsPage() {
     try {
       setLoading(true);
       const res = await permissionService.getAll(1, 1000);
-      setItems(res?.result || []);
+      setItems(Array.isArray(res) ? res : res?.result || []);
     } catch {
       toast.error("Lỗi tải dữ liệu");
     } finally {
@@ -145,7 +145,7 @@ export default function AdminPermissionsPage() {
       {/* Filters */}
       <div className="bg-white rounded-2xl border border-gray-100 p-4">
         <div className="flex flex-wrap gap-3">
-          <div className="relative flex-1 min-w-[200px]">
+          <div className="relative flex-1 min-w-50">
             <FiSearch
               className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
               size={15}

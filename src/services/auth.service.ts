@@ -1,8 +1,10 @@
 import apiClient from "@/lib/api";
 import {
   ReqChangePasswordDTO,
+  ReqForgotPasswordDTO,
   ReqLoginDTO,
   ReqRegisterDTO,
+  ReqResetPasswordDTO,
   ReqUpdateProfileDTO,
   ResLoginDTO,
   ResCreateUserDTO,
@@ -45,6 +47,16 @@ export const authService = {
 
   changePassword: async (data: ReqChangePasswordDTO) => {
     const res = await apiClient.put<RestResponse<void>>("/auth/change-password", data);
+    return res.data;
+  },
+
+  forgotPassword: async (data: ReqForgotPasswordDTO) => {
+    const res = await apiClient.post<RestResponse<void>>("/auth/forgot-password", data);
+    return res.data;
+  },
+
+  resetPassword: async (data: ReqResetPasswordDTO) => {
+    const res = await apiClient.put<RestResponse<void>>("/auth/reset-password", data);
     return res.data;
   },
 

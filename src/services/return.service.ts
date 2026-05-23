@@ -57,4 +57,11 @@ export const traHangService = {
     );
     return res.data.data;
   },
+
+  createVNPayPaymentUrl: async (id: number) => {
+    const res = await apiClient.post<RestResponse<{ paymentUrl: string }>>(
+      `/tra-hang/${id}/vnpay-url`,
+    );
+    return res.data.data.paymentUrl;
+  },
 };

@@ -157,6 +157,11 @@ export default function AccountPage() {
                   <FiShield size={12} /> {user.role.name}
                 </span>
               )}
+              {user.idCuaHang !== null && user.idCuaHang !== undefined && (
+                <p className="text-gray-400 text-sm mt-1">
+                  Cửa hàng (ID): {user.idCuaHang}
+                </p>
+              )}
             </div>
           </div>
 

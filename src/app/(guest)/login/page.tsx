@@ -163,6 +163,15 @@ function LoginForm() {
           </button>
         </form>
 
+        <p className="mt-4 text-center text-sm text-gray-500">
+          <Link
+            href="/forgot-password"
+            className="text-accent font-medium hover:underline"
+          >
+            Quên mật khẩu?
+          </Link>
+        </p>
+
         <p className="mt-8 text-center text-sm text-gray-500">
           Chưa có tài khoản?{" "}
           <Link

@@ -32,12 +32,22 @@ export interface ResLoginUser {
   avatar?: string | null;
   role: Role;
   diemTichLuy?: number | null;
-  cuaHangId?: number;
+  idCuaHang?: number | null;
   nhanVienId?: number;
 }
 
 export interface ReqChangePasswordDTO {
   currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface ReqForgotPasswordDTO {
+  email: string;
+}
+
+export interface ReqResetPasswordDTO {
+  token: string;
   newPassword: string;
   confirmPassword: string;
 }

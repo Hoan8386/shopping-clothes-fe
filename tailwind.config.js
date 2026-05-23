@@ -1,9 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 const config = {
   darkMode: "class",
-  content: [
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
+  content: ["./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
       colors: {
@@ -17,12 +15,25 @@ const config = {
         muted: "var(--text-secondary)",
       },
       fontFamily: {
-        sans: ["var(--font-geist-sans)", "Arial", "Helvetica", "sans-serif"],
-        mono: ["var(--font-geist-mono)", "ui-monospace", "SFMono-Regular", "monospace"],
+        sans: [
+          "var(--font-geist-sans)",
+          "Noto Sans",
+          "Segoe UI",
+          "Roboto",
+          "Arial",
+          "Helvetica",
+          "sans-serif",
+        ],
+        mono: [
+          "var(--font-geist-mono)",
+          "ui-monospace",
+          "SFMono-Regular",
+          "monospace",
+        ],
       },
     },
   },
   plugins: [],
-}
+};
 
-export default config
+export default config;

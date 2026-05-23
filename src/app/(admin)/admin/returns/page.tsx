@@ -437,7 +437,9 @@ export default function AdminReturnsPage() {
                           {ct.soLuong}
                         </td>
                         <td className="px-3 py-2 text-right font-medium text-blue-600">
-                          {formatCurrency(ct.thanhTien)}
+                          {formatCurrency(
+                            (ct.giaSanPhamGiam ?? ct.giaSanPham) * ct.soLuong,
+                          )}
                         </td>
                         <td className="px-3 py-2 text-center">
                           <span

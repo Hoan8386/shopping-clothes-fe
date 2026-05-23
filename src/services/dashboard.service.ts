@@ -14,6 +14,7 @@ export interface DashboardResponse<T> {
 export interface ReportFilterParams {
   fromDate?: string;
   toDate?: string;
+  cuaHangId?: number;
   lowStockThreshold?: number;
   limit?: number;
 }
