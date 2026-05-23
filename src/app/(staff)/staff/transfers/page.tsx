@@ -96,6 +96,9 @@ export default function AdminTransfersPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [filterStatus, setFilterStatus] = useState<string | undefined>();
+  const [filterDirection, setFilterDirection] = useState<
+    "all" | "sent" | "received"
+  >("all");
   const [stores, setStores] = useState<CuaHang[]>([]);
   const [filterCuaHangGuiId, setFilterCuaHangGuiId] = useState<
     number | undefined
@@ -110,7 +113,7 @@ export default function AdminTransfersPage() {
 
   // Confirm action modal
   const [actionItem, setActionItem] = useState<DonLuanChuyen | null>(null);
-  const [actionType, setActionType] = useState<1 | 2 | 3 | 4>(1);
+  const [actionType, setActionType] = useState<1 | 2 | 3 | 4>(1); // 1: Xác nhận, 2: Giao, 4: Nhận, 3: Từ chối
   const [showConfirm, setShowConfirm] = useState(false);
   const [updating, setUpdating] = useState(false);
 
@@ -136,9 +139,29 @@ export default function AdminTransfersPage() {
   const fetchTransfers = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await donLuanChuyenService.getAll(page, 50, {
+      const query = {
         cuaHangGuiId: filterCuaHangGuiId,
         cuaHangDatId: filterCuaHangDatId,
+      } as {
+        cuaHangGuiId?: number;
+        cuaHangDatId?: number;
+      };
+
+      if (currentStoreId) {
+        if (filterDirection === "sent") {
+          query.cuaHangGuiId = currentStoreId;
+          query.cuaHangDatId = undefined;
+        }
+
+        if (filterDirection === "received") {
+          query.cuaHangDatId = currentStoreId;
+          query.cuaHangGuiId = undefined;
+        }
+      }
+
+      const data = await donLuanChuyenService.getAll(page, 50, {
+        cuaHangGuiId: query.cuaHangGuiId,
+        cuaHangDatId: query.cuaHangDatId,
       });
       let result = data?.result ?? [];
       if (filterStatus) {
@@ -153,7 +176,14 @@ export default function AdminTransfersPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatus, page, filterCuaHangGuiId, filterCuaHangDatId]);
+  }, [
+    currentStoreId,
+    filterDirection,
+    filterStatus,
+    page,
+    filterCuaHangGuiId,
+    filterCuaHangDatId,
+  ]);
 
   useEffect(() => {
     fetchTransfers();
@@ -180,10 +210,10 @@ export default function AdminTransfersPage() {
     try {
       setUpdating(true);
       await donLuanChuyenService.updateStatus(actionItem.id, actionType);
-      if (actionType === 4) toast.success("Đã xác nhận đơn luân chuyển");
-      if (actionType === 1)
+      if (actionType === 1) toast.success("Đã xác nhận đơn luân chuyển");
+      if (actionType === 2)
         toast.success("Đã chuyển sang trạng thái Đang giao");
-      if (actionType === 2) toast.success("Đã xác nhận nhập hàng thành công");
+      if (actionType === 4) toast.success("Đã xác nhận nhập hàng thành công");
       if (actionType === 3) toast.success("Đã từ chối đơn luân chuyển");
       setShowConfirm(false);
       fetchTransfers();
@@ -229,10 +259,10 @@ export default function AdminTransfersPage() {
           </div>
           <button
             onClick={() => setShowImportModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-red-700 rounded-lg text-sm font-medium hover:bg-primary/90 transition"
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition"
           >
             <FiPlus size={16} />
-            Nhập hàng
+            Luân chuyển
           </button>
         </div>
       </div>
@@ -292,6 +322,7 @@ export default function AdminTransfersPage() {
               setFilterCuaHangGuiId(
                 e.target.value ? Number(e.target.value) : undefined,
               );
+              setFilterDirection("all");
               setPage(1);
             }}
             className="h-10 px-3 rounded-lg bg-section border border-subtle text-sm"
@@ -310,6 +341,7 @@ export default function AdminTransfersPage() {
               setFilterCuaHangDatId(
                 e.target.value ? Number(e.target.value) : undefined,
               );
+              setFilterDirection("all");
               setPage(1);
             }}
             className="h-10 px-3 rounded-lg bg-section border border-subtle text-sm"
@@ -324,6 +356,51 @@ export default function AdminTransfersPage() {
         </div>
 
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setFilterDirection("sent");
+              setPage(1);
+            }}
+            disabled={!currentStoreId}
+            className={`inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed ${
+              filterDirection === "sent"
+                ? "bg-red-600 text-white hover:bg-red-700"
+                : "bg-section text-muted hover:bg-red-600 hover:text-white"
+            }`}
+          >
+            Gửi
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setFilterDirection("received");
+              setPage(1);
+            }}
+            disabled={!currentStoreId}
+            className={`inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed ${
+              filterDirection === "received"
+                ? "bg-red-600 text-white hover:bg-red-700"
+                : "bg-section text-muted hover:bg-red-600 hover:text-white"
+            }`}
+          >
+            Nhận
+          </button>
+          {filterDirection !== "all" && (
+            <button
+              type="button"
+              onClick={() => {
+                setFilterDirection("all");
+                setPage(1);
+              }}
+              className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg bg-accent text-white hover:bg-accent-hover transition"
+            >
+              Bỏ lọc
+            </button>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
           {TRANSFER_STATUSES.map((s) => (
             <button
               key={String(s.value)}
@@ -333,7 +410,7 @@ export default function AdminTransfersPage() {
               }}
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
                 filterStatus === s.value
-                  ? "bg-accent text-red-700"
+                  ? "bg-accent text-white"
                   : "bg-section text-muted hover:text-foreground"
               }`}
             >
@@ -419,12 +496,14 @@ export default function AdminTransfersPage() {
                         >
                           <FiEye size={15} />
                         </button>
+
+                        {/* Tuyến tính: Bước 0 -> Bước 1 hoặc Bước 3 */}
                         {r.cuaHangGuiId === currentStoreId &&
                           (r.trangThai === "Chờ xác nhận" ||
                             r.trangThai === "Chờ xử lý") && (
                             <>
                               <button
-                                onClick={() => openAction(r, 4)}
+                                onClick={() => openAction(r, 1)}
                                 className="p-1.5 text-indigo-500 hover:bg-indigo-500/10 rounded"
                                 title="Xác nhận đơn"
                               >
@@ -439,20 +518,24 @@ export default function AdminTransfersPage() {
                               </button>
                             </>
                           )}
+
+                        {/* Tuyến tính: Bước 1 -> Bước 2 */}
                         {r.cuaHangGuiId === currentStoreId &&
                           r.trangThai === "Đã xác nhận" && (
                             <button
-                              onClick={() => openAction(r, 1)}
+                              onClick={() => openAction(r, 2)}
                               className="p-1.5 text-blue-500 hover:bg-blue-500/10 rounded"
                               title="Chuyển sang Đang giao"
                             >
                               <FiTruck size={15} />
                             </button>
                           )}
+
+                        {/* Tuyến tính: Bước 2 -> Bước 4 */}
                         {r.cuaHangDatId === currentStoreId &&
                           r.trangThai === "Đang giao" && (
                             <button
-                              onClick={() => openAction(r, 2)}
+                              onClick={() => openAction(r, 4)}
                               className="p-1.5 text-green-500 hover:bg-green-500/10 rounded"
                               title="Xác nhận nhận hàng"
                             >
@@ -608,6 +691,7 @@ export default function AdminTransfersPage() {
                 ))}
               </div>
 
+              {/* Khối nút hành động tuyến tính trong chi tiết */}
               {selected.cuaHangGuiId === currentStoreId &&
                 (selected.trangThai === "Chờ xác nhận" ||
                   selected.trangThai === "Chờ xử lý") && (
@@ -615,9 +699,9 @@ export default function AdminTransfersPage() {
                     <button
                       onClick={() => {
                         setShowDetail(false);
-                        openAction(selected, 4);
+                        openAction(selected, 1);
                       }}
-                      className="flex-1 py-2.5 bg-indigo-600 text-red-700 rounded-lg text-sm font-medium hover:bg-indigo-700 transition flex items-center justify-center gap-2"
+                      className="flex-1 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition flex items-center justify-center gap-2"
                     >
                       <FiCheck size={16} /> Xác nhận đơn
                     </button>
@@ -626,7 +710,7 @@ export default function AdminTransfersPage() {
                         setShowDetail(false);
                         openAction(selected, 3);
                       }}
-                      className="flex-1 py-2.5 bg-red-600 text-red-700 rounded-lg text-sm font-medium hover:bg-red-700 transition flex items-center justify-center gap-2"
+                      className="flex-1 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition flex items-center justify-center gap-2"
                     >
                       <FiX size={16} /> Từ chối
                     </button>
@@ -638,9 +722,9 @@ export default function AdminTransfersPage() {
                     <button
                       onClick={() => {
                         setShowDetail(false);
-                        openAction(selected, 1);
+                        openAction(selected, 2);
                       }}
-                      className="flex-1 py-2.5 bg-blue-600 text-red-700 rounded-lg text-sm font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2"
+                      className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2"
                     >
                       <FiTruck size={16} /> Chuyển sang Đang giao
                     </button>
@@ -652,9 +736,9 @@ export default function AdminTransfersPage() {
                     <button
                       onClick={() => {
                         setShowDetail(false);
-                        openAction(selected, 2);
+                        openAction(selected, 4);
                       }}
-                      className="flex-1 py-2.5 bg-green-600 text-red-700 rounded-lg text-sm font-medium hover:bg-green-700 transition flex items-center justify-center gap-2"
+                      className="flex-1 py-2.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition flex items-center justify-center gap-2"
                     >
                       <FiCheck size={16} /> Xác nhận nhận hàng
                     </button>
@@ -670,9 +754,9 @@ export default function AdminTransfersPage() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-card rounded-xl shadow-xl w-full max-w-md p-6">
             <h3 className="font-bold text-lg text-foreground mb-2">
-              {actionType === 4 && "Xác nhận đơn luân chuyển?"}
-              {actionType === 1 && "Chuyển sang Đang giao?"}
-              {actionType === 2 && "Xác nhận đã nhận hàng?"}
+              {actionType === 1 && "Xác nhận đơn luân chuyển?"}
+              {actionType === 2 && "Chuyển sang Đang giao?"}
+              {actionType === 4 && "Xác nhận đã nhận hàng?"}
               {actionType === 3 && "Từ chối đơn luân chuyển?"}
             </h3>
             <p className="text-sm text-muted mb-1">
@@ -682,27 +766,28 @@ export default function AdminTransfersPage() {
             <p className="text-sm text-muted mb-4">
               {actionItem.tenCuaHangGui} → {actionItem.tenCuaHangDat}
             </p>
-            {actionType === 4 && (
-              <p className="text-sm text-indigo-700 bg-indigo-50 rounded-lg p-3 mb-4">
-                Cửa hàng gửi xác nhận có thể xử lý đơn. Sau bước này mới có thể
-                chuyển sang Đang giao.
-              </p>
-            )}
             {actionType === 1 && (
-              <p className="text-sm text-blue-700 bg-blue-50 rounded-lg p-3 mb-4">
-                Đơn sẽ chuyển sang trạng thái Đang giao. Cửa hàng gửi sẽ bắt đầu
-                vận chuyển hàng.
+              <p className="text-sm text-indigo-700 bg-indigo-50 rounded-lg p-3 mb-4">
+                Cửa hàng gửi xác nhận có thể xử lý đơn này. Sau bước này mới có
+                thể chuyển sang Đang giao.
               </p>
             )}
             {actionType === 2 && (
+              <p className="text-sm text-blue-700 bg-blue-50 rounded-lg p-3 mb-4">
+                Đơn sẽ chuyển sang trạng thái Đang giao. Cửa hàng gửi bắt đầu
+                vận chuyển hàng hóa sang kho nhận.
+              </p>
+            )}
+            {actionType === 4 && (
               <p className="text-sm text-green-700 bg-green-50 rounded-lg p-3 mb-4">
-                Xác nhận đã nhận đủ hàng từ cửa hàng gửi.
+                Xác nhận đã nhận đủ hàng thành công. Hệ thống sẽ tự động cập
+                nhật cộng số lượng vào tồn kho.
               </p>
             )}
             {actionType === 3 && (
               <p className="text-sm text-red-700 bg-red-50 rounded-lg p-3 mb-4">
-                Sau khi từ chối, đơn luân chuyển sẽ bị hủy. Hành động này không
-                thể hoàn tác.
+                Sau khi từ chối, đơn luân chuyển sẽ bị hủy hoàn toàn. Hành động
+                này không thể hoàn tác.
               </p>
             )}
             <div className="flex gap-3">
@@ -716,23 +801,23 @@ export default function AdminTransfersPage() {
               <button
                 onClick={handleConfirmAction}
                 disabled={updating}
-                className={`flex-1 py-2.5 text-red-700 rounded-lg text-sm font-medium transition ${
-                  actionType === 4
+                className={`flex-1 py-2.5 text-white rounded-lg text-sm font-medium transition ${
+                  actionType === 1
                     ? "bg-indigo-600 hover:bg-indigo-700"
-                    : actionType === 1
+                    : actionType === 2
                       ? "bg-blue-600 hover:bg-blue-700"
-                      : actionType === 2
+                      : actionType === 4
                         ? "bg-green-600 hover:bg-green-700"
                         : "bg-red-600 hover:bg-red-700"
                 }`}
               >
                 {updating
                   ? "Đang xử lý..."
-                  : actionType === 4
+                  : actionType === 1
                     ? "Xác nhận đơn"
-                    : actionType === 1
+                    : actionType === 2
                       ? "Xác nhận giao"
-                      : actionType === 2
+                      : actionType === 4
                         ? "Xác nhận nhận"
                         : "Xác nhận từ chối"}
               </button>

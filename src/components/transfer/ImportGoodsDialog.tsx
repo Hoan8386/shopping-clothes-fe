@@ -188,7 +188,8 @@ export function ImportGoodsDialog({
 
     const items = filteredByVariant.map((variant) => {
       const storeMeta = allStores.find(
-        (s) => s.id === variant.maCuaHang || s.tenCuaHang === variant.tenCuaHang,
+        (s) =>
+          s.id === variant.maCuaHang || s.tenCuaHang === variant.tenCuaHang,
       );
       let distance: number | undefined;
       if (
@@ -307,7 +308,8 @@ export function ImportGoodsDialog({
             </h2>
             <p className="text-xs text-muted mt-0.5">
               {step === "select-product" && "Bước 1: Chọn sản phẩm"}
-              {step === "select-store-variant" && "Bước 2 & 3: Chọn phân loại và cửa hàng nguồn"}
+              {step === "select-store-variant" &&
+                "Bước 2 & 3: Chọn phân loại và cửa hàng nguồn"}
             </p>
           </div>
           <button
@@ -359,14 +361,17 @@ export function ImportGoodsDialog({
                         className="group bg-card rounded-xl overflow-hidden border border-subtle hover:border-primary/50 transition-all cursor-pointer hover:shadow-md hover:-translate-y-1 block"
                       >
                         <div className="relative aspect-square sm:aspect-3/4 overflow-hidden bg-section">
-                          {product.hinhAnhUrls && product.hinhAnhUrls.length > 0 ? (
+                          {product.hinhAnhUrls &&
+                          product.hinhAnhUrls.length > 0 ? (
                             <img
                               src={product.hinhAnhUrls[0]}
                               alt={product.tenSanPham}
                               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
                             />
                           ) : (
-                            <div className="w-full h-full flex justify-center items-center text-xs text-muted">No image</div>
+                            <div className="w-full h-full flex justify-center items-center text-xs text-muted">
+                              No image
+                            </div>
                           )}
                         </div>
                         <div className="p-3 space-y-1.5">
@@ -384,14 +389,26 @@ export function ImportGoodsDialog({
           {step === "select-store-variant" && (
             <div className="space-y-5">
               <div className="flex items-center gap-4 bg-card p-4 rounded-xl border border-subtle relative overflow-hidden">
-                {selectedProduct && selectedProduct.hinhAnhUrls && selectedProduct.hinhAnhUrls.length > 0 ? (
-                   <img src={selectedProduct.hinhAnhUrls[0]} alt={selectedProduct.tenSanPham} className="w-16 h-16 rounded-md object-cover border border-subtle shrink-0" />
+                {selectedProduct &&
+                selectedProduct.hinhAnhUrls &&
+                selectedProduct.hinhAnhUrls.length > 0 ? (
+                  <img
+                    src={selectedProduct.hinhAnhUrls[0]}
+                    alt={selectedProduct.tenSanPham}
+                    className="w-16 h-16 rounded-md object-cover border border-subtle shrink-0"
+                  />
                 ) : (
-                   <div className="w-16 h-16 rounded-md bg-section flex justify-center items-center text-xs text-muted border border-subtle shrink-0">No Img</div>
+                  <div className="w-16 h-16 rounded-md bg-section flex justify-center items-center text-xs text-muted border border-subtle shrink-0">
+                    No Img
+                  </div>
                 )}
                 <div className="flex-1">
-                  <h3 className="font-bold text-foreground text-lg">{selectedProduct?.tenSanPham}</h3>
-                  <p className="text-sm text-muted">Vui lòng chọn thông số luân chuyển bên dưới</p>
+                  <h3 className="font-bold text-foreground text-lg">
+                    {selectedProduct?.tenSanPham}
+                  </h3>
+                  <p className="text-sm text-muted">
+                    Vui lòng chọn thông số luân chuyển bên dưới
+                  </p>
                 </div>
               </div>
 
@@ -427,11 +444,15 @@ export function ImportGoodsDialog({
                                   : "border-subtle bg-section hover:bg-background hover:shadow-sm"
                               }`}
                             >
-                              <p className="text-xs text-muted mb-0.5">Màu sắc</p>
+                              <p className="text-xs text-muted mb-0.5">
+                                Màu sắc
+                              </p>
                               <p className="text-sm font-semibold text-foreground line-clamp-1 mb-2">
                                 {choice.color}
                               </p>
-                              <p className="text-xs text-muted mb-0.5">Kích thước</p>
+                              <p className="text-xs text-muted mb-0.5">
+                                Kích thước
+                              </p>
                               <p className="text-sm font-semibold text-foreground">
                                 {choice.size}
                               </p>
@@ -466,7 +487,8 @@ export function ImportGoodsDialog({
                     ) : (
                       <div className="space-y-3">
                         {storeItems.map((item) => {
-                          const isSelected = selectedStoreId === item.variant.id;
+                          const isSelected =
+                            selectedStoreId === item.variant.id;
                           const isNearest = nearestStoreId === item.variant.id;
 
                           return (
@@ -486,7 +508,9 @@ export function ImportGoodsDialog({
                               <div className="flex items-start justify-between gap-4">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-3">
-                                    <div className={`p-1.5 rounded-md ${isSelected ? 'bg-primary/20 text-primary' : 'bg-section text-muted'}`}>
+                                    <div
+                                      className={`p-1.5 rounded-md ${isSelected ? "bg-primary/20 text-primary" : "bg-section text-muted"}`}
+                                    >
                                       <FiMapPin className="w-4 h-4" />
                                     </div>
                                     <h3 className="font-bold text-foreground">
@@ -549,7 +573,11 @@ export function ImportGoodsDialog({
                       disabled={!selectedStore}
                     />
                     <p className="text-xs text-muted mt-2">
-                      Bạn có thể yêu cầu tối đa <span className="font-bold text-foreground">{selectedStore?.soLuong || 0}</span> sản phẩm từ cửa hàng này.
+                      Bạn có thể yêu cầu tối đa{" "}
+                      <span className="font-bold text-foreground">
+                        {selectedStore?.soLuong || 0}
+                      </span>{" "}
+                      sản phẩm từ cửa hàng này.
                     </p>
                   </div>
                 </>
@@ -580,9 +608,11 @@ export function ImportGoodsDialog({
               <button
                 onClick={handleConfirmImport}
                 disabled={submitting || !selectedStore || !selectedVariantKey}
-                className="flex-1 py-2.5 bg-primary text-red-700 rounded-lg text-sm font-bold shadow-md hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed group relative overflow-hidden"
+                className="flex-1 py-2.5 bg-red-600 text-white rounded-lg text-sm font-bold shadow-md hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed group relative overflow-hidden"
               >
-                {submitting ? "Đang xử lý..." : "Xác nhận tạo yêu cầu luân chuyển"}
+                {submitting
+                  ? "Đang xử lý..."
+                  : "Xác nhận tạo yêu cầu luân chuyển"}
               </button>
             </>
           )}

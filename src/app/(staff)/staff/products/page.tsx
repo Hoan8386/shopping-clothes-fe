@@ -521,7 +521,7 @@ export default function StaffProductsPage() {
                   </div>
                   <button
                     onClick={() => setShowImportModal(true)}
-                    className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg bg-primary text-red-500 hover:bg-primary/90 transition"
+                    className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg bg-red-600 text-white hover:bg-red-700 transition"
                   >
                     <FiRepeat size={14} /> Luân chuyển
                   </button>

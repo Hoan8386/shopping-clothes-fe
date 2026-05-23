@@ -438,7 +438,7 @@ export function StoreWithInventoryModal({
           <button
             onClick={handleSubmit}
             disabled={submitting || !selectedStore || !selectedVariantKey}
-            className="flex-1 py-2.5 bg-primary text-red-800 rounded-lg text-sm font-medium hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitting ? "Đang tạo đơn..." : "Tạo yêu cầu luân chuyển"}
           </button>
