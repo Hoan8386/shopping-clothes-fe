@@ -338,7 +338,8 @@ export default function AccountPage() {
             </Link>
           )}
 
-          {user.role?.name === "NHAN_VIEN" && (
+          {(user.role?.name === "NHAN_VIEN" ||
+            user.role?.name === "NHAN_VIEN_QUAN_LY") && (
             <Link
               href="/staff"
               className="group border border-subtle bg-card p-6 flex items-center gap-5 hover:border-foreground transition"

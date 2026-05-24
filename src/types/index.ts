@@ -190,6 +190,7 @@ export interface DonHang {
   tongTienGiam: number;
   tongTienTra: number;
   paymentRef?: string | null;
+  phuongThucThanhToan?: string | null;
   trangThai: string | number;
   trangThaiThanhToan: string | number;
   hinhThucDonHang: string | number;
@@ -587,6 +588,7 @@ export interface ReqTraHangDTO {
   paymentRef?: string;
   chiTietTraHangs: {
     chiTietDonHangId: number;
+    soLuong: number;
     ghiTru?: string;
   }[];
 }

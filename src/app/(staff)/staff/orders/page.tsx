@@ -83,8 +83,24 @@ function getValidNextStatuses(
       ];
     case 2:
       return [{ label: "Đang giao hàng", value: 3 }];
+    case 3:
+      return [{ label: "Đã nhận hàng", value: 5 }];
     default:
       return [];
+  }
+}
+
+function getPaymentStatusColor(status: string | number): string {
+  const text = getPaymentStatusText(status);
+  switch (text) {
+    case "Chưa thanh toán":
+      return "bg-amber-500/10 text-amber-700 border border-amber-200";
+    case "Đã thanh toán":
+      return "bg-emerald-500/10 text-emerald-700 border border-emerald-200";
+    case "Thanh toán thất bại":
+      return "bg-red-500/10 text-red-700 border border-red-200";
+    default:
+      return "bg-gray-100 text-gray-700 border border-gray-200";
   }
 }
 
@@ -115,6 +131,9 @@ export default function StaffOrdersPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [filterStatus, setFilterStatus] = useState<number | undefined>();
+  const [filterPaymentStatus, setFilterPaymentStatus] = useState<
+    number | undefined
+  >();
   const [filterType, setFilterType] = useState<number | undefined>();
 
   // Draft carts tab
@@ -194,6 +213,9 @@ export default function StaffOrdersPage() {
       setLoading(true);
       const params: OrderSearchParams = { page, size: 15 };
       if (filterStatus !== undefined) params.trangThai = filterStatus;
+      if (filterPaymentStatus !== undefined) {
+        params.trangThaiThanhToan = filterPaymentStatus;
+      }
       if (filterType !== undefined) params.hinhThucDonHang = filterType;
       const data = await orderService.getAll(params);
       setOrders(data.result);
@@ -203,7 +225,7 @@ export default function StaffOrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, filterStatus, filterType]);
+  }, [page, filterPaymentStatus, filterStatus, filterType]);
 
   useEffect(() => {
     fetchOrders();
@@ -1221,6 +1243,21 @@ export default function StaffOrdersPage() {
               ))}
             </div>
             <select
+              value={filterPaymentStatus ?? ""}
+              onChange={(e) => {
+                setFilterPaymentStatus(
+                  e.target.value !== "" ? Number(e.target.value) : undefined,
+                );
+                setPage(1);
+              }}
+              className="border border-subtle bg-background text-foreground rounded-lg px-3 py-1.5 text-sm"
+            >
+              <option value="">Tất cả thanh toán</option>
+              <option value="0">Chưa thanh toán</option>
+              <option value="1">Đã thanh toán</option>
+              <option value="2">Thanh toán thất bại</option>
+            </select>
+            <select
               value={filterType ?? ""}
               onChange={(e) => {
                 setFilterType(
@@ -1268,9 +1305,6 @@ export default function StaffOrdersPage() {
                       <th className="px-4 py-3 text-left font-medium text-muted">
                         Bên vận chuyển
                       </th>
-                      <th className="px-4 py-3 text-left font-medium text-muted">
-                        Ngày tạo
-                      </th>
                       <th className="px-4 py-3 text-right font-medium text-muted">
                         Tổng tiền
                       </th>
@@ -1282,9 +1316,6 @@ export default function StaffOrdersPage() {
                       </th>
                       <th className="px-4 py-3 text-center font-medium text-muted">
                         Thanh toán
-                      </th>
-                      <th className="px-4 py-3 text-center font-medium text-muted">
-                        Payment Ref
                       </th>
                       <th className="px-4 py-3 text-center font-medium text-muted">
                         Thao tác
@@ -1303,9 +1334,6 @@ export default function StaffOrdersPage() {
                         </td>
                         <td className="px-4 py-3 text-muted">
                           {o.vanChuyen?.tenVanChuyen || "—"}
-                        </td>
-                        <td className="px-4 py-3 text-muted">
-                          {formatDate(o.ngayTao)}
                         </td>
                         <td className="px-4 py-3 text-right font-medium text-blue-600">
                           {formatCurrency(o.tongTienTra || o.tongTien)}
@@ -1330,10 +1358,11 @@ export default function StaffOrdersPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-center text-muted text-xs">
-                          {getPaymentStatusText(o.trangThaiThanhToan)}
-                        </td>
-                        <td className="px-4 py-3 text-center text-muted text-xs">
-                          {o.paymentRef || "-"}
+                          <span
+                            className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getPaymentStatusColor(o.trangThaiThanhToan)}`}
+                          >
+                            {getPaymentStatusText(o.trangThaiThanhToan)}
+                          </span>
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex justify-center gap-2">
@@ -1533,6 +1562,15 @@ export default function StaffOrdersPage() {
                       </span>
                     </div>
                     <div>
+                      <span className="text-muted">
+                        Phương thức thanh toán khách:{" "}
+                      </span>
+                      <span className="font-medium text-foreground">
+                        {selectedOrder.phuongThucThanhToan ??
+                          getPaymentMethodText(selectedOrder.hinhThucDonHang)}
+                      </span>
+                    </div>
+                    <div>
                       <span className="text-muted">Trạng thái: </span>
                       <span
                         className={`px-2 py-0.5 rounded-full text-xs font-medium ${getOrderStatusColor(selectedOrder.trangThai)}`}
@@ -1542,7 +1580,9 @@ export default function StaffOrdersPage() {
                     </div>
                     <div>
                       <span className="text-muted">Thanh toán: </span>
-                      <span className="font-medium text-foreground">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${getPaymentStatusColor(selectedOrder.trangThaiThanhToan)}`}
+                      >
                         {getPaymentStatusText(selectedOrder.trangThaiThanhToan)}
                       </span>
                     </div>

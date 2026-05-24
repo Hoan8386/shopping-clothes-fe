@@ -41,6 +41,30 @@ function getStatusNumber(status: string | number): number {
   return map[status] ?? -1;
 }
 
+function getValidNextStatuses(
+  currentStatus: string | number,
+): { label: string; value: number }[] {
+  const current = getStatusNumber(currentStatus);
+  switch (current) {
+    case 0:
+      return [
+        { label: "Đã xác nhận", value: 1 },
+        { label: "Đã hủy", value: 4 },
+      ];
+    case 1:
+      return [
+        { label: "Đang đóng gói", value: 2 },
+        { label: "Đã hủy", value: 4 },
+      ];
+    case 2:
+      return [{ label: "Đang giao hàng", value: 3 }];
+    case 3:
+      return [{ label: "Đã nhận hàng", value: 5 }];
+    default:
+      return [];
+  }
+}
+
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<DonHang[]>([]);
   const [stores, setStores] = useState<CuaHang[]>([]);
@@ -113,8 +137,13 @@ export default function AdminOrdersPage() {
   };
 
   const openEdit = (order: DonHang) => {
+    const validStatuses = getValidNextStatuses(order.trangThai);
+    if (validStatuses.length === 0) {
+      toast.error("Đơn hàng này không thể cập nhật trạng thái");
+      return;
+    }
     setEditOrder(order);
-    setNewStatus(getStatusNumber(order.trangThai));
+    setNewStatus(validStatuses[0].value);
   };
 
   const handleUpdateStatus = async () => {
@@ -247,9 +276,6 @@ export default function AdminOrdersPage() {
                   <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
                     Bên vận chuyển
                   </th>
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
-                    Ngày tạo
-                  </th>
                   <th className="px-5 py-3.5 text-right text-xs font-semibold text-muted uppercase tracking-wider">
                     Tổng tiền
                   </th>
@@ -261,9 +287,6 @@ export default function AdminOrdersPage() {
                   </th>
                   <th className="px-5 py-3.5 text-center text-xs font-semibold text-muted uppercase tracking-wider">
                     Thanh toán
-                  </th>
-                  <th className="px-5 py-3.5 text-center text-xs font-semibold text-muted uppercase tracking-wider">
-                    Payment Ref
                   </th>
                   <th className="px-5 py-3.5 text-center text-xs font-semibold text-muted uppercase tracking-wider">
                     Thao tác
@@ -287,9 +310,6 @@ export default function AdminOrdersPage() {
                     </td>
                     <td className="px-5 py-3.5 text-muted">
                       {o.vanChuyen?.tenVanChuyen || "—"}
-                    </td>
-                    <td className="px-5 py-3.5 text-muted">
-                      {formatDate(o.ngayTao)}
                     </td>
                     <td className="px-5 py-3.5 text-right font-semibold text-accent">
                       {formatCurrency(o.tongTienTra || o.tongTien)}
@@ -317,9 +337,6 @@ export default function AdminOrdersPage() {
                     </td>
                     <td className="px-5 py-3.5 text-center text-xs text-muted">
                       {getPaymentStatusText(o.trangThaiThanhToan)}
-                    </td>
-                    <td className="px-5 py-3.5 text-center text-xs text-muted">
-                      {o.paymentRef || "-"}
                     </td>
                     <td className="px-5 py-3.5 text-center">
                       <div className="flex items-center justify-center gap-1">
@@ -428,6 +445,15 @@ export default function AdminOrdersPage() {
                       <span className="text-muted">Hình thức: </span>
                       <span className="font-medium text-foreground">
                         {getPaymentMethodText(selectedOrder.hinhThucDonHang)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted">
+                        Phương thức thanh toán khách:{" "}
+                      </span>
+                      <span className="font-medium text-foreground">
+                        {selectedOrder.phuongThucThanhToan ??
+                          getPaymentMethodText(selectedOrder.hinhThucDonHang)}
                       </span>
                     </div>
                     <div>
@@ -612,12 +638,11 @@ export default function AdminOrdersPage() {
                   onChange={(e) => setNewStatus(Number(e.target.value))}
                   className="w-full border border-subtle bg-background text-foreground rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition"
                 >
-                  <option value={0}>Chờ xác nhận</option>
-                  <option value={1}>Đã xác nhận</option>
-                  <option value={2}>Đang đóng gói</option>
-                  <option value={3}>Đang giao hàng</option>
-                  <option value={4}>Đã hủy</option>
-                  <option value={5}>Đã nhận hàng</option>
+                  {getValidNextStatuses(editOrder.trangThai).map((status) => (
+                    <option key={status.value} value={status.value}>
+                      {status.label}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="flex gap-3 justify-end">

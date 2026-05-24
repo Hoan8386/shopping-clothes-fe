@@ -77,6 +77,9 @@ export default function OrderDetailPage() {
   const [returnItems, setReturnItems] = useState<
     {
       chiTietDonHangId: number;
+      soLuongDaMua: number;
+      soLuongConLai: number;
+      soLuongTra: number;
       ghiTru: string;
       selected: boolean;
       tenSanPham: string;
@@ -110,8 +113,8 @@ export default function OrderDetailPage() {
   const [exchangeLoadingVariants, setExchangeLoadingVariants] = useState(false);
   const [exchangeHistory, setExchangeHistory] = useState<DoiHang[]>([]);
 
-  const returnedItemIds = useMemo(() => {
-    const set = new Set<number>();
+  const returnedQuantityByItemId = useMemo(() => {
+    const quantityMap = new Map<number, number>();
     const isRejectedStatus = (status?: string) =>
       status?.toLowerCase().includes("từ chối") ||
       status?.toLowerCase().includes("tu choi");
@@ -120,19 +123,26 @@ export default function OrderDetailPage() {
       if (isRejectedStatus(ret.trangThai)) continue;
       for (const detail of ret.chiTietTraHangs || []) {
         if (detail.chiTietDonHangId) {
-          set.add(detail.chiTietDonHangId);
+          const current = quantityMap.get(detail.chiTietDonHangId) || 0;
+          quantityMap.set(
+            detail.chiTietDonHangId,
+            current + (detail.soLuong || 0),
+          );
         }
       }
     }
 
-    return set;
+    return quantityMap;
   }, [returnHistory]);
 
   const hasReturnableItems = useMemo(() => {
-    return !!order?.chiTietDonHangs?.some(
-      (item) => item.id && !returnedItemIds.has(item.id),
-    );
-  }, [order?.chiTietDonHangs, returnedItemIds]);
+    return !!order?.chiTietDonHangs?.some((item) => {
+      if (!item.id) return false;
+      const daTra = returnedQuantityByItemId.get(item.id) || 0;
+      const daMua = item.soLuong || 0;
+      return daMua - daTra > 0;
+    });
+  }, [order?.chiTietDonHangs, returnedQuantityByItemId]);
 
   const fetchOrder = useCallback(
     async (showPageLoading = true) => {
@@ -293,13 +303,26 @@ export default function OrderDetailPage() {
   const openReturnModal = () => {
     if (!order) return;
     const items = order.chiTietDonHangs
-      .filter((item) => item.id && !returnedItemIds.has(item.id))
-      .map((item) => ({
-        chiTietDonHangId: item.id!,
-        ghiTru: "",
-        selected: false,
-        tenSanPham: item.tenSanPham || "Sản phẩm",
-      }));
+      .filter((item) => {
+        if (!item.id) return false;
+        const daTra = returnedQuantityByItemId.get(item.id) || 0;
+        const daMua = item.soLuong || 0;
+        return daMua - daTra > 0;
+      })
+      .map((item) => {
+        const daTra = item.id ? returnedQuantityByItemId.get(item.id) || 0 : 0;
+        const soLuongDaMua = item.soLuong || 0;
+        const soLuongConLai = Math.max(soLuongDaMua - daTra, 0);
+        return {
+          chiTietDonHangId: item.id!,
+          soLuongDaMua,
+          soLuongConLai,
+          soLuongTra: soLuongConLai > 0 ? 1 : 0,
+          ghiTru: "",
+          selected: false,
+          tenSanPham: item.tenSanPham || "Sản phẩm",
+        };
+      });
 
     if (items.length === 0) {
       toast("Tất cả sản phẩm trong đơn đã có yêu cầu trả hàng");
@@ -357,6 +380,20 @@ export default function OrderDetailPage() {
     );
   };
 
+  const updateReturnItemQuantity = (idx: number, qtyValue: string) => {
+    const parsed = Number.parseInt(qtyValue, 10);
+    setReturnItems((prev) =>
+      prev.map((item, i) => {
+        if (i !== idx) return item;
+        const safeQty = Number.isNaN(parsed) ? 1 : parsed;
+        return {
+          ...item,
+          soLuongTra: Math.max(1, Math.min(item.soLuongConLai, safeQty)),
+        };
+      }),
+    );
+  };
+
   const handleSubmitReturn = async () => {
     if (!order) return;
     const selected = returnItems.filter((i) => i.selected);
@@ -372,6 +409,12 @@ export default function OrderDetailPage() {
       toast.error("Vui lòng nhập thông tin chuyển khoản để hoàn tiền");
       return;
     }
+    if (
+      selected.some((i) => i.soLuongTra < 1 || i.soLuongTra > i.soLuongConLai)
+    ) {
+      toast.error("Số lượng trả không hợp lệ");
+      return;
+    }
     setReturnSubmitting(true);
     try {
       await traHangService.create(
@@ -384,6 +427,7 @@ export default function OrderDetailPage() {
           paymentRef: order.paymentRef || undefined,
           chiTietTraHangs: selected.map((i) => ({
             chiTietDonHangId: i.chiTietDonHangId,
+            soLuong: i.soLuongTra,
             ghiTru: i.ghiTru || undefined,
           })),
         },
@@ -553,6 +597,15 @@ export default function OrderDetailPage() {
               </div>
               <div>
                 <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">
+                  Phương thức thanh toán
+                </p>
+                <p className="font-semibold text-foreground">
+                  {order.phuongThucThanhToan ??
+                    getPaymentMethodText(order.hinhThucDonHang)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">
                   Thanh toán
                 </p>
                 <p className="font-semibold text-foreground">
@@ -622,7 +675,10 @@ export default function OrderDetailPage() {
           </div>
           <div className="divide-y divide-subtle">
             {order.chiTietDonHangs?.map((item, idx) => {
-              const isReturned = !!item.id && returnedItemIds.has(item.id);
+              const soLuongDaTra = item.id
+                ? returnedQuantityByItemId.get(item.id) || 0
+                : 0;
+              const isReturned = soLuongDaTra >= (item.soLuong || 0);
 
               return (
                 <div
@@ -654,11 +710,16 @@ export default function OrderDetailPage() {
                         Đã trả hàng
                       </p>
                     )}
-                    {item.giamGia > 0 && (
+                    {!isReturned && soLuongDaTra > 0 && (
+                      <p className="text-xs font-medium text-orange-600 mt-1">
+                        Đã trả {soLuongDaTra}/{item.soLuong}
+                      </p>
+                    )}
+                    {/* {item.giamGia > 0 && (
                       <p className="text-xs text-accent mt-0.5">
                         Giảm giá: {item.giamGia}%
                       </p>
-                    )}
+                    )} */}
                     {/* Review & Exchange buttons for delivered orders */}
                     {order.trangThai === "Đã nhận hàng" &&
                       item.id &&
@@ -1349,9 +1410,30 @@ export default function OrderDetailPage() {
                         <p className="text-sm font-medium text-foreground flex-1">
                           {item.tenSanPham}
                         </p>
+                        <p className="text-xs text-muted">
+                          Còn có thể trả: {item.soLuongConLai}/
+                          {item.soLuongDaMua}
+                        </p>
                       </div>
                       {item.selected && (
                         <div className="mt-2 ml-7">
+                          <div className="mb-2">
+                            <label className="block text-xs text-muted mb-1">
+                              Số lượng trả
+                            </label>
+                            <input
+                              type="number"
+                              min={1}
+                              max={item.soLuongConLai}
+                              value={item.soLuongTra}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                updateReturnItemQuantity(idx, e.target.value);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-28 border border-subtle bg-background text-foreground rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-accent/40"
+                            />
+                          </div>
                           <input
                             type="text"
                             value={item.ghiTru}

@@ -29,6 +29,20 @@ function getReturnStatusColor(status: string) {
   }
 }
 
+function getDisplayTotalAmount(
+  item: Pick<TraHang, "tongTien" | "chiTietTraHangs">,
+) {
+  const details = item.chiTietTraHangs ?? [];
+  if (details.length > 0) {
+    return details.reduce(
+      (sum, detail) => sum + Number(detail.thanhTien ?? 0),
+      0,
+    );
+  }
+
+  return Number(item.tongTien ?? 0);
+}
+
 export default function StaffReturnsPage() {
   const [returns, setReturns] = useState<TraHang[]>([]);
   const [loading, setLoading] = useState(true);
@@ -216,9 +230,7 @@ export default function StaffReturnsPage() {
                   <th className="px-4 py-3 text-left font-medium text-muted">
                     Hoàn tiền
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted">
-                    Payment ref
-                  </th>
+
                   <th className="px-4 py-3 text-center font-medium text-muted">
                     Trạng thái
                   </th>
@@ -239,14 +251,12 @@ export default function StaffReturnsPage() {
                       {formatDate(r.ngayTao)}
                     </td>
                     <td className="px-4 py-3 text-right font-medium text-blue-600">
-                      {formatCurrency(r.tongTien)}
+                      {formatCurrency(getDisplayTotalAmount(r))}
                     </td>
                     <td className="px-4 py-3 text-muted">
                       {r.phuongThucHoanTien}
                     </td>
-                    <td className="px-4 py-3 text-muted">
-                      {r.paymentRef || "-"}
-                    </td>
+
                     <td className="px-4 py-3 text-center">
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-medium ${getReturnStatusColor(r.trangThai)}`}
@@ -342,7 +352,7 @@ export default function StaffReturnsPage() {
                 <div>
                   <span className="text-muted">Tổng tiền: </span>
                   <span className="font-medium text-blue-600">
-                    {formatCurrency(selected.tongTien)}
+                    {formatCurrency(getDisplayTotalAmount(selected))}
                   </span>
                 </div>
                 <div className="col-span-2">
@@ -396,10 +406,7 @@ export default function StaffReturnsPage() {
                         Phân loại
                       </th>
                       <th className="px-3 py-2 text-right text-muted font-medium">
-                        Giá gốc
-                      </th>
-                      <th className="px-3 py-2 text-right text-muted font-medium">
-                        Giá sản phẩm (giảm)
+                        Giá sản phẩm
                       </th>
                       <th className="px-3 py-2 text-right text-muted font-medium">
                         Số lượng
@@ -428,11 +435,8 @@ export default function StaffReturnsPage() {
                         <td className="px-3 py-2 text-muted">
                           {ct.tenMauSac} / {ct.tenKichThuoc}
                         </td>
-                        <td className="px-3 py-2 text-right text-muted">
-                          {formatCurrency(ct.giaSanPham)}
-                        </td>
                         <td className="px-3 py-2 text-right font-medium text-foreground">
-                          {formatCurrency(ct.giaSanPhamGiam ?? 0)}
+                          {formatCurrency(ct.giaSanPhamGiam ?? ct.giaSanPham)}
                         </td>
                         <td className="px-3 py-2 text-right text-muted">
                           {ct.soLuong}
@@ -499,7 +503,7 @@ export default function StaffReturnsPage() {
             <p className="text-sm text-muted mb-4">
               Tổng tiền:{" "}
               <span className="font-medium text-blue-600">
-                {formatCurrency(actionItem.tongTien)}
+                {formatCurrency(getDisplayTotalAmount(actionItem))}
               </span>
             </p>
             <p className="text-sm text-muted mb-4">

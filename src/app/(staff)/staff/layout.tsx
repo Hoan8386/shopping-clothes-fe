@@ -111,7 +111,11 @@ export default function StaffLayout({
       return;
     }
     const role = session.user?.role?.name;
-    if (role !== "ADMIN" && role !== "NHAN_VIEN") {
+    if (
+      role !== "ADMIN" &&
+      role !== "NHAN_VIEN" &&
+      role !== "NHAN_VIEN_QUAN_LY"
+    ) {
       router.push("/unauthorized");
     }
   }, [session, status, router]);

@@ -44,7 +44,7 @@ export default auth((req) => {
       return NextResponse.redirect(url);
     }
     const role = session.user?.role?.name;
-    if (role !== "ADMIN" && role !== "NHAN_VIEN") {
+    if (role !== "ADMIN" && role !== "NHAN_VIEN" && role !== "NHAN_VIEN_QUAN_LY") {
       return NextResponse.redirect(new URL("/unauthorized", req.url));
     }
   }

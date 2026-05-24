@@ -5,7 +5,7 @@ import { useAuthStore } from "@/store/auth.store";
 import { useCartStore } from "@/store/cart.store";
 import { authService } from "@/services/auth.service";
 import { cartService } from "@/services/cart.service";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import toast from "react-hot-toast";
@@ -27,12 +27,12 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [mounted, setMounted] = useState(false);
   const { theme, toggleTheme } = useThemeStore();
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
   const router = useRouter();
   const pathname = usePathname();
 
@@ -223,7 +223,8 @@ export default function Header() {
                       Quản trị
                     </Link>
                   )}
-                  {user?.role?.name === "NHAN_VIEN" && (
+                  {(user?.role?.name === "NHAN_VIEN" ||
+                    user?.role?.name === "NHAN_VIEN_QUAN_LY") && (
                     <Link
                       href="/staff"
                       className="block px-4 py-2.5 text-sm text-muted hover:bg-section hover:text-accent transition"
