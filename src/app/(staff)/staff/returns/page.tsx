@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { TraHang } from "@/types";
 import { traHangService } from "@/services/return.service";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import Pagination from "@/components/ui/Pagination";
 import Loading from "@/components/ui/Loading";
+import { ReturnCreationModal } from "@/components/returns/ReturnCreationModal";
 import toast from "react-hot-toast";
 import { FiEye, FiCheck, FiX, FiRotateCcw } from "react-icons/fi";
 
@@ -44,11 +46,15 @@ function getDisplayTotalAmount(
 }
 
 export default function StaffReturnsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const hasProcessedVNPayReturnRef = useRef(false);
   const [returns, setReturns] = useState<TraHang[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [filterStatus, setFilterStatus] = useState<string | undefined>();
+  const [showCreatePanel, setShowCreatePanel] = useState(false);
 
   // Detail modal
   const [selected, setSelected] = useState<TraHang | null>(null);
@@ -81,6 +87,47 @@ export default function StaffReturnsPage() {
   useEffect(() => {
     fetchReturns();
   }, [fetchReturns]);
+
+  useEffect(() => {
+    if (hasProcessedVNPayReturnRef.current) return;
+
+    const txnRef = searchParams.get("vnp_TxnRef");
+    if (!txnRef || !txnRef.startsWith("TRH_")) {
+      return;
+    }
+
+    hasProcessedVNPayReturnRef.current = true;
+
+    const queryObject = Object.fromEntries(Array.from(searchParams.entries()));
+
+    const processVNPayReturn = async () => {
+      try {
+        const data = await traHangService.confirmVNPayReturn(queryObject);
+        const success = data?.success === "true";
+
+        if (success) {
+          toast.success(
+            "Thanh toán VNPAY thành công, phiếu trả hàng đã được duyệt",
+          );
+          await fetchReturns();
+        } else {
+          toast.error(
+            "Thanh toán VNPAY chưa thành công, phiếu trả hàng chưa được duyệt",
+          );
+        }
+      } catch (err: unknown) {
+        const msg =
+          err instanceof Error
+            ? err.message
+            : "Không thể đồng bộ kết quả thanh toán VNPAY";
+        toast.error(msg);
+      } finally {
+        router.replace("/staff/returns");
+      }
+    };
+
+    processVNPayReturn();
+  }, [searchParams, router, fetchReturns]);
 
   const handleViewDetail = async (id: number) => {
     try {
@@ -133,47 +180,34 @@ export default function StaffReturnsPage() {
     }
   };
 
-  const pendingCount = returns.filter(
-    (r) => r.trangThai === "Chờ xử lý",
-  ).length;
-
   return (
     <div className="space-y-5">
       {/* Header */}
       <div className="bg-card rounded-2xl border border-subtle p-4 lg:p-5">
-        <p className="text-sm font-semibold text-foreground">
-          Quản lý phiếu trả hàng
-        </p>
-        <p className="text-sm text-muted mt-1">
-          Duyệt hoặc từ chối yêu cầu trả hàng từ khách hàng.
-        </p>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-foreground">
+              Quản lý phiếu trả hàng
+            </p>
+            <p className="text-sm text-muted mt-1">
+              Duyệt, từ chối hoặc tạo phiếu trả hàng cho đơn đã nhận.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowCreatePanel(true)}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
+          >
+            <FiRotateCcw size={16} />
+            Tạo phiếu trả hàng
+          </button>
+        </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="bg-card border border-subtle rounded-xl p-4">
-          <p className="text-xs text-muted uppercase tracking-wide">
-            Tổng phiếu
-          </p>
-          <p className="text-xl font-bold text-foreground mt-1">
-            {returns.length}
-          </p>
-        </div>
-        <div className="bg-card border border-subtle rounded-xl p-4">
-          <p className="text-xs text-muted uppercase tracking-wide">
-            Chờ xử lý
-          </p>
-          <p className="text-xl font-bold text-yellow-600 mt-1">
-            {pendingCount}
-          </p>
-        </div>
-        <div className="bg-card border border-subtle rounded-xl p-4">
-          <p className="text-xs text-muted uppercase tracking-wide">Đã duyệt</p>
-          <p className="text-xl font-bold text-green-600 mt-1">
-            {returns.filter((r) => r.trangThai === "Đã duyệt").length}
-          </p>
-        </div>
-      </div>
+      <ReturnCreationModal
+        isOpen={showCreatePanel}
+        onClose={() => setShowCreatePanel(false)}
+        onCreated={fetchReturns}
+      />
 
       {/* Filters */}
       <div className="bg-card rounded-2xl border border-subtle p-4 flex flex-wrap gap-2">

@@ -69,4 +69,7 @@ export const kiemKeHangHoaService = {
     );
     return res.data.data;
   },
+  delete: async (id: number) => {
+    await apiClient.delete(`/kiem-ke-hang-hoa/${id}`);
+  },
 };

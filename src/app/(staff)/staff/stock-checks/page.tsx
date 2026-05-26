@@ -23,6 +23,7 @@ import {
   productService,
   productVariantService,
 } from "@/services/product.service";
+import { useAuthStore } from "@/store/auth.store";
 import {
   kiemKeHangHoaService,
   loaiKiemKeService,
@@ -110,6 +111,7 @@ export default function StaffStockChecksPage() {
   const [capturedPreviewUrl, setCapturedPreviewUrl] = useState<string | null>(
     null,
   );
+  const user = useAuthStore((state) => state.user);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const cameraStreamRef = useRef<MediaStream | null>(null);
@@ -118,6 +120,15 @@ export default function StaffStockChecksPage() {
   const variantById = useMemo(
     () => new Map(variants.map((item) => [item.id, item])),
     [variants],
+  );
+  const currentStoreId = user?.idCuaHang ?? null;
+
+  const isVariantInCurrentStore = useCallback(
+    (variant: ResChiTietSanPhamDTO) =>
+      currentStoreId == null ||
+      variant.maCuaHang == null ||
+      variant.maCuaHang === currentStoreId,
+    [currentStoreId],
   );
 
   const productOptions = useMemo(
@@ -201,34 +212,42 @@ export default function StaffStockChecksPage() {
     handleCloseCamera();
   }, [clearCapturedPreview, handleCloseCamera]);
 
-  const upsertRowByVariant = useCallback((variant: ResChiTietSanPhamDTO) => {
-    setRows((prev) => {
-      const existingIndex = prev.findIndex(
-        (row) => row.chiTietSanPhamId === variant.id,
-      );
-
-      if (existingIndex >= 0) {
-        return prev.map((row, idx) =>
-          idx === existingIndex
-            ? {
-                ...row,
-                soLuongThucTe: Math.max(0, (row.soLuongThucTe || 0) + 1),
-              }
-            : row,
-        );
+  const upsertRowByVariant = useCallback(
+    (variant: ResChiTietSanPhamDTO) => {
+      if (!isVariantInCurrentStore(variant)) {
+        toast.error("Sản phẩm không nằm trong cửa hàng hiện tại");
+        return;
       }
 
-      return [
-        ...prev,
-        {
-          sanPhamId: variant.sanPhamId,
-          chiTietSanPhamId: variant.id,
-          soLuongThucTe: 1,
-          ghiChu: "",
-        },
-      ];
-    });
-  }, []);
+      setRows((prev) => {
+        const existingIndex = prev.findIndex(
+          (row) => row.chiTietSanPhamId === variant.id,
+        );
+
+        if (existingIndex >= 0) {
+          return prev.map((row, idx) =>
+            idx === existingIndex
+              ? {
+                  ...row,
+                  soLuongThucTe: Math.max(0, (row.soLuongThucTe || 0) + 1),
+                }
+              : row,
+          );
+        }
+
+        return [
+          ...prev,
+          {
+            sanPhamId: variant.sanPhamId,
+            chiTietSanPhamId: variant.id,
+            soLuongThucTe: 1,
+            ghiChu: "",
+          },
+        ];
+      });
+    },
+    [isVariantInCurrentStore],
+  );
 
   const handleAddByProductDetailCode = async () => {
     const codeText = productDetailCodeInput.trim();
@@ -244,9 +263,11 @@ export default function StaffStockChecksPage() {
     }
 
     try {
-      const fromCache = variantById.get(productDetailId);
-      const variant =
-        fromCache || (await productVariantService.getById(productDetailId));
+      const variant = variantById.get(productDetailId);
+      if (!variant) {
+        toast.error("Sản phẩm không nằm trong cửa hàng hiện tại");
+        return;
+      }
       upsertRowByVariant(variant);
       setProductDetailCodeInput("");
       toast.success("Đã thêm sản phẩm vào chi tiết kiểm kê");
@@ -547,6 +568,20 @@ export default function StaffStockChecksPage() {
     }
   };
 
+  const handleDelete = async (id: number) => {
+    if (!confirm("Bạn có chắc muốn xóa phiếu kiểm kê này?")) return;
+
+    try {
+      await kiemKeHangHoaService.delete(id);
+      toast.success("Đã xóa phiếu kiểm kê");
+      await fetchData();
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Xóa phiếu kiểm kê thất bại";
+      toast.error(message);
+    }
+  };
+
   if (loading) return <Loading />;
 
   return (
@@ -660,6 +695,15 @@ export default function StaffStockChecksPage() {
                           title="Gửi duyệt"
                         >
                           <FiSend size={15} />
+                        </button>
+                      )}
+                      {canEdit(item) && (
+                        <button
+                          onClick={() => handleDelete(item.id)}
+                          className="p-1.5 text-red-600 hover:bg-red-600/10 rounded"
+                          title="Xóa"
+                        >
+                          <FiTrash2 size={15} />
                         </button>
                       )}
                     </div>

@@ -24,6 +24,7 @@ export function AuthSync() {
         email: session.user.email ?? "",
         name: session.user.name ?? "",
         sdt: session.user.sdt ?? null,
+        avatar: session.user.avatar ?? null,
         role: session.user.role,
       });
       authService
@@ -34,6 +35,7 @@ export function AuthSync() {
             email: account.email,
             name: account.name,
             sdt: account.sdt,
+            avatar: account.avatar,
             role: account.role,
             diemTichLuy: account.diemTichLuy,
           });
