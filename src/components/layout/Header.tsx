@@ -80,6 +80,7 @@ export default function Header() {
   const navLinks = [
     { href: "/", label: "Trang chủ" },
     { href: "/products", label: "Sản phẩm" },
+    { href: "/try-on", label: "Thử đồ" },
     { href: "/stores", label: "Cửa hàng" },
   ];
 
@@ -208,6 +209,12 @@ export default function Header() {
                     className="block px-4 py-2.5 text-sm text-muted hover:bg-section hover:text-accent transition"
                   >
                     Đơn hàng
+                  </Link>
+                  <Link
+                    href="/try-on"
+                    className="block px-4 py-2.5 text-sm text-muted hover:bg-section hover:text-accent transition"
+                  >
+                    Thử đồ
                   </Link>
                   <Link
                     href="/reviews"
@@ -349,6 +356,13 @@ export default function Header() {
                   onClick={() => setMenuOpen(false)}
                 >
                   Đơn hàng
+                </Link>
+                <Link
+                  href="/try-on"
+                  className="block py-2.5 text-sm font-medium tracking-wide text-muted hover:text-foreground transition-colors"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Thử đồ
                 </Link>
                 <Link
                   href="/account"

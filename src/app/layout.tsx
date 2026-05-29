@@ -5,6 +5,7 @@ import SessionProvider from "@/components/providers/SessionProvider";
 import { AuthSync } from "@/components/providers/AuthSync";
 import ThemeProvider from "@/components/providers/ThemeProvider";
 import AppToaster from "@/components/providers/AppToaster";
+import OutfitChatbot from "@/components/ui/OutfitChatbot";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,6 +36,7 @@ export default function RootLayout({
           <ThemeProvider>
             <AuthSync />
             <AppToaster />
+            <OutfitChatbot />
             {children}
           </ThemeProvider>
         </SessionProvider>

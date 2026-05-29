@@ -16,6 +16,7 @@ import {
   ResDanhGiaSanPhamDTO,
 } from "@/types";
 import { getImageUrl, formatCurrency } from "@/lib/utils";
+import { tryOnStorage } from "@/lib/try-on";
 import Loading from "@/components/ui/Loading";
 import Barcode128 from "@/components/ui/Barcode128";
 import toast from "react-hot-toast";
@@ -144,6 +145,26 @@ export default function ProductDetailPage() {
     } finally {
       setAddingToCart(false);
     }
+  };
+
+  const handleAddToTryOn = () => {
+    if (!selectedVariant) {
+      toast.error("Vui lòng chọn phiên bản sản phẩm");
+      return;
+    }
+
+    tryOnStorage.addItem({
+      id: selectedVariant.id,
+      sanPhamId: selectedVariant.sanPhamId,
+      tenSanPham: selectedVariant.tenSanPham,
+      tenMauSac: selectedVariant.tenMauSac,
+      tenKichThuoc: selectedVariant.tenKichThuoc,
+      imageUrl: getImageUrl(images[0]),
+      price: selectedVariant.giaBan,
+      quantity: 1,
+    });
+
+    toast.success("Đã thêm vào danh sách thử đồ");
   };
 
   if (loading) return <Loading />;
@@ -429,7 +450,7 @@ export default function ProductDetailPage() {
 
             <div className="h-px bg-subtle" />
 
-            {/* Quantity + Add to cart */}
+            {/* Quantity + Action buttons */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <div className="flex items-center rounded-xl border border-subtle overflow-hidden">
                 <button
@@ -453,18 +474,28 @@ export default function ProductDetailPage() {
                 </button>
               </div>
 
-              <button
-                onClick={handleAddToCart}
-                disabled={
-                  addingToCart ||
-                  !selectedVariant ||
-                  selectedVariant.soLuong === 0
-                }
-                className="flex-1 w-full sm:w-auto bg-accent hover:bg-accent-hover text-white px-8 py-3.5 rounded-xl text-sm font-bold uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2.5 shadow-lg shadow-accent/20 hover:shadow-accent/30"
-              >
-                <FiShoppingCart size={16} />
-                {addingToCart ? "Đang thêm..." : "Thêm vào giỏ hàng"}
-              </button>
+              <div className="flex flex-col sm:flex-row gap-3 w-full">
+                <button
+                  onClick={handleAddToCart}
+                  disabled={
+                    addingToCart ||
+                    !selectedVariant ||
+                    selectedVariant.soLuong === 0
+                  }
+                  className="flex-1 w-full sm:w-auto bg-accent hover:bg-accent-hover text-white px-8 py-3.5 rounded-xl text-sm font-bold uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2.5 shadow-lg shadow-accent/20 hover:shadow-accent/30"
+                >
+                  <FiShoppingCart size={16} />
+                  {addingToCart ? "Đang thêm..." : "Thêm vào giỏ hàng"}
+                </button>
+
+                <button
+                  onClick={handleAddToTryOn}
+                  disabled={!selectedVariant || selectedVariant.soLuong === 0}
+                  className="flex-1 w-full sm:w-auto bg-foreground hover:opacity-90 text-background px-8 py-3.5 rounded-xl text-sm font-bold uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2.5 shadow-lg"
+                >
+                  Thêm và thử đồ
+                </button>
+              </div>
             </div>
 
             {/* Service badges */}
