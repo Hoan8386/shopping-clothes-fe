@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   FiArrowLeft,
@@ -50,8 +50,8 @@ export default function TryOnPage() {
   const [resultImageUrl, setResultImageUrl] = useState<string>("");
   const [resultFileName, setResultFileName] = useState<string>("");
   const [requestId, setRequestId] = useState<string>("");
-  const pollRef = useRef<number | null>(null);
 
+  // Tải danh sách sản phẩm đã lưu từ Storage khi component mount
   useEffect(() => {
     const stored = tryOnStorage.getAll();
     setItems(stored);
@@ -60,13 +60,14 @@ export default function TryOnPage() {
     }
   }, []);
 
+  // Giải phóng URL preview khi component unmount hoặc đổi ảnh để tránh rò rỉ bộ nhớ
   useEffect(() => {
     return () => {
-      if (pollRef.current) window.clearInterval(pollRef.current);
       if (personPreview) URL.revokeObjectURL(personPreview);
     };
   }, [personPreview]);
 
+  // Đồng bộ lại sản phẩm được chọn nếu danh sách thay đổi
   useEffect(() => {
     if (!items.length) return;
     if (!selectedId || !items.some((item) => item.id === selectedId)) {
@@ -91,10 +92,26 @@ export default function TryOnPage() {
     }
   };
 
-  const stopPolling = () => {
-    if (pollRef.current) {
-      window.clearInterval(pollRef.current);
-      pollRef.current = null;
+  // Hàm đệ quy kiểm tra tiến độ chạy ngầm độc lập qua setTimeout
+  const checkProgress = async (reqId: string) => {
+    try {
+      const progressData = await virtualTryOnService.getProgress(reqId);
+
+      // Chỉ cập nhật tiến độ nếu tiến trình đang chạy và giá trị mới lớn hơn hoặc bằng cũ
+      setProgress((prev) => Math.max(prev, progressData.progress ?? 0));
+      setStatus(progressData.message || progressData.status || "Đang xử lý...");
+
+      // Nếu trạng thái chưa kết thúc, lên lịch hẹn giờ gọi lại chính nó sau 1.5 giây
+      if (
+        progressData.status !== "completed" &&
+        progressData.status !== "cancelled" &&
+        progressData.status !== "error"
+      ) {
+        setTimeout(() => checkProgress(reqId), 1500);
+      }
+    } catch (e) {
+      // Nếu gặp lỗi kết nối/mạng tạm thời từ Ngrok, vẫn hẹn giờ thử lại sau 2 giây để tránh gãy luồng UI
+      setTimeout(() => checkProgress(reqId), 2000);
     }
   };
 
@@ -115,6 +132,7 @@ export default function TryOnPage() {
     setResultFileName("");
 
     try {
+      // 1. Kiểm tra tính hợp lệ của ảnh người
       const check = await virtualTryOnService.checkPerson(personFile);
       if (!check?.data?.has_person) {
         throw new Error(
@@ -122,64 +140,64 @@ export default function TryOnPage() {
         );
       }
 
+      // 2. Khởi tạo một Request ID mới từ Server
       const request = await virtualTryOnService.createRequestId();
       const newRequestId = request.request_id as string;
       setRequestId(newRequestId);
-      setStatus("Đang xử lý thử đồ ảo...");
+      setStatus("Đang chuẩn bị dữ liệu sản phẩm...");
 
-      pollRef.current = window.setInterval(async () => {
-        try {
-          const progressData =
-            await virtualTryOnService.getProgress(newRequestId);
-          setProgress(progressData.progress ?? 0);
-          setStatus(
-            progressData.message || progressData.status || "Đang xử lý...",
-          );
-
-          if (
-            progressData.status === "completed" ||
-            progressData.status === "cancelled" ||
-            progressData.status === "error"
-          ) {
-            stopPolling();
-          }
-        } catch {
-          // ignore polling hiccups
-        }
-      }, 1000);
-
+      // 3. Chuyển đổi URL ảnh sản phẩm thành đối tượng File
       const garmentFile = await urlToFile(
         selectedItemImage,
         `${selectedItem.tenSanPham}-${selectedItem.id}.jpg`,
       );
 
-      const result = await virtualTryOnService.process({
-        requestId: newRequestId,
-        personFile,
-        garmentFile,
-        category,
-      });
+      setStatus("Đang gửi yêu cầu thử đồ lên hệ thống AI...");
 
-      stopPolling();
-      setProgress(result.progress ?? 100);
-      setStatus(result.message || "Thử đồ ảo hoàn tất.");
-      if (result.image_url) {
-        setResultImageUrl(result.image_url);
-      }
-      if (result.result?.file_name) {
-        setResultFileName(result.result.file_name);
-      }
-      toast.success("Thử đồ hoàn tất");
+      // 4. Bắt đầu kích hoạt luồng check tiến độ chạy song song (Không dùng await block luồng)
+      checkProgress(newRequestId);
+
+      // 5. Đẩy yêu cầu xử lý AI chạy ngầm dưới dạng Background Promise
+      virtualTryOnService
+        .process({
+          requestId: newRequestId,
+          personFile,
+          garmentFile,
+          category,
+        })
+        .then((result) => {
+          // Khi Server xử lý hoàn tất hoàn toàn tác vụ chính
+          setProgress(100);
+          setStatus(result.message || "Thử đồ ảo hoàn tất.");
+          if (result.image_url) {
+            setResultImageUrl(result.image_url);
+          }
+          if (result.result?.file_name) {
+            setResultFileName(result.result.file_name);
+          }
+          toast.success("Thử đồ hoàn tất");
+        })
+        .catch((error) => {
+          // Xử lý lỗi xảy ra từ API process
+          const message =
+            error?.message ||
+            error?.detail?.message ||
+            error?.detail ||
+            "Không thể chạy thử đồ ảo";
+          setStatus(message);
+          toast.error(message);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     } catch (error: any) {
-      stopPolling();
       const message =
         error?.message ||
         error?.detail?.message ||
         error?.detail ||
-        "Không thể chạy thử đồ ảo";
+        "Có lỗi xảy ra trong quá trình khởi tạo.";
       setStatus(message);
       toast.error(message);
-    } finally {
       setLoading(false);
     }
   };
@@ -188,9 +206,8 @@ export default function TryOnPage() {
     if (!requestId) return;
     try {
       await virtualTryOnService.cancel(requestId);
-      toast.success("Đã hủy tiến trình");
+      toast.success("Đã gửi yêu cầu hủy tiến trình");
       setStatus("Đã hủy tiến trình thử đồ.");
-      stopPolling();
       setLoading(false);
     } catch (error: any) {
       toast.error(error?.message || "Không hủy được tiến trình");
@@ -241,7 +258,7 @@ export default function TryOnPage() {
                     Request ID + Process
                   </div>
                   <div className="px-4 py-2 rounded-full bg-amber-500/10 text-amber-700 text-xs font-semibold">
-                    Poll progress
+                    Async Progress
                   </div>
                 </div>
               </div>
@@ -427,7 +444,7 @@ export default function TryOnPage() {
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-pink-500 to-purple-600 px-4 py-3.5 text-sm font-semibold text-white shadow-lg shadow-pink-200/40 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <FiPlay size={14} />
-                  {loading ? "Đang chạy..." : "Bắt đầu thử đồ"}
+                  {loading ? "Đang xử lý..." : "Bắt đầu thử đồ"}
                 </button>
 
                 <button
@@ -447,7 +464,7 @@ export default function TryOnPage() {
                 </div>
                 <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/10">
                   <div
-                    className="h-full rounded-full bg-linear-to-r from-emerald-400 to-cyan-400 transition-all"
+                    className="h-full rounded-full bg-linear-to-r from-emerald-400 to-cyan-400 transition-all duration-300"
                     style={{ width: `${Math.min(progress, 100)}%` }}
                   />
                 </div>

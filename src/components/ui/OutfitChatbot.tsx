@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { productService } from "@/services/product.service";
 import outfitService from "@/services/outfit.service";
+import { formatCurrency, getImageUrl } from "@/lib/utils";
 
 type Message = {
   id: string;
@@ -13,6 +16,28 @@ type OutfitCombo = {
   combo_name: string;
   items: Array<{ id: string; name: string; price?: string; reason?: string }>;
   size_advice?: string;
+};
+
+type ResolvedOutfitItem = {
+  productId: number;
+  imageUrl: string;
+  detailUrl: string;
+};
+
+type OutfitResponse = {
+  natural_response?: string;
+  outfit_combos?: OutfitCombo[];
+  result?: {
+    outfit_combos?: OutfitCombo[];
+  };
+};
+
+type OutfitProgressResponse = OutfitResponse & {
+  status?: string;
+  stage?: string;
+  progress?: number;
+  error?: string | null;
+  finished_at?: string | null;
 };
 
 // Logo SVG AI Sparkle Hiện Đại thay cho Emoji cũ
@@ -34,9 +59,14 @@ export default function OutfitChatbot() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState<number | null>(null);
+  const [requestState, setRequestState] = useState<
+    "idle" | "loading" | "completed"
+  >("idle");
   const [requestId, setRequestId] = useState<string | null>(null);
   const [combos, setCombos] = useState<OutfitCombo[] | null>(null);
+  const [resolvedItems, setResolvedItems] = useState<
+    Record<string, ResolvedOutfitItem>
+  >({});
   const pollRef = useRef<number | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -46,8 +76,55 @@ export default function OutfitChatbot() {
   }, [messages, combos, loading]);
 
   useEffect(() => {
+    const items = combos?.flatMap((combo) => combo.items) ?? [];
+    const uniqueItems = Array.from(
+      new Map(items.map((item) => [item.id, item])).values(),
+    );
+
+    if (uniqueItems.length === 0) return;
+
+    let cancelled = false;
+
+    const loadProductDetails = async () => {
+      const nextResolved: Record<string, ResolvedOutfitItem> = {};
+
+      await Promise.all(
+        uniqueItems.map(async (item) => {
+          const numericId = Number(String(item.id).replace(/\D+/g, ""));
+          if (!numericId) return;
+
+          try {
+            const product = await productService.getById(numericId);
+            nextResolved[item.id] = {
+              productId: numericId,
+              imageUrl: getImageUrl(product.hinhAnhChinh),
+              detailUrl: `/products/${numericId}`,
+            };
+          } catch {
+            nextResolved[item.id] = {
+              productId: numericId,
+              imageUrl: "/images/placeholder.png",
+              detailUrl: `/products/${numericId}`,
+            };
+          }
+        }),
+      );
+
+      if (!cancelled) {
+        setResolvedItems(nextResolved);
+      }
+    };
+
+    void loadProductDetails();
+
     return () => {
-      if (pollRef.current) window.clearInterval(pollRef.current);
+      cancelled = true;
+    };
+  }, [combos]);
+
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) window.clearTimeout(pollRef.current);
     };
   }, []);
 
@@ -58,12 +135,30 @@ export default function OutfitChatbot() {
     ]);
   };
 
-  const renderCombos = (data: any) => {
-    const list: OutfitCombo[] =
-      data?.outfit_combos || data?.result?.outfit_combos || null;
+  const renderCombos = (
+    data?: OutfitResponse | OutfitProgressResponse | null,
+  ) => {
+    const list = data?.outfit_combos || data?.result?.outfit_combos;
     if (Array.isArray(list)) {
       setCombos(list as OutfitCombo[]);
     }
+  };
+
+  const stopPolling = () => {
+    if (pollRef.current) {
+      window.clearTimeout(pollRef.current);
+      pollRef.current = null;
+    }
+  };
+
+  const isCancelError = (error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    return (
+      message.includes("499") ||
+      message.includes("da huy tac vu tu frontend") ||
+      message.includes("đã hủy tác vụ từ frontend") ||
+      message.includes("Nguoi dung da huy tac vu tu frontend")
+    );
   };
 
   const handleSend = async () => {
@@ -72,8 +167,26 @@ export default function OutfitChatbot() {
     addMessage(text, "user");
     setInput("");
     setLoading(true);
+    setRequestState("loading");
     setCombos(null);
-    setProgress(0);
+    stopPolling();
+
+    const applyResponse = (
+      data?: OutfitResponse | OutfitProgressResponse | null,
+    ) => {
+      if (typeof data?.natural_response === "string") {
+        addMessage(data.natural_response, "bot");
+      }
+
+      renderCombos(data);
+    };
+
+    const finishRequest = () => {
+      stopPolling();
+      setLoading(false);
+      setRequestId(null);
+      setRequestState("completed");
+    };
 
     try {
       const rid = await outfitService.createRequestId();
@@ -82,41 +195,23 @@ export default function OutfitChatbot() {
         "Đang tiếp nhận thông tin và phân tích vóc dáng của bạn...",
         "bot",
       );
-      const res = await outfitService.sendQuery(rid, text);
+      const res = (await outfitService.sendQuery(rid, text)) as OutfitResponse;
+      applyResponse(res);
+      finishRequest();
+    } catch (error) {
+      if (isCancelError(error)) {
+        stopPolling();
+        setLoading(false);
+        setRequestId(null);
+        setRequestState("idle");
+        return;
+      }
 
-      if (res?.natural_response) addMessage(res.natural_response, "bot");
-      renderCombos(res);
-
-      pollRef.current = window.setInterval(async () => {
-        try {
-          const p = await outfitService.getProgress(rid);
-          const prog = typeof p?.progress === "number" ? p.progress : null;
-          setProgress(prog);
-          if (p?.finished_at || prog === 100) {
-            if (pollRef.current) window.clearInterval(pollRef.current);
-            setLoading(false);
-            setProgress(null);
-
-            if (p?.outfit_combos || p?.natural_response) {
-              if (p.natural_response) addMessage(p.natural_response, "bot");
-              renderCombos(p);
-            } else {
-              try {
-                const final = await outfitService.sendQuery(rid, text);
-                if (final?.natural_response)
-                  addMessage(final.natural_response, "bot");
-                renderCombos(final);
-              } catch (e) {}
-            }
-          }
-        } catch (e) {
-          // ignore polling errors
-        }
-      }, 1500);
-    } catch (err: any) {
-      addMessage("Hệ thống gặp gián đoạn: " + (err?.message || err), "bot");
+      const message = error instanceof Error ? error.message : String(error);
+      addMessage("Hệ thống gặp gián đoạn: " + message, "bot");
+      stopPolling();
       setLoading(false);
-      setProgress(null);
+      setRequestState("idle");
     }
   };
 
@@ -126,10 +221,10 @@ export default function OutfitChatbot() {
       await outfitService.cancel(requestId);
       addMessage("Đã hủy yêu cầu tìm kiếm trang phục.", "bot");
       setLoading(false);
-      setProgress(null);
-      if (pollRef.current) window.clearInterval(pollRef.current);
+      stopPolling();
       setRequestId(null);
-    } catch (e) {
+      setRequestState("idle");
+    } catch {
       addMessage("Hủy không thành công.", "bot");
     }
   };
@@ -138,9 +233,9 @@ export default function OutfitChatbot() {
     <div aria-live="polite" className="font-sans antialiased">
       <div className="fixed right-6 bottom-6 z-50">
         {open ? (
-          <div className="w-[400px] max-w-[calc(100vw-2rem)] h-[600px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 flex flex-col overflow-hidden transition-all duration-300 transform scale-100 origin-bottom-right">
+          <div className="w-100 max-w-[calc(100vw-2rem)] h-150 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 flex flex-col overflow-hidden transition-all duration-300 transform scale-100 origin-bottom-right">
             {/* Header Gradient quyến rũ hơn */}
-            <div className="relative p-4 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-600 text-white shadow-md flex-none">
+            <div className="relative p-4 bg-linear-to-r from-pink-500 via-purple-500 to-indigo-600 text-white shadow-md flex-none">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <BotLogo />
@@ -175,16 +270,6 @@ export default function OutfitChatbot() {
                   </svg>
                 </button>
               </div>
-
-              {/* Thanh Progress bar tinh tế ngay cạnh dưới Header */}
-              {loading && progress !== null && (
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-yellow-300 to-emerald-400 transition-all duration-500 ease-out"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-              )}
             </div>
 
             {/* Vùng nội dung tin nhắn thoáng và sạch sẽ */}
@@ -197,7 +282,7 @@ export default function OutfitChatbot() {
                   <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
                     Xin chào bạn!
                   </p>
-                  <p className="text-xs text-slate-400 max-w-[240px]">
+                  <p className="text-xs text-slate-400 max-w-60">
                     Hãy chia sẻ chiều cao, cân nặng, vóc dáng hoặc phong cách
                     bạn muốn hướng tới nhé.
                   </p>
@@ -213,7 +298,7 @@ export default function OutfitChatbot() {
                     className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm
                       ${
                         m.from === "user"
-                          ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-tr-none"
+                          ? "bg-linear-to-br from-blue-500 to-indigo-600 text-white rounded-tr-none"
                           : "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-100 dark:border-slate-700/50 rounded-tl-none"
                       }`}
                   >
@@ -240,22 +325,16 @@ export default function OutfitChatbot() {
                             key={it.id}
                             className="flex items-start gap-3 p-1.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
                           >
-                            {/* Mockup Clothes Icon */}
-                            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-pink-50 to-purple-50 dark:from-slate-700 dark:to-slate-700 text-purple-500 flex items-center justify-center flex-none border border-purple-100/50 dark:border-none">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                strokeWidth={1.5}
-                                stroke="currentColor"
-                                className="w-5 h-5"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M9.813 15.904 9 21m3.625-5.096L13.5 21m-1.302-4.961a1.5 1.5 0 1 1-1.025-1.025 1.5 1.5 0 1 1 1.025 1.025ZM21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-                                />
-                              </svg>
+                            <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-700 flex-none border border-purple-100/50 dark:border-none">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={
+                                  resolvedItems[it.id]?.imageUrl ||
+                                  "/images/placeholder.png"
+                                }
+                                alt={it.name}
+                                className="h-full w-full object-cover"
+                              />
                             </div>
 
                             <div className="flex-1 min-w-0">
@@ -265,7 +344,16 @@ export default function OutfitChatbot() {
                                 </span>
                                 {it.price && (
                                   <span className="text-[11px] font-bold text-pink-600 bg-pink-50 dark:bg-pink-950/40 dark:text-pink-400 px-2 py-0.5 rounded-full flex-none">
-                                    {it.price}đ
+                                    {typeof it.price === "number"
+                                      ? formatCurrency(it.price)
+                                      : formatCurrency(
+                                          Number(
+                                            String(it.price).replace(
+                                              /[^\d]/g,
+                                              "",
+                                            ),
+                                          ) || 0,
+                                        )}
                                   </span>
                                 )}
                               </div>
@@ -274,6 +362,17 @@ export default function OutfitChatbot() {
                                   {it.reason}
                                 </div>
                               )}
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                <Link
+                                  href={
+                                    resolvedItems[it.id]?.detailUrl ||
+                                    `/products/${String(it.id).replace(/\D+/g, "")}`
+                                  }
+                                  className="inline-flex items-center justify-center rounded-full bg-slate-900 px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+                                >
+                                  Xem chi tiết sản phẩm
+                                </Link>
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -315,12 +414,12 @@ export default function OutfitChatbot() {
                     ${
                       loading
                         ? "bg-slate-400 cursor-not-allowed"
-                        : "bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 active:scale-95"
+                        : "bg-linear-to-r from-pink-500 to-purple-600 hover:opacity-90 active:scale-95"
                     }`}
                   onClick={handleSend}
                   disabled={loading}
                 >
-                  <span>{loading ? "Đang xử lý" : "Gợi ý"}</span>
+                  <span>{loading ? "Đang xử lý" : "Gửi"}</span>
                   {!loading && (
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -335,10 +434,14 @@ export default function OutfitChatbot() {
               </div>
 
               {/* Vùng hiển thị tiến trình hủy hoặc trạng thái bên dưới */}
-              {(progress !== null || requestId) && (
+              {(requestState !== "idle" || requestId) && (
                 <div className="flex items-center justify-between mt-2 px-2 text-[11px]">
                   <div className="text-slate-400 font-medium">
-                    {progress !== null ? `Tiến trình: ${progress}%` : ""}
+                    {requestState === "loading"
+                      ? "Đang xử lý..."
+                      : requestState === "completed"
+                        ? "Hoàn thành"
+                        : ""}
                   </div>
                   {requestId && loading && (
                     <button
@@ -357,7 +460,7 @@ export default function OutfitChatbot() {
           <button
             title="Mở chatbot gợi ý phối đồ"
             onClick={() => setOpen(true)}
-            className="w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-500 via-purple-500 to-indigo-600 text-white flex items-center justify-center shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 group relative"
+            className="w-16 h-16 rounded-2xl bg-linear-to-br from-pink-500 via-purple-500 to-indigo-600 text-white flex items-center justify-center shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 group relative"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
