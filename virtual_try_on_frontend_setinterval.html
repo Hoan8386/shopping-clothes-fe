@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Fashion Frontend - Virtual Try-On & Outfit Suggestion</title>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --text: #121826;
+      --muted: #657085;
+      --line: #e6e8ef;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --danger: #dc2626;
+      --danger-dark: #b91c1c;
+      --success: #16a34a;
+      --warning: #d97706;
+      --radius: 18px;
+      --shadow: 0 14px 40px rgba(15, 23, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: radial-gradient(circle at top left, #dbeafe 0, transparent 34%), var(--bg);
+      color: var(--text);
+    }
+
+    .app {
+      width: min(1200px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 48px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.4fr 0.9fr;
+      gap: 20px;
+      align-items: stretch;
+      margin-bottom: 20px;
+    }
+
+    .hero-card,
+    .card {
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-card {
+      padding: 26px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hero-card::after {
+      content: "";
+      position: absolute;
+      width: 220px;
+      height: 220px;
+      border-radius: 999px;
+      background: rgba(37, 99, 235, 0.12);
+      right: -80px;
+      top: -90px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 13px;
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 46px);
+      line-height: 1.05;
+      letter-spacing: -1px;
+    }
+
+    .hero-card p {
+      margin: 14px 0 0;
+      color: var(--muted);
+      line-height: 1.6;
+      max-width: 680px;
+    }
+
+    .config-card {
+      padding: 18px;
+    }
+
+    .config-title {
+      font-weight: 800;
+      margin-bottom: 12px;
+      font-size: 17px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      font-size: 13px;
+      margin-bottom: 8px;
+      color: #273249;
+    }
+
+    input[type="text"],
+    input[type="password"],
+    input[type="file"],
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--text);
+      border-radius: 12px;
+      padding: 12px 13px;
+      outline: none;
+      font: inherit;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    textarea {
+      min-height: 150px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: rgba(37, 99, 235, 0.65);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      padding: 8px;
+      border-radius: 16px;
+      background: #e9eef8;
+      margin-bottom: 18px;
+      overflow-x: auto;
+    }
+
+    .tab-btn {
+      border: 0;
+      background: transparent;
+      color: #475569;
+      font-weight: 800;
+      padding: 12px 16px;
+      border-radius: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .tab-btn.active {
+      background: #fff;
+      color: var(--primary);
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .card {
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .section-title h2 {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: -0.2px;
+    }
+
+    .section-title span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .preview-box {
+      min-height: 280px;
+      border: 1px dashed #cbd5e1;
+      border-radius: 16px;
+      background: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .preview-box img {
+      width: 100%;
+      height: 100%;
+      max-height: 430px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .placeholder {
+      text-align: center;
+      color: var(--muted);
+      padding: 20px;
+      line-height: 1.5;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 15px;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.12s ease, opacity 0.12s ease, background 0.12s ease;
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    button:not(:disabled):active {
+      transform: translateY(1px);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--primary-dark);
+    }
+
+    .btn-secondary {
+      background: #e2e8f0;
+      color: #263244;
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: var(--danger-dark);
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: #fff;
+    }
+
+    .status-box {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px;
+      background: #fbfdff;
+    }
+
+    .status-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 10px;
+    }
+
+    .status-name {
+      font-weight: 900;
+      color: #1e293b;
+    }
+
+    .status-meta {
+      color: var(--muted);
+      font-size: 13px;
+      text-align: right;
+    }
+
+    .progress-wrap {
+      width: 100%;
+      height: 14px;
+      background: #e5e7eb;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #60a5fa, #2563eb);
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+
+    .message {
+      margin-top: 10px;
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: 14px;
+    }
+
+    .log {
+      background: #0f172a;
+      color: #dbeafe;
+      border-radius: 16px;
+      padding: 14px;
+      min-height: 160px;
+      max-height: 310px;
+      overflow: auto;
+      font-family: Consolas, Monaco, monospace;
+      font-size: 12px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+
+    .result-image {
+      min-height: 360px;
+    }
+
+    .result-link {
+      word-break: break-all;
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .small-note {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-top: 10px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #3730a3;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 10px;
+    }
+
+    .checkbox-row input {
+      width: 16px;
+      height: 16px;
+    }
+
+    @media (max-width: 900px) {
+      .hero,
+      .grid,
+      .grid-3 {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-card,
+      .card,
+      .config-card {
+        padding: 16px;
+      }
+
+      .preview-box,
+      .result-image {
+        min-height: 230px;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .app {
+        width: min(100% - 18px, 1200px);
+        padding-top: 14px;
+      }
+
+      .actions button {
+        width: 100%;
+      }
+
+      .section-title {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .status-line {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .status-meta {
+        text-align: left;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="hero">
+      <div class="hero-card">
+        <div class="badge">AI Fashion Frontend</div>
+        <h1>Giao diện chạy thử đồ ảo & gợi ý phối đồ</h1>
+        <p>
+          File HTML này gọi trực tiếp API: kiểm tra ảnh người, tạo request_id, chạy thử đồ ảo,
+          lấy tiến độ, hủy tiến trình, hiển thị ảnh kết quả và chạy gợi ý phối đồ.
+        </p>
+      </div>
+
+      <div class="config-card hero-card">
+        <div class="config-title">Cấu hình API</div>
+        <div style="display: grid; gap: 12px;">
+          <div>
+            <label for="baseUrl">Base URL Virtual Try-On</label>
+            <input id="baseUrl" type="text" value="http://127.0.0.1:8001" />
+          </div>
+          <div>
+            <label for="outfitBaseUrl">Base URL Outfit Suggestion</label>
+            <input id="outfitBaseUrl" type="text" value="http://127.0.0.1:8001" />
+          </div>
+          <div>
+            <label for="apiKey">API Key - để trống nếu backend đã bỏ key</label>
+            <input id="apiKey" type="password" placeholder="YOUR_API_KEY" />
+          </div>
+          <div class="checkbox-row">
+            <input id="sendOutfitApiKey" type="checkbox" />
+            <span>Gửi x-api-key cho API gợi ý phối đồ</span>
+          </div>
+          <div class="actions">
+            <button class="btn-secondary" onclick="healthCheck()">Kiểm tra server</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="tryon" onclick="switchTab('tryon')">Thử đồ ảo</button>
+      <button class="tab-btn" data-tab="outfit" onclick="switchTab('outfit')">Gợi ý phối đồ</button>
+    </nav>
+
+    <section id="tryonPanel" class="tab-panel active">
+      <div class="card">
+        <div class="section-title">
+          <div>
+            <h2>1. Chọn ảnh đầu vào</h2>
+            <span>Ảnh người và ảnh sản phẩm quần/áo</span>
+          </div>
+          <span class="pill">FormData - không set Content-Type thủ công</span>
+        </div>
+
+        <div class="grid">
+          <div>
+            <label for="personFile">Ảnh người</label>
+            <input id="personFile" type="file" accept="image/png,image/jpeg,image/jpg" onchange="previewFile(this, 'personPreview')" />
+            <div class="preview-box" style="margin-top: 12px;">
+              <div id="personPreview" class="placeholder">Chưa chọn ảnh người</div>
+            </div>
+          </div>
+
+          <div>
+            <label for="garmentFile">Ảnh quần/áo</label>
+            <input id="garmentFile" type="file" accept="image/png,image/jpeg,image/jpg" onchange="previewFile(this, 'garmentPreview')" />
+            <div class="preview-box" style="margin-top: 12px;">
+              <div id="garmentPreview" class="placeholder">Chưa chọn ảnh quần/áo</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-3" style="margin-top: 16px;">
+          <div>
+            <label for="category">Category</label>
+            <select id="category">
+              <option value="tops">tops - Áo / phần thân trên</option>
+              <option value="bottoms" selected>bottoms - Quần / váy / phần thân dưới</option>
+              <option value="one-pieces">one-pieces - Váy liền / jumpsuit</option>
+            </select>
+          </div>
+          <div>
+            <label for="currentRequestId">Request ID hiện tại</label>
+            <input id="currentRequestId" type="text" readonly placeholder="Tự động tạo khi chạy" />
+          </div>
+          <div>
+            <label for="currentFileName">File kết quả</label>
+            <input id="currentFileName" type="text" readonly placeholder="Có sau khi hoàn tất" />
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn-secondary" onclick="checkPersonOnly()">Kiểm tra ảnh có người</button>
+          <button id="runTryOnBtn" class="btn-primary" onclick="runVirtualTryOn()">Chạy thử đồ ảo</button>
+          <button id="cancelTryOnBtn" class="btn-danger" onclick="cancelTryOn()" disabled>Hủy tiến trình</button>
+          <button id="deleteImageBtn" class="btn-secondary" onclick="deleteTryOnImage()" disabled>Xóa ảnh kết quả</button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <div class="section-title">
+            <h2>2. Tiến độ xử lý</h2>
+            <span id="tryOnPercentText">0%</span>
+          </div>
+          <div class="status-box">
+            <div class="status-line">
+              <div class="status-name" id="tryOnStatus">Chưa chạy</div>
+              <div class="status-meta" id="tryOnStage">stage: none</div>
+            </div>
+            <div class="progress-wrap">
+              <div id="tryOnProgressBar" class="progress-bar"></div>
+            </div>
+            <div id="tryOnMessage" class="message">Chọn ảnh và bấm chạy thử đồ ảo.</div>
+          </div>
+          <div style="margin-top: 14px;" class="log" id="tryOnLog"></div>
+        </div>
+
+        <div class="card">
+          <div class="section-title">
+            <h2>3. Ảnh kết quả</h2>
+            <span>image_url lấy từ response /process</span>
+          </div>
+          <div class="preview-box result-image">
+            <div id="tryOnResult" class="placeholder">Chưa có kết quả</div>
+          </div>
+          <div id="resultUrlWrap" class="small-note hidden">
+            <div>URL ảnh:</div>
+            <a id="resultUrl" class="result-link" href="#" target="_blank" rel="noopener noreferrer"></a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="outfitPanel" class="tab-panel">
+      <div class="card">
+        <div class="section-title">
+          <div>
+            <h2>Gợi ý phối đồ</h2>
+            <span>Nhập yêu cầu dạng text, hệ thống tạo request_id rồi chạy API /outfits/</span>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div>
+            <label for="userQuery">Yêu cầu phối đồ</label>
+            <textarea id="userQuery" placeholder="Ví dụ: Tôi là nam, cao 1m75, nặng 68kg, muốn phối đồ đi chơi cuối tuần."></textarea>
+            <div class="grid" style="margin-top: 14px;">
+              <div>
+                <label for="outfitRequestId">Request ID phối đồ</label>
+                <input id="outfitRequestId" type="text" readonly placeholder="Tự động tạo khi chạy" />
+              </div>
+              <div>
+                <label>Thao tác</label>
+                <div class="actions" style="margin-top: 0;">
+                  <button id="runOutfitBtn" class="btn-primary" onclick="runOutfitSuggestion()">Chạy gợi ý</button>
+                  <button id="cancelOutfitBtn" class="btn-danger" onclick="cancelOutfitSuggestion()" disabled>Hủy</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="status-box">
+              <div class="status-line">
+                <div class="status-name" id="outfitStatus">Chưa chạy</div>
+                <div class="status-meta" id="outfitStage">stage: none</div>
+              </div>
+              <div class="progress-wrap">
+                <div id="outfitProgressBar" class="progress-bar"></div>
+              </div>
+              <div id="outfitMessage" class="message">Nhập nội dung và bấm chạy gợi ý.</div>
+            </div>
+            <div style="margin-top: 14px;" class="log" id="outfitLog"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">
+          <h2>Kết quả gợi ý phối đồ</h2>
+          <span>Hiển thị JSON trả về từ API</span>
+        </div>
+        <pre class="log" id="outfitResult" style="min-height: 280px;">Chưa có kết quả</pre>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const API_PREFIX = "/api/v1";
+
+    let tryOnPollingTimer = null;
+    let outfitPollingTimer = null;
+
+    // Dùng setInterval thuần, không dùng pollRef.
+    // Các cờ này giúp tránh tình trạng interval mới chạy khi request progress cũ chưa xong.
+    let tryOnPollingBusy = false;
+    let outfitPollingBusy = false;
+    let tryOnPollingFailCount = 0;
+    let outfitPollingFailCount = 0;
+    const MAX_POLLING_FAILS = 8;
+
+    let tryOnAbortController = null;
+    let currentTryOnRequestId = null;
+    let currentOutfitRequestId = null;
+    let currentResultFileName = null;
+
+    function getBaseUrl() {
+      return document.getElementById("baseUrl").value.trim().replace(/\/$/, "");
+    }
+
+    function getOutfitBaseUrl() {
+      return document.getElementById("outfitBaseUrl").value.trim().replace(/\/$/, "");
+    }
+
+    function getApiBaseUrl() {
+      return `${getBaseUrl()}${API_PREFIX}`;
+    }
+
+    function getOutfitApiBaseUrl() {
+      return `${getOutfitBaseUrl()}${API_PREFIX}`;
+    }
+
+    function getApiKey() {
+      return document.getElementById("apiKey").value.trim();
+    }
+
+    function shouldUseNgrokHeader(url = "") {
+      return String(url || "").toLowerCase().includes("ngrok");
+    }
+
+    function getAuthHeaders(extra = {}) {
+      const headers = { ...extra };
+      const apiKey = getApiKey();
+      const baseUrl = getBaseUrl();
+
+      if (apiKey) {
+        headers["x-api-key"] = apiKey;
+      }
+
+      // Bắt buộc khi gọi qua ngrok free để tránh trang warning làm fetch lỗi/CORS lỗi.
+      if (shouldUseNgrokHeader(baseUrl)) {
+        headers["ngrok-skip-browser-warning"] = "true";
+      }
+
+      return headers;
+    }
+
+    function getOutfitHeaders(extra = {}) {
+      const headers = { ...extra };
+      const shouldSendApiKey = document.getElementById("sendOutfitApiKey").checked;
+      const apiKey = getApiKey();
+      const baseUrl = getOutfitBaseUrl();
+
+      if (shouldSendApiKey && apiKey) {
+        headers["x-api-key"] = apiKey;
+      }
+
+      if (shouldUseNgrokHeader(baseUrl)) {
+        headers["ngrok-skip-browser-warning"] = "true";
+      }
+
+      return headers;
+    }
+
+    function switchTab(tabName) {
+      document.querySelectorAll(".tab-btn").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.tab === tabName);
+      });
+      document.getElementById("tryonPanel").classList.toggle("active", tabName === "tryon");
+      document.getElementById("outfitPanel").classList.toggle("active", tabName === "outfit");
+    }
+
+    function previewFile(input, previewId) {
+      const preview = document.getElementById(previewId);
+      const file = input.files?.[0];
+
+      if (!file) {
+        preview.innerHTML = "Chưa chọn ảnh";
+        preview.className = "placeholder";
+        return;
+      }
+
+      if (!file.type.startsWith("image/")) {
+        preview.innerHTML = "File không phải ảnh";
+        preview.className = "placeholder";
+        return;
+      }
+
+      const url = URL.createObjectURL(file);
+      preview.className = "";
+      preview.innerHTML = `<img src="${url}" alt="preview" />`;
+    }
+
+    function setTryOnProgress(progress, status, stage, message) {
+      const safeProgress = Number.isFinite(Number(progress)) ? Math.max(0, Math.min(100, Number(progress))) : 0;
+      document.getElementById("tryOnProgressBar").style.width = `${safeProgress}%`;
+      document.getElementById("tryOnPercentText").textContent = `${safeProgress}%`;
+      document.getElementById("tryOnStatus").textContent = status || "unknown";
+      document.getElementById("tryOnStage").textContent = `stage: ${stage || "none"}`;
+      document.getElementById("tryOnMessage").textContent = message || "Đang xử lý...";
+    }
+
+    function setOutfitProgress(progress, status, stage, message) {
+      const safeProgress = Number.isFinite(Number(progress)) ? Math.max(0, Math.min(100, Number(progress))) : 0;
+      document.getElementById("outfitProgressBar").style.width = `${safeProgress}%`;
+      document.getElementById("outfitStatus").textContent = status || "unknown";
+      document.getElementById("outfitStage").textContent = `stage: ${stage || "none"}`;
+      document.getElementById("outfitMessage").textContent = message || "Đang xử lý...";
+    }
+
+    function logTryOn(message, data) {
+      appendLog("tryOnLog", message, data);
+    }
+
+    function logOutfit(message, data) {
+      appendLog("outfitLog", message, data);
+    }
+
+    function appendLog(elementId, message, data) {
+      const el = document.getElementById(elementId);
+      const time = new Date().toLocaleTimeString("vi-VN");
+      let line = `[${time}] ${message}`;
+      if (data !== undefined) {
+        line += `\n${typeof data === "string" ? data : JSON.stringify(data, null, 2)}`;
+      }
+      el.textContent += `${line}\n\n`;
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function clearTryOnLog() {
+      document.getElementById("tryOnLog").textContent = "";
+    }
+
+    function clearOutfitLog() {
+      document.getElementById("outfitLog").textContent = "";
+    }
+
+    async function readJsonResponse(res) {
+      const contentType = res.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        return await res.json();
+      }
+      const text = await res.text();
+      try {
+        return JSON.parse(text);
+      } catch (_) {
+        return { detail: text || res.statusText };
+      }
+    }
+
+    async function fetchJson(url, options = {}) {
+      try {
+        const finalOptions = {
+          ...options,
+          mode: "cors",
+          cache: "no-store",
+          headers: {
+            ...(options.headers || {})
+          }
+        };
+
+        // Không dùng credentials với backend đang allow_origins=["*"].
+        // Nếu để credentials include, browser sẽ chặn CORS.
+        delete finalOptions.credentials;
+
+        const res = await fetch(url, finalOptions);
+        const data = await readJsonResponse(res);
+
+        if (!res.ok) {
+          const error = new Error(getErrorMessage(data, res.status));
+          error.status = res.status;
+          error.data = data;
+          error.url = url;
+          throw error;
+        }
+
+        return data;
+      } catch (error) {
+        if (error instanceof TypeError) {
+          const networkError = new Error(
+            `${error.message}. Kiểm tra CORS, ngrok, backend có đang chạy đúng port, hoặc endpoint progress có bị server block hay không.`
+          );
+          networkError.type = "FETCH_FAILED";
+          networkError.url = url;
+          networkError.originalError = error;
+          throw networkError;
+        }
+
+        throw error;
+      }
+    }
+
+    function getErrorMessage(errorData, status) {
+      if (!errorData) return `HTTP ${status}`;
+      if (typeof errorData === "string") return errorData;
+      if (typeof errorData.detail === "string") return errorData.detail;
+      if (typeof errorData.message === "string") return errorData.message;
+      if (errorData.detail && typeof errorData.detail === "object") {
+        return errorData.detail.message || errorData.detail.error || JSON.stringify(errorData.detail);
+      }
+      return JSON.stringify(errorData);
+    }
+
+    function getFileInput(id) {
+      return document.getElementById(id).files?.[0] || null;
+    }
+
+    async function healthCheck() {
+      try {
+        const data = await fetchJson(`${getBaseUrl()}/`, {
+          method: "GET",
+          headers: getAuthHeaders()
+        });
+        alert(`Server hoạt động: ${data.message || "OK"}`);
+      } catch (error) {
+        alert(`Không gọi được server: ${error.message}`);
+      }
+    }
+
+    async function checkPersonApi(personFile) {
+      const formData = new FormData();
+      formData.append("image", personFile);
+
+      return await fetchJson(`${getApiBaseUrl()}/check/person`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: formData
+      });
+    }
+
+    async function checkPersonOnly() {
+      const personFile = getFileInput("personFile");
+      if (!personFile) {
+        alert("Vui lòng chọn ảnh người trước.");
+        return;
+      }
+
+      try {
+        clearTryOnLog();
+        logTryOn("Đang kiểm tra ảnh có người...");
+        const data = await checkPersonApi(personFile);
+        logTryOn("Kết quả kiểm tra ảnh người", data);
+
+        if (data?.data?.has_person === true) {
+          alert("Ảnh hợp lệ: phát hiện có người.");
+        } else {
+          alert("Ảnh không hợp lệ: không phát hiện người.");
+        }
+      } catch (error) {
+        logTryOn("Lỗi kiểm tra ảnh người", error.data || error.message);
+        alert(`Lỗi kiểm tra ảnh người: ${error.message}`);
+      }
+    }
+
+    async function createTryOnRequestId() {
+      return await fetchJson(`${getApiBaseUrl()}/virtual-try-on/request-id`, {
+        method: "POST",
+        headers: getAuthHeaders()
+      });
+    }
+
+    async function getTryOnProgress(requestId) {
+      return await fetchJson(`${getApiBaseUrl()}/virtual-try-on/progress/${encodeURIComponent(requestId)}`, {
+        method: "GET",
+        headers: getAuthHeaders()
+      });
+    }
+
+    async function processVirtualTryOn(requestId, personFile, garmentFile, category) {
+      const formData = new FormData();
+      formData.append("request_id", requestId);
+      formData.append("person_img", personFile);
+      formData.append("garment_img", garmentFile);
+      formData.append("category", category);
+
+      tryOnAbortController = new AbortController();
+
+      return await fetchJson(`${getApiBaseUrl()}/virtual-try-on/process`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: formData,
+        signal: tryOnAbortController.signal
+      });
+    }
+
+    function startTryOnPolling(requestId) {
+      stopTryOnPolling();
+
+      tryOnPollingBusy = false;
+      tryOnPollingFailCount = 0;
+
+      const pollOnce = async () => {
+        if (!requestId || tryOnPollingBusy) {
+          return;
+        }
+
+        tryOnPollingBusy = true;
+
+        try {
+          const progressData = await getTryOnProgress(requestId);
+          tryOnPollingFailCount = 0;
+
+          setTryOnProgress(
+            progressData.progress,
+            progressData.status,
+            progressData.stage,
+            progressData.message
+          );
+
+          if (["completed", "cancelled", "error"].includes(progressData.status)) {
+            stopTryOnPolling();
+          }
+        } catch (error) {
+          tryOnPollingFailCount += 1;
+
+          // Không spam log liên tục mỗi giây. Vẫn tiếp tục polling bằng setInterval.
+          if (tryOnPollingFailCount === 1 || tryOnPollingFailCount % 3 === 0) {
+            logTryOn(
+              `Lỗi polling tiến độ thử đồ lần ${tryOnPollingFailCount}`,
+              error.data || error.message
+            );
+          }
+
+          if (tryOnPollingFailCount >= MAX_POLLING_FAILS) {
+            stopTryOnPolling();
+            logTryOn(
+              "Đã dừng polling vì lỗi quá nhiều lần",
+              "Process vẫn có thể đang chạy. Hãy kiểm tra tab Network/backend log hoặc chờ response của /process."
+            );
+          }
+        } finally {
+          tryOnPollingBusy = false;
+        }
+      };
+
+      // Gọi sau 1.2 giây để /process có thời gian chuyển trạng thái sang running.
+      tryOnPollingTimer = setInterval(pollOnce, 1200);
+    }
+
+    function stopTryOnPolling() {
+      if (tryOnPollingTimer) {
+        clearInterval(tryOnPollingTimer);
+        tryOnPollingTimer = null;
+      }
+
+      tryOnPollingBusy = false;
+      tryOnPollingFailCount = 0;
+    }
+
+    async function runVirtualTryOn() {
+      const personFile = getFileInput("personFile");
+      const garmentFile = getFileInput("garmentFile");
+      const category = document.getElementById("category").value;
+
+      if (!personFile || !garmentFile) {
+        alert("Vui lòng chọn đủ ảnh người và ảnh quần/áo.");
+        return;
+      }
+
+      clearTryOnLog();
+      document.getElementById("tryOnResult").className = "placeholder";
+      document.getElementById("tryOnResult").innerHTML = "Đang chờ kết quả...";
+      document.getElementById("resultUrlWrap").classList.add("hidden");
+      document.getElementById("currentFileName").value = "";
+      currentResultFileName = null;
+      setTryOnProgress(0, "starting", "validate", "Đang kiểm tra ảnh người...");
+
+      document.getElementById("runTryOnBtn").disabled = true;
+      document.getElementById("cancelTryOnBtn").disabled = false;
+      document.getElementById("deleteImageBtn").disabled = true;
+
+      try {
+        logTryOn("Bước 1: Kiểm tra ảnh có người");
+        const checkData = await checkPersonApi(personFile);
+        logTryOn("Kết quả check/person", checkData);
+
+        if (checkData?.data?.has_person !== true) {
+          throw new Error("Ảnh người không hợp lệ. API không phát hiện có người trong ảnh.");
+        }
+
+        setTryOnProgress(5, "creating", "request-id", "Đang tạo request_id...");
+        logTryOn("Bước 2: Tạo request_id");
+        const requestData = await createTryOnRequestId();
+        currentTryOnRequestId = requestData.request_id;
+        document.getElementById("currentRequestId").value = currentTryOnRequestId || "";
+        logTryOn("Đã tạo request_id", requestData);
+
+        setTryOnProgress(10, "running", "process", "Đang gửi ảnh sang API thử đồ ảo...");
+        startTryOnPolling(currentTryOnRequestId);
+
+        logTryOn("Bước 3: Gọi /virtual-try-on/process. API này sẽ chờ tới khi có kết quả.");
+        const result = await processVirtualTryOn(currentTryOnRequestId, personFile, garmentFile, category);
+        stopTryOnPolling();
+        logTryOn("Hoàn tất thử đồ ảo", result);
+
+        setTryOnProgress(100, result.status || "completed", result.stage || "completed", result.message || "Thử đồ ảo hoàn tất.");
+        renderTryOnResult(result);
+      } catch (error) {
+        stopTryOnPolling();
+
+        if (error.name === "AbortError") {
+          logTryOn("Đã dừng request process ở frontend.");
+          setTryOnProgress(0, "cancelled", "cancelled", "Đã hủy tiến trình.");
+        } else {
+          logTryOn("Lỗi chạy thử đồ ảo", error.data || error.message);
+          setTryOnProgress(0, "error", "error", error.message || "Có lỗi xảy ra.");
+          document.getElementById("tryOnResult").className = "placeholder";
+          document.getElementById("tryOnResult").innerHTML = `Lỗi: ${escapeHtml(error.message)}`;
+          alert(`Lỗi chạy thử đồ ảo: ${error.message}`);
+        }
+      } finally {
+        document.getElementById("runTryOnBtn").disabled = false;
+        document.getElementById("cancelTryOnBtn").disabled = true;
+        tryOnAbortController = null;
+      }
+    }
+
+    function renderTryOnResult(result) {
+      const imageUrl = result?.image_url || result?.result?.image_url;
+      currentResultFileName = result?.result?.file_name || extractFileNameFromUrl(imageUrl);
+      document.getElementById("currentFileName").value = currentResultFileName || "";
+
+      if (!imageUrl) {
+        document.getElementById("tryOnResult").className = "placeholder";
+        document.getElementById("tryOnResult").innerHTML = "API hoàn tất nhưng không trả image_url.";
+        return;
+      }
+
+      const resultEl = document.getElementById("tryOnResult");
+      resultEl.className = "";
+      resultEl.innerHTML = `<img src="${escapeAttribute(imageUrl)}" alt="Kết quả thử đồ ảo" />`;
+
+      const link = document.getElementById("resultUrl");
+      link.href = imageUrl;
+      link.textContent = imageUrl;
+      document.getElementById("resultUrlWrap").classList.remove("hidden");
+      document.getElementById("deleteImageBtn").disabled = !currentResultFileName;
+    }
+
+    function extractFileNameFromUrl(url) {
+      if (!url) return null;
+      try {
+        const parsed = new URL(url);
+        return decodeURIComponent(parsed.pathname.split("/").pop() || "");
+      } catch (_) {
+        return url.split("/").pop() || null;
+      }
+    }
+
+    async function cancelTryOn() {
+      if (!currentTryOnRequestId) {
+        alert("Chưa có request_id để hủy.");
+        return;
+      }
+
+      try {
+        logTryOn("Đang gọi API hủy tiến trình...");
+        const data = await fetchJson(`${getApiBaseUrl()}/virtual-try-on/cancel/${encodeURIComponent(currentTryOnRequestId)}`, {
+          method: "POST",
+          headers: getAuthHeaders()
+        });
+        logTryOn("Đã hủy tiến trình", data);
+        stopTryOnPolling();
+        setTryOnProgress(data.progress || 0, data.status || "cancelled", data.stage || "cancelled", data.message || "Đã hủy tiến trình.");
+
+        if (tryOnAbortController) {
+          tryOnAbortController.abort();
+        }
+      } catch (error) {
+        logTryOn("Lỗi hủy tiến trình", error.data || error.message);
+        alert(`Lỗi hủy tiến trình: ${error.message}`);
+      }
+    }
+
+    async function deleteTryOnImage() {
+      const fileName = currentResultFileName || document.getElementById("currentFileName").value.trim();
+      if (!fileName) {
+        alert("Chưa có file ảnh kết quả để xóa.");
+        return;
+      }
+
+      if (!confirm(`Xóa ảnh kết quả: ${fileName}?`)) return;
+
+      try {
+        const data = await fetchJson(`${getApiBaseUrl()}/virtual-try-on/delete/${encodeURIComponent(fileName)}`, {
+          method: "DELETE",
+          headers: getAuthHeaders()
+        });
+        logTryOn("Đã xóa ảnh kết quả", data);
+        currentResultFileName = null;
+        document.getElementById("currentFileName").value = "";
+        document.getElementById("deleteImageBtn").disabled = true;
+        document.getElementById("resultUrlWrap").classList.add("hidden");
+        document.getElementById("tryOnResult").className = "placeholder";
+        document.getElementById("tryOnResult").innerHTML = "Ảnh kết quả đã bị xóa.";
+      } catch (error) {
+        logTryOn("Lỗi xóa ảnh kết quả", error.data || error.message);
+        alert(`Lỗi xóa ảnh: ${error.message}`);
+      }
+    }
+
+    async function createOutfitRequestId() {
+      return await fetchJson(`${getOutfitApiBaseUrl()}/outfits/request-id`, {
+        method: "POST",
+        headers: getOutfitHeaders()
+      });
+    }
+
+    async function suggestOutfit(requestId, userQuery) {
+      return await fetchJson(`${getOutfitApiBaseUrl()}/outfits/`, {
+        method: "POST",
+        headers: getOutfitHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({
+          request_id: requestId,
+          user_query: userQuery
+        })
+      });
+    }
+
+    async function getOutfitProgress(requestId) {
+      return await fetchJson(`${getOutfitApiBaseUrl()}/outfits/progress/${encodeURIComponent(requestId)}`, {
+        method: "GET",
+        headers: getOutfitHeaders()
+      });
+    }
+
+    function startOutfitPolling(requestId) {
+      stopOutfitPolling();
+
+      outfitPollingBusy = false;
+      outfitPollingFailCount = 0;
+
+      const pollOnce = async () => {
+        if (!requestId || outfitPollingBusy) {
+          return;
+        }
+
+        outfitPollingBusy = true;
+
+        try {
+          const progressData = await getOutfitProgress(requestId);
+          outfitPollingFailCount = 0;
+
+          setOutfitProgress(
+            progressData.progress,
+            progressData.status,
+            progressData.stage,
+            progressData.message || progressData.error
+          );
+
+          if (["completed", "cancelled", "error"].includes(progressData.status)) {
+            stopOutfitPolling();
+          }
+        } catch (error) {
+          outfitPollingFailCount += 1;
+
+          if (outfitPollingFailCount === 1 || outfitPollingFailCount % 3 === 0) {
+            logOutfit(
+              `Lỗi polling tiến độ phối đồ lần ${outfitPollingFailCount}`,
+              error.data || error.message
+            );
+          }
+
+          if (outfitPollingFailCount >= MAX_POLLING_FAILS) {
+            stopOutfitPolling();
+            logOutfit(
+              "Đã dừng polling vì lỗi quá nhiều lần",
+              "Tiến trình vẫn có thể đang chạy. Hãy kiểm tra tab Network/backend log."
+            );
+          }
+        } finally {
+          outfitPollingBusy = false;
+        }
+      };
+
+      outfitPollingTimer = setInterval(pollOnce, 1200);
+    }
+
+    function stopOutfitPolling() {
+      if (outfitPollingTimer) {
+        clearInterval(outfitPollingTimer);
+        outfitPollingTimer = null;
+      }
+
+      outfitPollingBusy = false;
+      outfitPollingFailCount = 0;
+    }
+
+    async function runOutfitSuggestion() {
+      const userQuery = document.getElementById("userQuery").value.trim();
+      if (!userQuery) {
+        alert("Vui lòng nhập yêu cầu phối đồ.");
+        return;
+      }
+
+      clearOutfitLog();
+      document.getElementById("outfitResult").textContent = "Đang chạy...";
+      document.getElementById("runOutfitBtn").disabled = true;
+      document.getElementById("cancelOutfitBtn").disabled = false;
+      setOutfitProgress(0, "starting", "request-id", "Đang tạo request_id phối đồ...");
+
+      try {
+        logOutfit("Bước 1: Tạo request_id phối đồ");
+        const requestData = await createOutfitRequestId();
+        currentOutfitRequestId = requestData.request_id;
+        document.getElementById("outfitRequestId").value = currentOutfitRequestId || "";
+        logOutfit("Đã tạo request_id", requestData);
+
+        setOutfitProgress(10, "running", "suggest", "Đang chạy gợi ý phối đồ...");
+        startOutfitPolling(currentOutfitRequestId);
+
+        logOutfit("Bước 2: Gọi /outfits/");
+        const result = await suggestOutfit(currentOutfitRequestId, userQuery);
+        stopOutfitPolling();
+        logOutfit("Hoàn tất gợi ý phối đồ", result);
+        document.getElementById("outfitResult").textContent = JSON.stringify(result, null, 2);
+        setOutfitProgress(100, result.status || "completed", result.stage || "completed", "Gợi ý phối đồ hoàn tất.");
+      } catch (error) {
+        stopOutfitPolling();
+        logOutfit("Lỗi chạy gợi ý phối đồ", error.data || error.message);
+        document.getElementById("outfitResult").textContent = JSON.stringify(error.data || { error: error.message }, null, 2);
+        setOutfitProgress(0, "error", "error", error.message || "Có lỗi xảy ra.");
+        alert(`Lỗi gợi ý phối đồ: ${error.message}`);
+      } finally {
+        document.getElementById("runOutfitBtn").disabled = false;
+        document.getElementById("cancelOutfitBtn").disabled = true;
+      }
+    }
+
+    async function cancelOutfitSuggestion() {
+      if (!currentOutfitRequestId) {
+        alert("Chưa có request_id phối đồ để hủy.");
+        return;
+      }
+
+      try {
+        logOutfit("Đang hủy tiến trình phối đồ...");
+        const data = await fetchJson(`${getOutfitApiBaseUrl()}/outfits/cancel/${encodeURIComponent(currentOutfitRequestId)}`, {
+          method: "POST",
+          headers: getOutfitHeaders()
+        });
+        stopOutfitPolling();
+        logOutfit("Đã hủy tiến trình phối đồ", data);
+        setOutfitProgress(data.progress || 0, data.status || "cancelled", data.stage || "cancelled", "Đã hủy tiến trình phối đồ.");
+      } catch (error) {
+        logOutfit("Lỗi hủy phối đồ", error.data || error.message);
+        alert(`Lỗi hủy phối đồ: ${error.message}`);
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function escapeAttribute(value) {
+      return escapeHtml(value).replace(/`/g, "&#096;");
+    }
+
+    window.addEventListener("beforeunload", () => {
+      stopTryOnPolling();
+      stopOutfitPolling();
+    });
+  </script>
+</body>
+</html>

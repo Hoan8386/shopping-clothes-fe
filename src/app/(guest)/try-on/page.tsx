@@ -38,9 +38,24 @@ const urlToFile = async (imageUrl: string, fileName: string) => {
   return new File([blob], fileName, { type: blob.type || "image/jpeg" });
 };
 
+type TryOnProcessResponse = {
+  status?: string;
+  stage?: string;
+  progress?: number;
+  message?: string;
+  image_url?: string;
+  result?: {
+    file_name?: string;
+    image_url?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+};
+
 export default function TryOnPage() {
   const [items, setItems] = useState<TryOnSelectedProduct[]>([]);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedTopId, setSelectedTopId] = useState<number | null>(null);
+  const [selectedBottomId, setSelectedBottomId] = useState<number | null>(null);
   const [personFile, setPersonFile] = useState<File | null>(null);
   const [personPreview, setPersonPreview] = useState<string>("");
   const [category, setCategory] = useState<TryOnCategory>("bottoms");
@@ -50,35 +65,63 @@ export default function TryOnPage() {
   const [resultImageUrl, setResultImageUrl] = useState<string>("");
   const [resultFileName, setResultFileName] = useState<string>("");
   const [requestId, setRequestId] = useState<string>("");
-
+  const [progressIntervalId, setProgressIntervalId] = useState<number | null>(
+    null,
+  );
   // Tải danh sách sản phẩm đã lưu từ Storage khi component mount
   useEffect(() => {
     const stored = tryOnStorage.getAll();
     setItems(stored);
-    if (stored.length > 0) {
-      setSelectedId(stored[0].id);
-    }
   }, []);
 
   // Giải phóng URL preview khi component unmount hoặc đổi ảnh để tránh rò rỉ bộ nhớ
   useEffect(() => {
     return () => {
       if (personPreview) URL.revokeObjectURL(personPreview);
+      if (progressIntervalId !== null) window.clearInterval(progressIntervalId);
     };
-  }, [personPreview]);
+  }, [personPreview, progressIntervalId]);
 
-  // Đồng bộ lại sản phẩm được chọn nếu danh sách thay đổi
   useEffect(() => {
-    if (!items.length) return;
-    if (!selectedId || !items.some((item) => item.id === selectedId)) {
-      setSelectedId(items[0].id);
+    if (
+      selectedTopId !== null &&
+      !items.some((item) => item.id === selectedTopId)
+    ) {
+      setSelectedTopId(null);
     }
-  }, [items, selectedId]);
+    if (
+      selectedBottomId !== null &&
+      !items.some((item) => item.id === selectedBottomId)
+    ) {
+      setSelectedBottomId(null);
+    }
+  }, [items, selectedTopId, selectedBottomId]);
+
+  const selectedTopItem = useMemo(
+    () => items.find((item) => item.id === selectedTopId) || null,
+    [items, selectedTopId],
+  );
+
+  const selectedBottomItem = useMemo(
+    () => items.find((item) => item.id === selectedBottomId) || null,
+    [items, selectedBottomId],
+  );
 
   const selectedItem = useMemo(
-    () => items.find((item) => item.id === selectedId) || null,
-    [items, selectedId],
+    () =>
+      (category === "tops"
+        ? selectedTopItem || selectedBottomItem
+        : category === "bottoms"
+          ? selectedBottomItem || selectedTopItem
+          : selectedTopItem || selectedBottomItem) || null,
+    [category, selectedTopItem, selectedBottomItem],
   );
+
+  const resolvedResultImageUrl = useMemo(() => {
+    if (resultImageUrl) return resultImageUrl;
+    if (resultFileName) return virtualTryOnService.getResultUrl(resultFileName);
+    return "";
+  }, [resultImageUrl, resultFileName]);
 
   const selectedItemImage = selectedItem ? selectedItem.imageUrl : "";
 
@@ -89,29 +132,6 @@ export default function TryOnPage() {
       setPersonPreview(URL.createObjectURL(file));
     } else {
       setPersonPreview("");
-    }
-  };
-
-  // Hàm đệ quy kiểm tra tiến độ chạy ngầm độc lập qua setTimeout
-  const checkProgress = async (reqId: string) => {
-    try {
-      const progressData = await virtualTryOnService.getProgress(reqId);
-
-      // Chỉ cập nhật tiến độ nếu tiến trình đang chạy và giá trị mới lớn hơn hoặc bằng cũ
-      setProgress((prev) => Math.max(prev, progressData.progress ?? 0));
-      setStatus(progressData.message || progressData.status || "Đang xử lý...");
-
-      // Nếu trạng thái chưa kết thúc, lên lịch hẹn giờ gọi lại chính nó sau 1.5 giây
-      if (
-        progressData.status !== "completed" &&
-        progressData.status !== "cancelled" &&
-        progressData.status !== "error"
-      ) {
-        setTimeout(() => checkProgress(reqId), 1500);
-      }
-    } catch (e) {
-      // Nếu gặp lỗi kết nối/mạng tạm thời từ Ngrok, vẫn hẹn giờ thử lại sau 2 giây để tránh gãy luồng UI
-      setTimeout(() => checkProgress(reqId), 2000);
     }
   };
 
@@ -149,36 +169,67 @@ export default function TryOnPage() {
       // 3. Chuyển đổi URL ảnh sản phẩm thành đối tượng File
       const garmentFile = await urlToFile(
         selectedItemImage,
-        `${selectedItem.tenSanPham}-${selectedItem.id}.jpg`,
+        `${selectedItem.tenSanPham}-${selectedItem.id}`,
       );
+      // Giữ nguyên type ảnh sản phẩm (không ép sang JPG)
+      // const garmentJpgFile = await convertImageToJpgFile(garmentFile);
+      const garmentJpgFile = garmentFile;
 
       setStatus("Đang gửi yêu cầu thử đồ lên hệ thống AI...");
 
-      // 4. Bắt đầu kích hoạt luồng check tiến độ chạy song song (Không dùng await block luồng)
-      checkProgress(newRequestId);
+      // 4. Dùng setInterval thuần để lấy tiến độ cho tới khi hoàn thành
+      const intervalId = window.setInterval(async () => {
+        try {
+          const progressData =
+            await virtualTryOnService.getProgress(newRequestId);
+          setProgress((prev) => Math.max(prev, progressData.progress ?? 0));
+          setStatus(
+            progressData.message || progressData.status || "Đang xử lý...",
+          );
+
+          if (
+            progressData.status === "completed" ||
+            progressData.status === "cancelled" ||
+            progressData.status === "error"
+          ) {
+            window.clearInterval(intervalId);
+            setProgressIntervalId(null);
+          }
+        } catch {
+          // Bỏ qua lỗi ngắt quãng từ mạng/ngrok, interval sẽ tự poll lại.
+        }
+      }, 1000);
+
+      setProgressIntervalId(intervalId);
 
       // 5. Đẩy yêu cầu xử lý AI chạy ngầm dưới dạng Background Promise
       virtualTryOnService
         .process({
           requestId: newRequestId,
           personFile,
-          garmentFile,
+          garmentFile: garmentJpgFile,
           category,
         })
         .then((result) => {
+          const payload = result as TryOnProcessResponse;
           // Khi Server xử lý hoàn tất hoàn toàn tác vụ chính
+          window.clearInterval(intervalId);
+          setProgressIntervalId(null);
           setProgress(100);
-          setStatus(result.message || "Thử đồ ảo hoàn tất.");
-          if (result.image_url) {
-            setResultImageUrl(result.image_url);
+          setStatus(payload.message || "Thử đồ ảo hoàn tất.");
+          const imageUrl = payload.image_url || payload.result?.image_url;
+          if (imageUrl) {
+            setResultImageUrl(imageUrl);
           }
-          if (result.result?.file_name) {
-            setResultFileName(result.result.file_name);
+          if (payload.result?.file_name) {
+            setResultFileName(payload.result.file_name);
           }
           toast.success("Thử đồ hoàn tất");
         })
         .catch((error) => {
           // Xử lý lỗi xảy ra từ API process
+          window.clearInterval(intervalId);
+          setProgressIntervalId(null);
           const message =
             error?.message ||
             error?.detail?.message ||
@@ -190,11 +241,16 @@ export default function TryOnPage() {
         .finally(() => {
           setLoading(false);
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as {
+        message?: string;
+        detail?: { message?: string } | string;
+      };
+      const detailMessage =
+        typeof err?.detail === "string" ? err.detail : err?.detail?.message;
       const message =
-        error?.message ||
-        error?.detail?.message ||
-        error?.detail ||
+        err?.message ||
+        detailMessage ||
         "Có lỗi xảy ra trong quá trình khởi tạo.";
       setStatus(message);
       toast.error(message);
@@ -205,19 +261,25 @@ export default function TryOnPage() {
   const handleCancel = async () => {
     if (!requestId) return;
     try {
+      if (progressIntervalId !== null) {
+        window.clearInterval(progressIntervalId);
+        setProgressIntervalId(null);
+      }
       await virtualTryOnService.cancel(requestId);
       toast.success("Đã gửi yêu cầu hủy tiến trình");
       setStatus("Đã hủy tiến trình thử đồ.");
       setLoading(false);
-    } catch (error: any) {
-      toast.error(error?.message || "Không hủy được tiến trình");
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      toast.error(err?.message || "Không hủy được tiến trình");
     }
   };
 
   const handleClearAll = () => {
     tryOnStorage.clear();
     setItems([]);
-    setSelectedId(null);
+    setSelectedTopId(null);
+    setSelectedBottomId(null);
     toast.success("Đã xóa danh sách chọn");
   };
 
@@ -234,36 +296,36 @@ export default function TryOnPage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-6 lg:gap-8">
-          <section className="space-y-6">
-            <div className="rounded-3xl border border-white/60 bg-white/90 backdrop-blur shadow-xl shadow-rose-100/40 p-6 lg:p-8">
-              <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.24em] text-accent font-semibold">
-                    Virtual Try-On
-                  </p>
-                  <h1 className="mt-2 text-3xl lg:text-4xl font-bold text-foreground">
-                    Trang thử đồ
-                  </h1>
-                  <p className="mt-3 text-sm text-muted max-w-2xl">
-                    Chọn một sản phẩm đã lưu, tải ảnh người lên và hệ thống sẽ
-                    gọi BE AI thử đồ ảo theo đúng luồng trong tài liệu API.
-                  </p>
+        <div className="flex flex-col gap-6 lg:gap-8">
+          <div className="rounded-3xl border border-white/60 bg-white/90 backdrop-blur shadow-xl shadow-rose-100/40 p-6 lg:p-8">
+            <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.24em] text-accent font-semibold">
+                  Virtual Try-On
+                </p>
+                <h1 className="mt-2 text-3xl lg:text-4xl font-bold text-foreground">
+                  Trang thử đồ
+                </h1>
+                <p className="mt-3 text-sm text-muted max-w-2xl">
+                  Chọn một sản phẩm đã lưu, tải ảnh người lên và hệ thống sẽ gọi
+                  BE AI thử đồ ảo theo đúng luồng trong tài liệu API.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <div className="px-4 py-2 rounded-full bg-emerald-500/10 text-emerald-700 text-xs font-semibold">
+                  Check person
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <div className="px-4 py-2 rounded-full bg-emerald-500/10 text-emerald-700 text-xs font-semibold">
-                    Check person
-                  </div>
-                  <div className="px-4 py-2 rounded-full bg-sky-500/10 text-sky-700 text-xs font-semibold">
-                    Request ID + Process
-                  </div>
-                  <div className="px-4 py-2 rounded-full bg-amber-500/10 text-amber-700 text-xs font-semibold">
-                    Async Progress
-                  </div>
+                <div className="px-4 py-2 rounded-full bg-sky-500/10 text-sky-700 text-xs font-semibold">
+                  Request ID + Process
+                </div>
+                <div className="px-4 py-2 rounded-full bg-amber-500/10 text-amber-700 text-xs font-semibold">
+                  Async Progress
                 </div>
               </div>
             </div>
+          </div>
 
+          <section className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,0.95fr)] gap-6 lg:gap-8 items-start">
             <div className="rounded-3xl border border-subtle bg-card shadow-lg overflow-hidden">
               <div className="flex items-center justify-between px-6 py-4 border-b border-subtle">
                 <div>
@@ -299,11 +361,12 @@ export default function TryOnPage() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 lg:p-6">
                   {items.map((item) => {
-                    const active = item.id === selectedId;
+                    const topActive = item.id === selectedTopId;
+                    const bottomActive = item.id === selectedBottomId;
+                    const active = topActive || bottomActive;
                     return (
-                      <button
+                      <div
                         key={item.id}
-                        onClick={() => setSelectedId(item.id)}
                         className={`text-left rounded-2xl border p-4 transition-all duration-200 ${
                           active
                             ? "border-accent bg-accent/5 shadow-md shadow-accent/10"
@@ -339,18 +402,52 @@ export default function TryOnPage() {
                             <div className="mt-3 text-sm font-semibold text-accent">
                               {formatCurrency(item.price)}
                             </div>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedTopId(item.id)}
+                                className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                                  topActive
+                                    ? "bg-sky-500 text-white"
+                                    : "bg-sky-500/10 text-sky-700 hover:bg-sky-500/20"
+                                }`}
+                              >
+                                Chọn áo
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedBottomId(item.id)}
+                                className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                                  bottomActive
+                                    ? "bg-emerald-500 text-white"
+                                    : "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20"
+                                }`}
+                              >
+                                Chọn quần
+                              </button>
+                            </div>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {topActive && (
+                                <span className="rounded-full bg-sky-500/10 px-2.5 py-1 text-[11px] font-semibold text-sky-700">
+                                  Đã chọn cho áo
+                                </span>
+                              )}
+                              {bottomActive && (
+                                <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+                                  Đã chọn cho quần
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
               )}
             </div>
-          </section>
 
-          <aside className="space-y-6">
-            <div className="rounded-3xl border border-subtle bg-card shadow-lg p-6 lg:p-7 space-y-6 sticky top-6">
+            <aside className="rounded-3xl border border-subtle bg-card shadow-lg p-6 lg:p-7 space-y-6">
               <div>
                 <h2 className="text-lg font-semibold text-foreground">
                   Thiết lập thử đồ
@@ -411,10 +508,86 @@ export default function TryOnPage() {
                 </select>
               </div>
 
+              <div className="rounded-2xl border border-subtle bg-section p-4 space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs uppercase tracking-wider text-muted font-semibold">
+                    Bộ đã chọn
+                  </p>
+                  <p className="text-[11px] text-muted text-right">
+                    Có thể chọn cùng lúc cả áo và quần
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-subtle bg-background p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-sky-700">
+                      Áo
+                    </p>
+                    {selectedTopItem ? (
+                      <div className="mt-2 flex items-start gap-3">
+                        <div className="h-16 w-12 shrink-0 overflow-hidden rounded-lg bg-section border border-subtle">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={selectedTopItem.imageUrl}
+                            alt={selectedTopItem.tenSanPham}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-semibold text-foreground line-clamp-2">
+                            {selectedTopItem.tenSanPham}
+                          </h3>
+                          <p className="mt-1 text-sm text-muted">
+                            {selectedTopItem.tenMauSac} •{" "}
+                            {selectedTopItem.tenKichThuoc}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-sm text-muted">Chưa chọn áo.</p>
+                    )}
+                  </div>
+
+                  <div className="rounded-xl border border-subtle bg-background p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
+                      Quần
+                    </p>
+                    {selectedBottomItem ? (
+                      <div className="mt-2 flex items-start gap-3">
+                        <div className="h-16 w-12 shrink-0 overflow-hidden rounded-lg bg-section border border-subtle">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={selectedBottomItem.imageUrl}
+                            alt={selectedBottomItem.tenSanPham}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-semibold text-foreground line-clamp-2">
+                            {selectedBottomItem.tenSanPham}
+                          </h3>
+                          <p className="mt-1 text-sm text-muted">
+                            {selectedBottomItem.tenMauSac} •{" "}
+                            {selectedBottomItem.tenKichThuoc}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-sm text-muted">Chưa chọn quần.</p>
+                    )}
+                  </div>
+                </div>
+
+                <p className="text-xs text-muted">
+                  Khi bấm chạy, hệ thống sẽ dùng ảnh theo loại đang chọn ở
+                  dropdown.
+                </p>
+              </div>
+
               {selectedItem && (
                 <div className="rounded-2xl border border-subtle bg-section p-4">
                   <p className="text-xs uppercase tracking-wider text-muted font-semibold">
-                    Sản phẩm sẽ thử
+                    Ảnh sẽ gửi lên để xử lý
                   </p>
                   <div className="mt-3 flex items-start gap-3">
                     <div className="h-20 w-16 shrink-0 overflow-hidden rounded-xl bg-background border border-subtle">
@@ -477,55 +650,50 @@ export default function TryOnPage() {
                   </p>
                 )}
               </div>
-            </div>
+            </aside>
+          </section>
 
-            <div className="rounded-3xl border border-subtle bg-card shadow-lg overflow-hidden">
-              <div className="px-6 py-4 border-b border-subtle">
-                <h2 className="text-lg font-semibold text-foreground">
-                  Kết quả
-                </h2>
-                <p className="text-sm text-muted">
-                  Ảnh trả về từ BE AI sẽ hiển thị ở đây.
-                </p>
-              </div>
-              <div className="p-4 lg:p-6">
-                {resultImageUrl ? (
-                  <a
-                    href={resultImageUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block overflow-hidden rounded-3xl border border-subtle bg-background"
-                  >
+          <section className="rounded-3xl border border-subtle bg-card shadow-lg overflow-hidden">
+            <div className="px-6 py-4 border-b border-subtle">
+              <h2 className="text-lg font-semibold text-foreground">Kết quả</h2>
+              <p className="text-sm text-muted">
+                Ảnh trả về từ BE AI sẽ hiển thị ở đây.
+              </p>
+            </div>
+            <div className="p-4 lg:p-6">
+              {resolvedResultImageUrl ? (
+                <div className="block overflow-hidden rounded-3xl border border-subtle bg-section/40">
+                  <div className="flex min-h-64 items-center justify-center p-3 lg:p-4">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={resultImageUrl}
+                      src={resolvedResultImageUrl}
                       alt="Kết quả thử đồ"
-                      className="w-full object-cover"
+                      className="max-h-135 w-full object-contain"
                     />
-                  </a>
-                ) : (
-                  <div className="flex min-h-64 items-center justify-center rounded-3xl border border-dashed border-subtle bg-section/40 text-center text-muted">
-                    <div>
-                      <p className="font-medium text-foreground">
-                        Chưa có kết quả
-                      </p>
-                      <p className="mt-2 text-sm">
-                        Chọn ảnh và bấm{" "}
-                        <span className="font-semibold">Bắt đầu thử đồ</span> để
-                        chạy AI.
-                      </p>
-                    </div>
                   </div>
-                )}
+                </div>
+              ) : (
+                <div className="flex min-h-64 items-center justify-center rounded-3xl border border-dashed border-subtle bg-section/40 text-center text-muted">
+                  <div>
+                    <p className="font-medium text-foreground">
+                      Chưa có kết quả
+                    </p>
+                    <p className="mt-2 text-sm">
+                      Chọn ảnh và bấm{" "}
+                      <span className="font-semibold">Bắt đầu thử đồ</span> để
+                      chạy AI.
+                    </p>
+                  </div>
+                </div>
+              )}
 
-                {resultFileName && (
-                  <p className="mt-4 text-xs text-muted break-all">
-                    file: {resultFileName}
-                  </p>
-                )}
-              </div>
+              {resultFileName && (
+                <p className="mt-4 text-xs text-muted break-all">
+                  file: {resultFileName}
+                </p>
+              )}
             </div>
-          </aside>
+          </section>
         </div>
       </div>
     </div>
