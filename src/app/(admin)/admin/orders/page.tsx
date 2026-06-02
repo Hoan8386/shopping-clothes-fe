@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { CuaHang, DonHang } from "@/types";
+import { CuaHang, DonHang, NhanVien, VanChuyen } from "@/types";
 import { orderService, OrderSearchParams } from "@/services/order.service";
-import { cuaHangService } from "@/services/common.service";
+import { cuaHangService, vanChuyenService } from "@/services/common.service";
+import { nhanVienService } from "@/services/employee.service";
 import {
   formatCurrency,
   formatDate,
@@ -65,15 +66,40 @@ function getValidNextStatuses(
   }
 }
 
+function getPaymentStatusColor(status: string | number): string {
+  const text = getPaymentStatusText(status);
+  switch (text) {
+    case "Chưa thanh toán":
+      return "bg-amber-500/10 text-amber-700 border border-amber-200";
+    case "Đã thanh toán":
+      return "bg-emerald-500/10 text-emerald-700 border border-emerald-200";
+    case "Thanh toán thất bại":
+      return "bg-red-500/10 text-red-700 border border-red-200";
+    default:
+      return "bg-gray-100 text-gray-700 border border-gray-200";
+  }
+}
+
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<DonHang[]>([]);
   const [stores, setStores] = useState<CuaHang[]>([]);
+  const [employees, setEmployees] = useState<NhanVien[]>([]);
+  const [shippingPartners, setShippingPartners] = useState<VanChuyen[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [filterStoreId, setFilterStoreId] = useState<number | undefined>();
   const [filterStatus, setFilterStatus] = useState<number | undefined>();
+  const [filterPaymentStatus, setFilterPaymentStatus] = useState<
+    number | undefined
+  >();
+  const [filterShippingId, setFilterShippingId] = useState<
+    number | undefined
+  >();
   const [filterType, setFilterType] = useState<number | undefined>();
+  const [filterEmployeeId, setFilterEmployeeId] = useState<
+    number | undefined
+  >();
 
   // Detail modal
   const [selectedOrder, setSelectedOrder] = useState<DonHang | null>(null);
@@ -94,17 +120,33 @@ export default function AdminOrdersPage() {
         size: 15,
         cuaHangId: filterStoreId,
         trangThai: filterStatus,
+        trangThaiThanhToan: filterPaymentStatus,
         hinhThucDonHang: filterType,
+        nhanVienId: filterEmployeeId,
       };
       const data = await orderService.getAll(params);
-      setOrders(data.result);
-      setTotalPages(data.meta.pages);
+      const filteredOrders =
+        filterShippingId === undefined
+          ? data.result
+          : data.result.filter(
+              (order) => order.vanChuyen?.id === filterShippingId,
+            );
+      setOrders(filteredOrders);
+      setTotalPages(filterShippingId === undefined ? data.meta.pages : 1);
     } catch {
       toast.error("Không thể tải đơn hàng");
     } finally {
       setLoading(false);
     }
-  }, [page, filterStoreId, filterStatus, filterType]);
+  }, [
+    page,
+    filterStoreId,
+    filterStatus,
+    filterPaymentStatus,
+    filterShippingId,
+    filterType,
+    filterEmployeeId,
+  ]);
 
   useEffect(() => {
     fetchOrders();
@@ -121,6 +163,29 @@ export default function AdminOrdersPage() {
     };
 
     fetchStores();
+  }, []);
+
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const data = await nhanVienService.getAll();
+        setEmployees(data ?? []);
+      } catch {
+        setEmployees([]);
+      }
+    };
+
+    const fetchShippingPartners = async () => {
+      try {
+        const data = await vanChuyenService.getAll();
+        setShippingPartners(data ?? []);
+      } catch {
+        setShippingPartners([]);
+      }
+    };
+
+    fetchEmployees();
+    fetchShippingPartners();
   }, []);
 
   const openDetail = async (id: number) => {
@@ -231,6 +296,38 @@ export default function AdminOrdersPage() {
           ))}
         </div>
         <select
+          value={filterPaymentStatus ?? ""}
+          onChange={(e) => {
+            setFilterPaymentStatus(
+              e.target.value !== "" ? Number(e.target.value) : undefined,
+            );
+            setPage(1);
+          }}
+          className="border border-subtle bg-background text-foreground rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition"
+        >
+          <option value="">Tất cả thanh toán</option>
+          <option value="0">Chưa thanh toán</option>
+          <option value="1">Đã thanh toán</option>
+          <option value="2">Thanh toán thất bại</option>
+        </select>
+        <select
+          value={filterShippingId ?? ""}
+          onChange={(e) => {
+            setFilterShippingId(
+              e.target.value !== "" ? Number(e.target.value) : undefined,
+            );
+            setPage(1);
+          }}
+          className="border border-subtle bg-background text-foreground rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition"
+        >
+          <option value="">Tất cả vận chuyển</option>
+          {shippingPartners.map((shipping) => (
+            <option key={shipping.id} value={shipping.id}>
+              {shipping.tenVanChuyen}
+            </option>
+          ))}
+        </select>
+        <select
           value={filterType ?? ""}
           onChange={(e) => {
             setFilterType(
@@ -243,6 +340,23 @@ export default function AdminOrdersPage() {
           <option value="">Tất cả hình thức</option>
           <option value="0">COD/Tiền mặt</option>
           <option value="1">VNPAY</option>
+        </select>
+        <select
+          value={filterEmployeeId ?? ""}
+          onChange={(e) => {
+            setFilterEmployeeId(
+              e.target.value !== "" ? Number(e.target.value) : undefined,
+            );
+            setPage(1);
+          }}
+          className="border border-subtle bg-background text-foreground rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition"
+        >
+          <option value="">Tất cả nhân viên</option>
+          {employees.map((employee) => (
+            <option key={employee.id} value={employee.id}>
+              {employee.tenNhanVien}
+            </option>
+          ))}
         </select>
       </div>
 
@@ -274,13 +388,7 @@ export default function AdminOrdersPage() {
                     Nhân viên
                   </th>
                   <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
-                    Bên vận chuyển
-                  </th>
-                  <th className="px-5 py-3.5 text-right text-xs font-semibold text-muted uppercase tracking-wider">
                     Tổng tiền
-                  </th>
-                  <th className="px-5 py-3.5 text-center text-xs font-semibold text-muted uppercase tracking-wider">
-                    Hình thức
                   </th>
                   <th className="px-5 py-3.5 text-center text-xs font-semibold text-muted uppercase tracking-wider">
                     Trạng thái
@@ -308,23 +416,8 @@ export default function AdminOrdersPage() {
                     <td className="px-5 py-3.5 text-muted">
                       {o.nhanVien?.tenNhanVien || "—"}
                     </td>
-                    <td className="px-5 py-3.5 text-muted">
-                      {o.vanChuyen?.tenVanChuyen || "—"}
-                    </td>
                     <td className="px-5 py-3.5 text-right font-semibold text-accent">
                       {formatCurrency(o.tongTienTra || o.tongTien)}
-                    </td>
-                    <td className="px-5 py-3.5 text-center">
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full ${
-                          o.hinhThucDonHang === 0 ||
-                          o.hinhThucDonHang === "COD/Tiền mặt"
-                            ? "bg-section text-muted"
-                            : "bg-blue-500/10 text-blue-500"
-                        }`}
-                      >
-                        {getPaymentMethodText(o.hinhThucDonHang)}
-                      </span>
                     </td>
                     <td className="px-5 py-3.5 text-center">
                       <span
@@ -336,7 +429,13 @@ export default function AdminOrdersPage() {
                       </span>
                     </td>
                     <td className="px-5 py-3.5 text-center text-xs text-muted">
-                      {getPaymentStatusText(o.trangThaiThanhToan)}
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getPaymentStatusColor(
+                          o.trangThaiThanhToan,
+                        )}`}
+                      >
+                        {getPaymentStatusText(o.trangThaiThanhToan)}
+                      </span>
                     </td>
                     <td className="px-5 py-3.5 text-center">
                       <div className="flex items-center justify-center gap-1">

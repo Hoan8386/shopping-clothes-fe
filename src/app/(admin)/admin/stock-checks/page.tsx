@@ -3,10 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Loading from "@/components/ui/Loading";
 import { formatDate } from "@/lib/utils";
-import { KiemKeHangHoa } from "@/types";
-import { kiemKeHangHoaService } from "@/services/stock-check.service";
+import { CuaHang, KiemKeHangHoa, LoaiKiemKe } from "@/types";
+import {
+  kiemKeHangHoaService,
+  loaiKiemKeService,
+} from "@/services/stock-check.service";
+import { cuaHangService } from "@/services/common.service";
 import toast from "react-hot-toast";
-import { FiCheck, FiEye, FiRefreshCw, FiX } from "react-icons/fi";
+import { FiCheck, FiEye, FiPlus, FiRefreshCw, FiX } from "react-icons/fi";
 
 const WAITING = 1;
 const RECHECK = 2;
@@ -30,13 +34,22 @@ function getStatusColor(status: number) {
 export default function AdminStockChecksPage() {
   const [loading, setLoading] = useState(true);
   const [checks, setChecks] = useState<KiemKeHangHoa[]>([]);
+  const [stores, setStores] = useState<CuaHang[]>([]);
+  const [types, setTypes] = useState<LoaiKiemKe[]>([]);
   const [showDetail, setShowDetail] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [selected, setSelected] = useState<KiemKeHangHoa | null>(null);
   const [processingId, setProcessingId] = useState<number | null>(null);
+  const [creating, setCreating] = useState(false);
   const [filterStatus, setFilterStatus] = useState<number | "ALL">("ALL");
   const [filterStoreId, setFilterStoreId] = useState<number | "ALL">("ALL");
   const [filterFromDate, setFilterFromDate] = useState("");
   const [filterToDate, setFilterToDate] = useState("");
+  const [createStoreId, setCreateStoreId] = useState<number | "" | "ALL">("");
+  const [createLoaiKiemKeId, setCreateLoaiKiemKeId] = useState<number | "">("");
+  const [createTitle, setCreateTitle] = useState("");
+  const [createDate, setCreateDate] = useState("");
+  const [createNote, setCreateNote] = useState("");
 
   const waitingCount = useMemo(
     () => checks.filter((item) => item.trangThai === WAITING).length,
@@ -110,6 +123,23 @@ export default function AdminStockChecksPage() {
     fetchData();
   }, [fetchData]);
 
+  useEffect(() => {
+    const loadMasterData = async () => {
+      try {
+        const [storeData, typeData] = await Promise.all([
+          cuaHangService.getAll(),
+          loaiKiemKeService.getAll(),
+        ]);
+        setStores(storeData ?? []);
+        setTypes(typeData ?? []);
+      } catch {
+        setStores([]);
+        setTypes([]);
+      }
+    };
+    loadMasterData();
+  }, []);
+
   const openDetail = async (id: number) => {
     try {
       const data = await kiemKeHangHoaService.getById(id);
@@ -169,10 +199,66 @@ export default function AdminStockChecksPage() {
     }
   };
 
+  const resetCreateForm = () => {
+    setCreateStoreId("");
+    setCreateLoaiKiemKeId("");
+    setCreateTitle("");
+    setCreateDate("");
+    setCreateNote("");
+  };
+
+  const handleCreateStockCheck = async () => {
+    if (!createStoreId) {
+      toast.error("Vui lòng chọn cửa hàng");
+      return;
+    }
+
+    if (!createTitle.trim()) {
+      toast.error("Vui lòng nhập tên phiếu kiểm kê");
+      return;
+    }
+
+    try {
+      setCreating(true);
+      await kiemKeHangHoaService.create({
+        cuaHangId: createStoreId === "ALL" ? undefined : Number(createStoreId),
+        loaiKiemKeId: createLoaiKiemKeId
+          ? Number(createLoaiKiemKeId)
+          : undefined,
+        tenPhieuKiemKe: createTitle.trim(),
+        ghiChu: createNote.trim() || undefined,
+        ngayKiemKe: createDate || undefined,
+        chiTietKiemKes: [],
+      });
+
+      toast.success(
+        "Đã tạo phiếu kiểm kê và gửi cho tất cả quản lý của cửa hàng",
+      );
+      setShowCreateModal(false);
+      resetCreateForm();
+      fetchData();
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Không thể tạo phiếu kiểm kê";
+      toast.error(message);
+    } finally {
+      setCreating(false);
+    }
+  };
+
   if (loading) return <Loading />;
 
   return (
     <div className="space-y-5">
+      <div className="flex justify-end">
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-accent text-white text-sm hover:bg-accent-hover transition"
+        >
+          <FiPlus size={16} /> Tạo kiểm kê
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="bg-card border border-subtle rounded-xl p-4">
           <p className="text-xs text-muted uppercase tracking-wide">
@@ -495,6 +581,133 @@ export default function AdminStockChecksPage() {
                     </button>
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 p-4 overflow-y-auto">
+          <div className="min-h-full flex items-center justify-center">
+            <div className="w-full max-w-xl bg-card border border-subtle rounded-2xl">
+              <div className="px-5 py-4 border-b border-subtle flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-foreground">
+                  Tạo phiếu kiểm kê
+                </h3>
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  className="text-muted hover:text-foreground"
+                >
+                  <FiX size={20} />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">
+                    Cửa hàng <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={String(createStoreId)}
+                    onChange={(e) => {
+                      if (e.target.value === "ALL") {
+                        setCreateStoreId("ALL");
+                        return;
+                      }
+                      setCreateStoreId(
+                        e.target.value ? Number(e.target.value) : "",
+                      );
+                    }}
+                    className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm"
+                  >
+                    <option value="">Chọn cửa hàng</option>
+                    <option value="ALL">Tất cả cửa hàng</option>
+                    {stores.map((store) => (
+                      <option key={store.id} value={store.id}>
+                        {store.tenCuaHang}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">
+                    Tên phiếu kiểm kê <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    value={createTitle}
+                    onChange={(e) => setCreateTitle(e.target.value)}
+                    placeholder="Ví dụ: Kiểm kê cuối tháng"
+                    className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">
+                    Loại kiểm kê
+                  </label>
+                  <select
+                    value={String(createLoaiKiemKeId)}
+                    onChange={(e) =>
+                      setCreateLoaiKiemKeId(
+                        e.target.value ? Number(e.target.value) : "",
+                      )
+                    }
+                    className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm"
+                  >
+                    <option value="">Không chọn</option>
+                    {types.map((type) => (
+                      <option key={type.id} value={type.id}>
+                        {type.tenLoaiKiemKe}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">
+                    Ngày kiểm kê
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={createDate}
+                    onChange={(e) => setCreateDate(e.target.value)}
+                    className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">
+                    Ghi chú
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={createNote}
+                    onChange={(e) => setCreateNote(e.target.value)}
+                    className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm resize-none"
+                    placeholder="Nhập ghi chú cho đợt kiểm kê"
+                  />
+                </div>
+              </div>
+
+              <div className="px-5 py-4 border-t border-subtle flex items-center justify-end gap-2">
+                <button
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    resetCreateForm();
+                  }}
+                  className="px-4 py-2 border border-subtle rounded-lg text-sm text-foreground hover:bg-section transition"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleCreateStockCheck}
+                  disabled={creating}
+                  className="px-4 py-2 rounded-lg bg-accent text-white text-sm hover:bg-accent-hover transition disabled:opacity-60"
+                >
+                  {creating ? "Đang tạo..." : "Tạo và gửi"}
+                </button>
               </div>
             </div>
           </div>

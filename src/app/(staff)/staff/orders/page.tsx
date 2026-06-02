@@ -11,6 +11,7 @@ import {
   ResChiTietSanPhamDTO,
   ResKhachHangLookupDTO,
   ResSanPhamDTO,
+  NhanVien,
 } from "@/types";
 import { orderService, OrderSearchParams } from "@/services/order.service";
 import { productService } from "@/services/product.service";
@@ -19,6 +20,8 @@ import {
   khuyenMaiDiemService,
   khuyenMaiHoaDonService,
 } from "@/services/common.service";
+import { nhanVienService } from "@/services/employee.service";
+import { useAuthStore } from "@/store/auth.store";
 import {
   formatCurrency,
   formatDate,
@@ -120,6 +123,7 @@ export default function StaffOrdersPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const hasProcessedVNPayReturnRef = useRef(false);
+  const { user } = useAuthStore();
 
   // Tab navigation
   const [activeTab, setActiveTab] = useState<"orders" | "draft-carts">(
@@ -135,6 +139,12 @@ export default function StaffOrdersPage() {
     number | undefined
   >();
   const [filterType, setFilterType] = useState<number | undefined>();
+  const [filterEmployeeId, setFilterEmployeeId] = useState<
+    number | undefined
+  >();
+  const [employeeOptions, setEmployeeOptions] = useState<NhanVien[]>([]);
+  const [orderIdInput, setOrderIdInput] = useState("");
+  const [orderIdSearch, setOrderIdSearch] = useState<number | undefined>();
 
   // Draft carts tab
   const [draftCarts, setDraftCarts] = useState<ResGioHangNhanVienDTO[]>([]);
@@ -211,12 +221,18 @@ export default function StaffOrdersPage() {
   const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
+      if (orderIdSearch) {
+        const order = await orderService.getById(orderIdSearch);
+        setOrders(order ? [order] : []);
+        setTotalPages(1);
+        return;
+      }
       const params: OrderSearchParams = { page, size: 15 };
-      if (filterStatus !== undefined) params.trangThai = filterStatus;
       if (filterPaymentStatus !== undefined) {
         params.trangThaiThanhToan = filterPaymentStatus;
       }
       if (filterType !== undefined) params.hinhThucDonHang = filterType;
+      if (filterEmployeeId !== undefined) params.nhanVienId = filterEmployeeId;
       const data = await orderService.getAll(params);
       setOrders(data.result);
       setTotalPages(data.meta.pages);
@@ -225,11 +241,53 @@ export default function StaffOrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, filterPaymentStatus, filterStatus, filterType]);
+  }, [page, filterPaymentStatus, filterType, filterEmployeeId, orderIdSearch]);
 
   useEffect(() => {
     fetchOrders();
   }, [fetchOrders]);
+
+  useEffect(() => {
+    const loadEmployees = async () => {
+      try {
+        const employees = await nhanVienService.getAll();
+        if (!user?.idCuaHang) {
+          setEmployeeOptions([]);
+          return;
+        }
+        setEmployeeOptions(
+          employees.filter((nv) => nv.cuaHang?.id === user.idCuaHang),
+        );
+      } catch {
+        setEmployeeOptions([]);
+      }
+    };
+
+    loadEmployees();
+  }, [user?.idCuaHang]);
+
+  const handleSearchByOrderId = () => {
+    const trimmed = orderIdInput.trim();
+    if (!trimmed) {
+      setOrderIdSearch(undefined);
+      return;
+    }
+
+    const orderId = Number(trimmed);
+    if (!Number.isInteger(orderId) || orderId <= 0) {
+      toast.error("Mã đơn không hợp lệ");
+      return;
+    }
+
+    setOrderIdSearch(orderId);
+    setPage(1);
+  };
+
+  const handleClearOrderSearch = () => {
+    setOrderIdInput("");
+    setOrderIdSearch(undefined);
+    setPage(1);
+  };
 
   const fetchDraftCarts = async () => {
     try {
@@ -1034,11 +1092,16 @@ export default function StaffOrdersPage() {
     staffCart?.tongTienGoc ||
     posItems.reduce((sum, item) => sum + item.giaBan * item.soLuong, 0);
 
-  const pendingOrders = orders.filter((o) => {
+  const filteredOrders =
+    filterStatus === undefined
+      ? orders
+      : orders.filter((o) => getStatusNumber(o.trangThai) === filterStatus);
+
+  const pendingOrders = filteredOrders.filter((o) => {
     const n = getStatusNumber(o.trangThai);
     return n >= 0 && n <= 2;
   }).length;
-  const onlineOrders = orders.filter(
+  const onlineOrders = filteredOrders.filter(
     (o) => o.hinhThucDonHang === 1 || o.hinhThucDonHang === "VNPAY",
   ).length;
 
@@ -1201,7 +1264,7 @@ export default function StaffOrdersPage() {
                 Tổng đơn trang
               </p>
               <p className="text-xl font-bold text-foreground mt-1">
-                {orders.length}
+                {filteredOrders.length}
               </p>
             </div>
             <div className="bg-card border border-subtle rounded-xl p-4">
@@ -1271,12 +1334,53 @@ export default function StaffOrdersPage() {
               <option value="0">COD/Tiền mặt</option>
               <option value="1">VNPAY</option>
             </select>
+            <select
+              value={filterEmployeeId ?? ""}
+              onChange={(e) => {
+                setFilterEmployeeId(
+                  e.target.value !== "" ? Number(e.target.value) : undefined,
+                );
+                setPage(1);
+              }}
+              className="border border-subtle bg-background text-foreground rounded-lg px-3 py-1.5 text-sm"
+            >
+              <option value="">Tất cả nhân viên</option>
+              {employeeOptions.map((nv) => (
+                <option key={nv.id} value={nv.id}>
+                  {nv.tenNhanVien}
+                </option>
+              ))}
+            </select>
+            <div className="flex items-center gap-2">
+              <input
+                value={orderIdInput}
+                onChange={(e) => setOrderIdInput(e.target.value)}
+                placeholder="Tìm theo mã đơn"
+                className="border border-subtle bg-background text-foreground rounded-lg px-3 py-1.5 text-sm w-36"
+              />
+              <button
+                type="button"
+                onClick={handleSearchByOrderId}
+                className="px-3 py-1.5 rounded-lg bg-accent text-white text-sm hover:bg-accent-hover"
+              >
+                Tìm
+              </button>
+              {orderIdSearch && (
+                <button
+                  type="button"
+                  onClick={handleClearOrderSearch}
+                  className="px-3 py-1.5 rounded-lg border border-subtle text-sm text-foreground hover:bg-section"
+                >
+                  Xóa
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Orders Table */}
           {loading ? (
             <Loading />
-          ) : orders.length === 0 ? (
+          ) : filteredOrders.length === 0 ? (
             <div className="text-center py-16 text-muted">
               Không có đơn hàng nào
             </div>
@@ -1323,7 +1427,7 @@ export default function StaffOrdersPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-subtle">
-                    {orders.map((o) => (
+                    {filteredOrders.map((o) => (
                       <tr key={o.id} className="hover:bg-section transition">
                         <td className="px-4 py-3 font-semibold">#{o.id}</td>
                         <td className="px-4 py-3 text-muted">
