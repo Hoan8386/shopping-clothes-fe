@@ -21,7 +21,21 @@ const nextConfig: NextConfig = {
         port: "8080",
         pathname: "/storage/**",
       },
+      {
+        protocol: "https",
+        hostname: "frostlike-grime-trimester.ngrok-free.dev", // Đổi thành domain mới
+        pathname: "/**",
+      },
     ],
+  },
+
+  async rewrites() {
+    return [
+      {
+        source: "/api/v1/:path*",
+        destination: "https://frostlike-grime-trimester.ngrok-free.dev/api/v1/:path*", // Đổi thành domain mới
+      },
+    ];
   },
 };
 
