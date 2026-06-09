@@ -32,7 +32,7 @@ export type TryOnHistoryEntry = {
   savedAt: string;
   resultImageUrl: string;
   products: Array<{
-    role: "top" | "bottom" | "single";
+    role: "top" | "bottom" | "dress" | "single";
     id: number;
     sanPhamId: number;
     tenSanPham: string;
@@ -148,6 +148,7 @@ export default function TryOnPage() {
   const [items, setItems] = useState<TryOnSelectedProduct[]>([]);
   const [selectedTopId, setSelectedTopId] = useState<number | null>(null);
   const [selectedBottomId, setSelectedBottomId] = useState<number | null>(null);
+  const [selectedDressId, setSelectedDressId] = useState<number | null>(null);
   const [personFile, setPersonFile] = useState<File | null>(null);
   const [personPreview, setPersonPreview] = useState<string>("");
   const [category, setCategory] = useState<TryOnCategory>("bottoms");
@@ -189,7 +190,10 @@ export default function TryOnPage() {
     if (selectedBottomId !== null && !items.some((item) => item.id === selectedBottomId)) {
       setSelectedBottomId(null);
     }
-  }, [items, selectedTopId, selectedBottomId]);
+    if (selectedDressId !== null && !items.some((item) => item.id === selectedDressId)) {
+      setSelectedDressId(null);
+    }
+  }, [items, selectedTopId, selectedBottomId, selectedDressId]);
 
   const selectedTopItem = useMemo(
     () => items.find((item) => item.id === selectedTopId) || null,
@@ -198,6 +202,10 @@ export default function TryOnPage() {
   const selectedBottomItem = useMemo(
     () => items.find((item) => item.id === selectedBottomId) || null,
     [items, selectedBottomId],
+  );
+  const selectedDressItem = useMemo(
+    () => items.find((item) => item.id === selectedDressId) || null,
+    [items, selectedDressId],
   );
 
   const resolvedResultImageUrl = useMemo(() => {
@@ -275,9 +283,10 @@ export default function TryOnPage() {
   const handleRun = async () => {
     const hasTop = selectedTopItem !== null;
     const hasBottom = selectedBottomItem !== null;
+    const hasDress = selectedDressItem !== null;
 
-    if (!hasTop && !hasBottom) {
-      toast.error("Vui lòng chọn ít nhất một sản phẩm (áo hoặc quần) để thử đồ");
+    if (!hasTop && !hasBottom && !hasDress) {
+      toast.error("Vui lòng chọn ít nhất một sản phẩm (áo, quần hoặc đầm) để thử đồ");
       return;
     }
     if (!personFile) {
@@ -301,7 +310,12 @@ export default function TryOnPage() {
       let finalImageUrl = "";
       let finalFileName = "";
 
-      if (hasTop && hasBottom) {
+      if (hasDress) {
+        // Đầm chạy đơn lẻ, bỏ qua top/bottom
+        const dressResult = await executeSingleTryOnStep(personFile, selectedDressItem!, "one-pieces", "Thử Đầm");
+        finalImageUrl = dressResult.image_url || dressResult.result?.image_url || "";
+        finalFileName = dressResult.result?.file_name || "";
+      } else if (hasTop && hasBottom) {
         const step1Result = await executeSingleTryOnStep(personFile, selectedTopItem!, "tops", "Bước 1/2: Thử Áo");
         const step1Url = step1Result.image_url || step1Result.result?.image_url;
         if (!step1Url) throw new Error("Không nhận được phản hồi ảnh từ Bước 1 (Thử Áo)");
@@ -362,6 +376,7 @@ export default function TryOnPage() {
     setItems([]);
     setSelectedTopId(null);
     setSelectedBottomId(null);
+    setSelectedDressId(null);
     toast.success("Đã làm sạch danh sách chọn");
   };
 
@@ -389,7 +404,9 @@ export default function TryOnPage() {
   const handleSaveSession = () => {
     if (!resolvedResultImageUrl) { toast.error("Chưa có ảnh kết quả để lưu phiên!"); return; }
     const products: TryOnHistoryEntry["products"] = [];
-    if (selectedTopItem && selectedBottomItem) {
+    if (selectedDressItem) {
+      products.push({ role: "dress", id: selectedDressItem.id, sanPhamId: selectedDressItem.sanPhamId, tenSanPham: selectedDressItem.tenSanPham, tenMauSac: selectedDressItem.tenMauSac, tenKichThuoc: selectedDressItem.tenKichThuoc, imageUrl: selectedDressItem.imageUrl, price: selectedDressItem.price });
+    } else if (selectedTopItem && selectedBottomItem) {
       products.push({ role: "top", id: selectedTopItem.id, sanPhamId: selectedTopItem.sanPhamId, tenSanPham: selectedTopItem.tenSanPham, tenMauSac: selectedTopItem.tenMauSac, tenKichThuoc: selectedTopItem.tenKichThuoc, imageUrl: selectedTopItem.imageUrl, price: selectedTopItem.price });
       products.push({ role: "bottom", id: selectedBottomItem.id, sanPhamId: selectedBottomItem.sanPhamId, tenSanPham: selectedBottomItem.tenSanPham, tenMauSac: selectedBottomItem.tenMauSac, tenKichThuoc: selectedBottomItem.tenKichThuoc, imageUrl: selectedBottomItem.imageUrl, price: selectedBottomItem.price });
     } else {
@@ -521,7 +538,7 @@ export default function TryOnPage() {
                 <div className="flex items-center justify-between px-6 py-4 border-b border-subtle">
                   <div>
                     <h2 className="text-lg font-semibold text-foreground">Sản phẩm đã chọn</h2>
-                    <p className="text-sm text-muted">Có thể bấm chọn cả 1 Áo và 1 Quần cùng lúc để thử trọn bộ.</p>
+                    <p className="text-sm text-muted">Chọn Áo + Quần để thử trọn bộ, hoặc chọn Đầm để thử đơn lẻ.</p>
                   </div>
                   <button onClick={handleClearAll} className="inline-flex items-center gap-2 text-sm text-rose-600 hover:text-rose-700">
                     <FiTrash2 size={14} />
@@ -567,18 +584,40 @@ export default function TryOnPage() {
                               <div className="mt-3 flex flex-wrap gap-2">
                                 <button
                                   type="button"
-                                  onClick={() => setSelectedTopId(item.id === selectedTopId ? null : item.id)}
+                                  onClick={() => {
+                                    setSelectedTopId(item.id === selectedTopId ? null : item.id);
+                                    setSelectedDressId(null); // clear đầm khi chọn áo
+                                  }}
                                   className={`rounded-full px-3 py-1 text-xs font-semibold transition ${topActive ? "bg-sky-500 text-white" : "bg-sky-500/10 text-sky-700 hover:bg-sky-500/20"}`}
                                 >
                                   {topActive ? "Hủy chọn áo" : "Chọn áo"}
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => setSelectedBottomId(item.id === selectedBottomId ? null : item.id)}
+                                  onClick={() => {
+                                    setSelectedBottomId(item.id === selectedBottomId ? null : item.id);
+                                    setSelectedDressId(null); // clear đầm khi chọn quần
+                                  }}
                                   className={`rounded-full px-3 py-1 text-xs font-semibold transition ${bottomActive ? "bg-emerald-500 text-white" : "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20"}`}
                                 >
                                   {bottomActive ? "Hủy chọn quần" : "Chọn quần"}
                                 </button>
+                                {(() => {
+                                  const dressActive = item.id === selectedDressId;
+                                  return (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedDressId(item.id === selectedDressId ? null : item.id);
+                                        setSelectedTopId(null); // clear áo/quần khi chọn đầm
+                                        setSelectedBottomId(null);
+                                      }}
+                                      className={`rounded-full px-3 py-1 text-xs font-semibold transition ${dressActive ? "bg-rose-500 text-white" : "bg-rose-500/10 text-rose-700 hover:bg-rose-500/20"}`}
+                                    >
+                                      {dressActive ? "Hủy chọn đầm" : "Chọn đầm"}
+                                    </button>
+                                  );
+                                })()}
                               </div>
                             </div>
                           </div>
@@ -631,41 +670,57 @@ export default function TryOnPage() {
                 <div className="rounded-2xl border border-subtle bg-section p-4 space-y-4">
                   <p className="text-xs uppercase tracking-wider text-muted font-semibold">Set đồ phối hợp hiện tại</p>
                   <div className="space-y-3">
-                    <div className={`rounded-xl border p-3 ${selectedTopItem ? "border-sky-300 bg-sky-500/5" : "border-subtle bg-background"}`}>
-                      <p className="text-xs font-semibold uppercase tracking-wider text-sky-700">Áo (Sẽ thử ở Bước 1)</p>
-                      {selectedTopItem ? (
+                    {/* Slot Đầm — hiện khi đang dùng chế độ đầm */}
+                    {selectedDressItem ? (
+                      <div className="rounded-xl border border-rose-300 bg-rose-500/5 p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-rose-700">Đầm (One-piece)</p>
                         <div className="mt-2 flex items-start gap-3">
                           <div className="h-16 w-12 shrink-0 overflow-hidden rounded-lg bg-background border border-subtle">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={selectedTopItem.imageUrl} alt={selectedTopItem.tenSanPham} className="h-full w-full object-cover" />
+                            <img src={selectedDressItem.imageUrl} alt={selectedDressItem.tenSanPham} className="h-full w-full object-cover" />
                           </div>
-                          <h3 className="font-semibold text-foreground line-clamp-2 text-sm">{selectedTopItem.tenSanPham}</h3>
+                          <h3 className="font-semibold text-foreground line-clamp-2 text-sm">{selectedDressItem.tenSanPham}</h3>
                         </div>
-                      ) : (
-                        <p className="mt-2 text-xs text-muted">Chưa chọn áo.</p>
-                      )}
-                    </div>
-                    <div className={`rounded-xl border p-3 ${selectedBottomItem ? "border-emerald-300 bg-emerald-500/5" : "border-subtle bg-background"}`}>
-                      <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">Quần (Sẽ thử ở Bước 2)</p>
-                      {selectedBottomItem ? (
-                        <div className="mt-2 flex items-start gap-3">
-                          <div className="h-16 w-12 shrink-0 overflow-hidden rounded-lg bg-background border border-subtle">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={selectedBottomItem.imageUrl} alt={selectedBottomItem.tenSanPham} className="h-full w-full object-cover" />
-                          </div>
-                          <h3 className="font-semibold text-foreground line-clamp-2 text-sm">{selectedBottomItem.tenSanPham}</h3>
+                      </div>
+                    ) : (
+                      <>
+                        <div className={`rounded-xl border p-3 ${selectedTopItem ? "border-sky-300 bg-sky-500/5" : "border-subtle bg-background"}`}>
+                          <p className="text-xs font-semibold uppercase tracking-wider text-sky-700">Áo (Sẽ thử ở Bước 1)</p>
+                          {selectedTopItem ? (
+                            <div className="mt-2 flex items-start gap-3">
+                              <div className="h-16 w-12 shrink-0 overflow-hidden rounded-lg bg-background border border-subtle">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={selectedTopItem.imageUrl} alt={selectedTopItem.tenSanPham} className="h-full w-full object-cover" />
+                              </div>
+                              <h3 className="font-semibold text-foreground line-clamp-2 text-sm">{selectedTopItem.tenSanPham}</h3>
+                            </div>
+                          ) : (
+                            <p className="mt-2 text-xs text-muted">Chưa chọn áo.</p>
+                          )}
                         </div>
-                      ) : (
-                        <p className="mt-2 text-xs text-muted">Chưa chọn quần.</p>
-                      )}
-                    </div>
+                        <div className={`rounded-xl border p-3 ${selectedBottomItem ? "border-emerald-300 bg-emerald-500/5" : "border-subtle bg-background"}`}>
+                          <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">Quần (Sẽ thử ở Bước 2)</p>
+                          {selectedBottomItem ? (
+                            <div className="mt-2 flex items-start gap-3">
+                              <div className="h-16 w-12 shrink-0 overflow-hidden rounded-lg bg-background border border-subtle">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={selectedBottomItem.imageUrl} alt={selectedBottomItem.tenSanPham} className="h-full w-full object-cover" />
+                              </div>
+                              <h3 className="font-semibold text-foreground line-clamp-2 text-sm">{selectedBottomItem.tenSanPham}</h3>
+                            </div>
+                          ) : (
+                            <p className="mt-2 text-xs text-muted">Chưa chọn quần.</p>
+                          )}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button
                     onClick={handleRun}
-                    disabled={loading || (!selectedTopItem && !selectedBottomItem)}
+                    disabled={loading || (!selectedTopItem && !selectedBottomItem && !selectedDressItem)}
                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-pink-500 to-purple-600 px-4 py-3.5 text-sm font-semibold text-white shadow-lg shadow-pink-200/40 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <FiPlay size={14} />
@@ -733,10 +788,22 @@ export default function TryOnPage() {
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={resolvedResultImageUrl} alt="Kết quả thử đồ phối hợp" className="max-h-135 w-full object-contain" />
                     </div>
-                    {(selectedTopItem || selectedBottomItem) && (
+                    {(selectedTopItem || selectedBottomItem || selectedDressItem) && (
                       <div className="border-t border-subtle px-4 py-4 bg-background/60">
                         <p className="text-xs uppercase tracking-wider font-semibold text-muted mb-3">Sản phẩm đã thử trong phiên này</p>
                         <div className="flex flex-wrap gap-3">
+                          {selectedDressItem && (
+                            <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-500/5 px-3 py-2">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={selectedDressItem.imageUrl} alt={selectedDressItem.tenSanPham} className="h-10 w-8 rounded-lg object-cover border border-subtle" />
+                              <div>
+                                <p className="text-xs font-semibold text-foreground line-clamp-1">{selectedDressItem.tenSanPham}</p>
+                                <p className="text-[11px] text-muted">{selectedDressItem.tenMauSac} • {selectedDressItem.tenKichThuoc}</p>
+                                <p className="text-[11px] font-semibold text-rose-600">{formatCurrency(selectedDressItem.price)}</p>
+                              </div>
+                              <span className="ml-1 rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700 uppercase">Đầm</span>
+                            </div>
+                          )}
                           {selectedTopItem && (
                             <div className="flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-500/5 px-3 py-2">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -872,7 +939,9 @@ export default function TryOnPage() {
                                   ? { label: "Áo", cls: "bg-sky-100 text-sky-700" }
                                   : product.role === "bottom"
                                     ? { label: "Quần", cls: "bg-emerald-100 text-emerald-700" }
-                                    : { label: "Đơn lẻ", cls: "bg-purple-100 text-purple-700" };
+                                    : product.role === "dress"
+                                      ? { label: "Đầm", cls: "bg-rose-100 text-rose-700" }
+                                      : { label: "Đơn lẻ", cls: "bg-purple-100 text-purple-700" };
 
                               return (
                                 <div

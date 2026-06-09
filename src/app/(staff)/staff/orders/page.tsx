@@ -87,7 +87,10 @@ function getValidNextStatuses(
     case 2:
       return [{ label: "Đang giao hàng", value: 3 }];
     case 3:
-      return [{ label: "Đã nhận hàng", value: 5 }];
+      return [
+        { label: "Đã nhận hàng", value: 5 },
+        { label: "Đã hủy (người nhận từ chối)", value: 4 },
+      ];
     default:
       return [];
   }
@@ -989,6 +992,21 @@ export default function StaffOrdersPage() {
     }
   };
 
+  const handleCancelShippingOrder = async (order: DonHang) => {
+    const confirmed = window.confirm(
+      `Xác nhận hủy đơn #${order.id}? (Người nhận đã từ chối nhận hàng)`,
+    );
+    if (!confirmed) return;
+    try {
+      await orderService.update({ id: order.id, trangThai: 4 });
+      toast.success(`Đã hủy đơn #${order.id}`);
+      fetchOrders();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Hủy đơn thất bại";
+      toast.error(msg);
+    }
+  };
+
   // POS product search
   const handleProductSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1484,6 +1502,15 @@ export default function StaffOrdersPage() {
                             >
                               <FiEdit size={15} />
                             </button>
+                            {getStatusNumber(o.trangThai) === 3 && (
+                              <button
+                                onClick={() => handleCancelShippingOrder(o)}
+                                className="p-1.5 text-red-500 hover:bg-red-500/10 rounded"
+                                title="Hủy đơn (người nhận từ chối)"
+                              >
+                                <FiX size={15} />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

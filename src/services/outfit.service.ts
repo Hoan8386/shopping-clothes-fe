@@ -1,5 +1,5 @@
 // Force using the external outfit AI service URL from env
-const OUTFIT_API_BASE = (process.env.NEXT_PUBLIC_OUTFIT_API_URL || "https://frostlike-grime-trimester.ngrok-free.dev/api/v1/outfits").replace(/\/+$/, "");
+const OUTFIT_API_BASE = (process.env.NEXT_PUBLIC_OUTFIT_API_URL || "https://matchbook-unafraid-glitzy.ngrok-free.dev/api/v1/outfits").replace(/\/+$/, "");
 
 const createRequestId = async (): Promise<string> => {
   const res = await fetch(`${OUTFIT_API_BASE}/request-id`, {

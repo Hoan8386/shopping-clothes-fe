@@ -23,7 +23,13 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "frostlike-grime-trimester.ngrok-free.dev", // Đổi thành domain mới
+        hostname: "frostlike-grime-trimester.ngrok-free.dev",
+        pathname: "/**",
+      },
+      // Thêm domain ngrok mới cho hình ảnh
+      {
+        protocol: "https",
+        hostname: "matchbook-unafraid-glitzy.ngrok-free.dev",
         pathname: "/**",
       },
     ],
@@ -33,7 +39,13 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api/v1/:path*",
-        destination: "https://frostlike-grime-trimester.ngrok-free.dev/api/v1/:path*", // Đổi thành domain mới
+        destination: "https://frostlike-grime-trimester.ngrok-free.dev/api/v1/:path*",
+      },
+      // Thêm rewrite cho api của domain ngrok mới nếu bạn cần chạy song song
+      // Lưu ý: Nếu muốn dùng domain mới này làm primary API, bạn có thể comment hoặc xóa rewrite cũ đi nhé
+      {
+        source: "/api/v1/:path*", 
+        destination: "https://matchbook-unafraid-glitzy.ngrok-free.dev/api/v1/:path*",
       },
     ];
   },
