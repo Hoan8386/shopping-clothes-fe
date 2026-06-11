@@ -3,14 +3,29 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Loading from "@/components/ui/Loading";
 import { formatDate } from "@/lib/utils";
-import { CuaHang, KiemKeHangHoa, LoaiKiemKe } from "@/types";
+import {
+  CuaHang,
+  KiemKeHangHoa,
+  LoaiKiemKe,
+  ResChiTietSanPhamDTO,
+} from "@/types";
 import {
   kiemKeHangHoaService,
   loaiKiemKeService,
 } from "@/services/stock-check.service";
 import { cuaHangService } from "@/services/common.service";
+import { productVariantService } from "@/services/product.service";
 import toast from "react-hot-toast";
-import { FiCheck, FiEye, FiPlus, FiRefreshCw, FiX } from "react-icons/fi";
+import {
+  FiCheck,
+  FiEye,
+  FiMinus,
+  FiPlus,
+  FiRefreshCw,
+  FiSearch,
+  FiTrash2,
+  FiX,
+} from "react-icons/fi";
 
 const WAITING = 1;
 const RECHECK = 2;
@@ -31,6 +46,16 @@ function getStatusColor(status: number) {
   }
 }
 
+interface SelectedVariant {
+  chiTietSanPhamId: number;
+  tenSanPham: string;
+  tenMauSac: string;
+  tenKichThuoc: string;
+  soLuongHeThong: number;
+  soLuongThucTe: number;
+  ghiChu: string;
+}
+
 export default function AdminStockChecksPage() {
   const [loading, setLoading] = useState(true);
   const [checks, setChecks] = useState<KiemKeHangHoa[]>([]);
@@ -46,10 +71,22 @@ export default function AdminStockChecksPage() {
   const [filterFromDate, setFilterFromDate] = useState("");
   const [filterToDate, setFilterToDate] = useState("");
   const [createStoreId, setCreateStoreId] = useState<number | "" | "ALL">("");
-  const [createLoaiKiemKeId, setCreateLoaiKiemKeId] = useState<number | "">("");
+  const [createLoaiKiemKeId, setCreateLoaiKiemKeId] = useState<number | "">(
+    "",
+  );
   const [createTitle, setCreateTitle] = useState("");
   const [createDate, setCreateDate] = useState("");
   const [createNote, setCreateNote] = useState("");
+
+  // --- Product selection state ---
+  const [storeVariants, setStoreVariants] = useState<ResChiTietSanPhamDTO[]>(
+    [],
+  );
+  const [loadingVariants, setLoadingVariants] = useState(false);
+  const [variantSearch, setVariantSearch] = useState("");
+  const [selectedVariants, setSelectedVariants] = useState<SelectedVariant[]>(
+    [],
+  );
 
   const waitingCount = useMemo(
     () => checks.filter((item) => item.trangThai === WAITING).length,
@@ -140,6 +177,93 @@ export default function AdminStockChecksPage() {
     loadMasterData();
   }, []);
 
+  // Load variants when store changes
+  useEffect(() => {
+    if (!createStoreId || createStoreId === "ALL") {
+      setStoreVariants([]);
+      setSelectedVariants([]);
+      return;
+    }
+
+    const loadVariants = async () => {
+      try {
+        setLoadingVariants(true);
+        const variants = await productVariantService.getAll({
+          maCuaHang: Number(createStoreId),
+        });
+        setStoreVariants(variants ?? []);
+      } catch {
+        toast.error("Không thể tải danh sách sản phẩm");
+        setStoreVariants([]);
+      } finally {
+        setLoadingVariants(false);
+      }
+    };
+
+    loadVariants();
+    setSelectedVariants([]);
+    setVariantSearch("");
+  }, [createStoreId]);
+
+  const filteredVariants = useMemo(() => {
+    const q = variantSearch.toLowerCase().trim();
+    if (!q) return storeVariants;
+    return storeVariants.filter(
+      (v) =>
+        v.tenSanPham?.toLowerCase().includes(q) ||
+        v.tenMauSac?.toLowerCase().includes(q) ||
+        v.tenKichThuoc?.toLowerCase().includes(q),
+    );
+  }, [storeVariants, variantSearch]);
+
+  const isVariantSelected = (id: number) =>
+    selectedVariants.some((v) => v.chiTietSanPhamId === id);
+
+  const toggleVariant = (variant: ResChiTietSanPhamDTO) => {
+    if (isVariantSelected(variant.id)) {
+      setSelectedVariants((prev) =>
+        prev.filter((v) => v.chiTietSanPhamId !== variant.id),
+      );
+    } else {
+      setSelectedVariants((prev) => [
+        ...prev,
+        {
+          chiTietSanPhamId: variant.id,
+          tenSanPham: variant.tenSanPham ?? "",
+          tenMauSac: variant.tenMauSac ?? "",
+          tenKichThuoc: variant.tenKichThuoc ?? "",
+          soLuongHeThong: variant.soLuong ?? 0,
+          soLuongThucTe: variant.soLuong ?? 0,
+          ghiChu: "",
+        },
+      ]);
+    }
+  };
+
+  const updateVariantThucTe = (id: number, value: number) => {
+    setSelectedVariants((prev) =>
+      prev.map((v) =>
+        v.chiTietSanPhamId === id
+          ? { ...v, soLuongThucTe: Math.max(0, value) }
+          : v,
+      ),
+    );
+  };
+
+  const updateVariantGhiChu = (id: number, value: string) => {
+    setSelectedVariants((prev) =>
+      prev.map((v) =>
+        v.chiTietSanPhamId === id ? { ...v, ghiChu: value } : v,
+      ),
+    );
+  };
+
+  const removeVariant = (id: number) => {
+    setSelectedVariants((prev) =>
+      prev.filter((v) => v.chiTietSanPhamId !== id),
+    );
+  };
+
   const openDetail = async (id: number) => {
     try {
       const data = await kiemKeHangHoaService.getById(id);
@@ -205,6 +329,9 @@ export default function AdminStockChecksPage() {
     setCreateTitle("");
     setCreateDate("");
     setCreateNote("");
+    setSelectedVariants([]);
+    setStoreVariants([]);
+    setVariantSearch("");
   };
 
   const handleCreateStockCheck = async () => {
@@ -228,7 +355,11 @@ export default function AdminStockChecksPage() {
         tenPhieuKiemKe: createTitle.trim(),
         ghiChu: createNote.trim() || undefined,
         ngayKiemKe: createDate || undefined,
-        chiTietKiemKes: [],
+        chiTietKiemKes: selectedVariants.map((v) => ({
+          chiTietSanPhamId: v.chiTietSanPhamId,
+          soLuongThucTe: v.soLuongThucTe,
+          ghiChu: v.ghiChu || undefined,
+        })),
       });
 
       toast.success(
@@ -589,8 +720,8 @@ export default function AdminStockChecksPage() {
 
       {showCreateModal && (
         <div className="fixed inset-0 z-50 bg-black/60 p-4 overflow-y-auto">
-          <div className="min-h-full flex items-center justify-center">
-            <div className="w-full max-w-xl bg-card border border-subtle rounded-2xl">
+          <div className="min-h-full flex items-center justify-center py-6">
+            <div className="w-full max-w-4xl bg-card border border-subtle rounded-2xl">
               <div className="px-5 py-4 border-b border-subtle flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-foreground">
                   Tạo phiếu kiểm kê
@@ -603,91 +734,295 @@ export default function AdminStockChecksPage() {
                 </button>
               </div>
 
-              <div className="p-5 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">
-                    Cửa hàng <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={String(createStoreId)}
-                    onChange={(e) => {
-                      if (e.target.value === "ALL") {
-                        setCreateStoreId("ALL");
-                        return;
+              <div className="p-5 grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {/* Left: basic info */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      Cửa hàng <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={String(createStoreId)}
+                      onChange={(e) => {
+                        if (e.target.value === "ALL") {
+                          setCreateStoreId("ALL");
+                          return;
+                        }
+                        setCreateStoreId(
+                          e.target.value ? Number(e.target.value) : "",
+                        );
+                      }}
+                      className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm"
+                    >
+                      <option value="">Chọn cửa hàng</option>
+                      <option value="ALL">Tất cả cửa hàng</option>
+                      {stores.map((store) => (
+                        <option key={store.id} value={store.id}>
+                          {store.tenCuaHang}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      Tên phiếu kiểm kê <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      value={createTitle}
+                      onChange={(e) => setCreateTitle(e.target.value)}
+                      placeholder="Ví dụ: Kiểm kê cuối tháng"
+                      className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      Loại kiểm kê
+                    </label>
+                    <select
+                      value={String(createLoaiKiemKeId)}
+                      onChange={(e) =>
+                        setCreateLoaiKiemKeId(
+                          e.target.value ? Number(e.target.value) : "",
+                        )
                       }
-                      setCreateStoreId(
-                        e.target.value ? Number(e.target.value) : "",
-                      );
-                    }}
-                    className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm"
-                  >
-                    <option value="">Chọn cửa hàng</option>
-                    <option value="ALL">Tất cả cửa hàng</option>
-                    {stores.map((store) => (
-                      <option key={store.id} value={store.id}>
-                        {store.tenCuaHang}
-                      </option>
-                    ))}
-                  </select>
+                      className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm"
+                    >
+                      <option value="">Không chọn</option>
+                      {types.map((type) => (
+                        <option key={type.id} value={type.id}>
+                          {type.tenLoaiKiemKe}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      Ngày kiểm kê
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={createDate}
+                      onChange={(e) => setCreateDate(e.target.value)}
+                      className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      Ghi chú
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={createNote}
+                      onChange={(e) => setCreateNote(e.target.value)}
+                      className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm resize-none"
+                      placeholder="Nhập ghi chú cho đợt kiểm kê"
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">
-                    Tên phiếu kiểm kê <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    value={createTitle}
-                    onChange={(e) => setCreateTitle(e.target.value)}
-                    placeholder="Ví dụ: Kiểm kê cuối tháng"
-                    className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm"
-                  />
-                </div>
+                {/* Right: product selection */}
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-foreground mb-1">
+                      Chọn sản phẩm kiểm kê
+                      {selectedVariants.length > 0 && (
+                        <span className="ml-2 text-xs bg-accent/10 text-accent px-2 py-0.5 rounded-full">
+                          {selectedVariants.length} đã chọn
+                        </span>
+                      )}
+                    </p>
 
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">
-                    Loại kiểm kê
-                  </label>
-                  <select
-                    value={String(createLoaiKiemKeId)}
-                    onChange={(e) =>
-                      setCreateLoaiKiemKeId(
-                        e.target.value ? Number(e.target.value) : "",
-                      )
-                    }
-                    className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm"
-                  >
-                    <option value="">Không chọn</option>
-                    {types.map((type) => (
-                      <option key={type.id} value={type.id}>
-                        {type.tenLoaiKiemKe}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    {!createStoreId || createStoreId === "ALL" ? (
+                      <div className="border border-dashed border-subtle rounded-lg p-6 text-center text-muted text-sm">
+                        Vui lòng chọn một cửa hàng cụ thể để xem sản phẩm
+                      </div>
+                    ) : (
+                      <>
+                        {/* Search box */}
+                        <div className="relative mb-2">
+                          <FiSearch
+                            size={14}
+                            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
+                          />
+                          <input
+                            type="text"
+                            value={variantSearch}
+                            onChange={(e) => setVariantSearch(e.target.value)}
+                            placeholder="Tìm theo tên, màu sắc, kích thước..."
+                            className="w-full border border-subtle bg-background text-foreground rounded-lg pl-8 pr-3 py-2 text-sm"
+                          />
+                        </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">
-                    Ngày kiểm kê
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={createDate}
-                    onChange={(e) => setCreateDate(e.target.value)}
-                    className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm"
-                  />
-                </div>
+                        {/* Variant list */}
+                        <div className="border border-subtle rounded-lg overflow-hidden">
+                          <div className="max-h-52 overflow-y-auto divide-y divide-subtle">
+                            {loadingVariants ? (
+                              <div className="p-4 text-center text-muted text-sm">
+                                Đang tải sản phẩm...
+                              </div>
+                            ) : filteredVariants.length === 0 ? (
+                              <div className="p-4 text-center text-muted text-sm">
+                                {variantSearch
+                                  ? "Không tìm thấy sản phẩm phù hợp"
+                                  : "Cửa hàng chưa có sản phẩm"}
+                              </div>
+                            ) : (
+                              filteredVariants.map((v) => {
+                                const selected = isVariantSelected(v.id);
+                                return (
+                                  <div
+                                    key={v.id}
+                                    onClick={() => toggleVariant(v)}
+                                    className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition ${
+                                      selected
+                                        ? "bg-accent/5 border-l-2 border-accent"
+                                        : "hover:bg-section"
+                                    }`}
+                                  >
+                                    <div
+                                      className={`w-4 h-4 rounded border-2 flex-shrink-0 flex items-center justify-center transition ${
+                                        selected
+                                          ? "bg-accent border-accent"
+                                          : "border-subtle"
+                                      }`}
+                                    >
+                                      {selected && (
+                                        <FiCheck
+                                          size={10}
+                                          className="text-white"
+                                        />
+                                      )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium text-foreground truncate">
+                                        {v.tenSanPham}
+                                      </p>
+                                      <p className="text-xs text-muted">
+                                        {v.tenMauSac} · {v.tenKichThuoc} · Tồn:{" "}
+                                        {v.soLuong ?? 0}
+                                      </p>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">
-                    Ghi chú
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={createNote}
-                    onChange={(e) => setCreateNote(e.target.value)}
-                    className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm resize-none"
-                    placeholder="Nhập ghi chú cho đợt kiểm kê"
-                  />
+                  {/* Selected variants table */}
+                  {selectedVariants.length > 0 && (
+                    <div>
+                      <p className="text-sm font-medium text-foreground mb-1">
+                        Danh sách sản phẩm kiểm kê
+                      </p>
+                      <div className="border border-subtle rounded-lg overflow-hidden">
+                        <div className="max-h-52 overflow-y-auto">
+                          <table className="w-full text-xs">
+                            <thead className="bg-section border-b border-subtle sticky top-0">
+                              <tr>
+                                <th className="px-2 py-2 text-left text-muted font-medium">
+                                  Sản phẩm
+                                </th>
+                                <th className="px-2 py-2 text-center text-muted font-medium w-28">
+                                  SL thực tế
+                                </th>
+                                <th className="px-2 py-2 text-left text-muted font-medium">
+                                  Ghi chú
+                                </th>
+                                <th className="px-2 py-2 w-8" />
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-subtle">
+                              {selectedVariants.map((sv) => (
+                                <tr key={sv.chiTietSanPhamId}>
+                                  <td className="px-2 py-1.5">
+                                    <p className="font-medium text-foreground truncate max-w-28">
+                                      {sv.tenSanPham}
+                                    </p>
+                                    <p className="text-muted">
+                                      {sv.tenMauSac} · {sv.tenKichThuoc}
+                                    </p>
+                                  </td>
+                                  <td className="px-2 py-1.5">
+                                    <div className="flex items-center gap-1 justify-center">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          updateVariantThucTe(
+                                            sv.chiTietSanPhamId,
+                                            sv.soLuongThucTe - 1,
+                                          )
+                                        }
+                                        className="p-0.5 rounded hover:bg-section text-muted"
+                                      >
+                                        <FiMinus size={11} />
+                                      </button>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        value={sv.soLuongThucTe}
+                                        onChange={(e) =>
+                                          updateVariantThucTe(
+                                            sv.chiTietSanPhamId,
+                                            Number(e.target.value),
+                                          )
+                                        }
+                                        className="w-12 text-center border border-subtle rounded px-1 py-0.5 bg-background text-foreground text-xs"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          updateVariantThucTe(
+                                            sv.chiTietSanPhamId,
+                                            sv.soLuongThucTe + 1,
+                                          )
+                                        }
+                                        className="p-0.5 rounded hover:bg-section text-muted"
+                                      >
+                                        <FiPlus size={11} />
+                                      </button>
+                                    </div>
+                                  </td>
+                                  <td className="px-2 py-1.5">
+                                    <input
+                                      type="text"
+                                      value={sv.ghiChu}
+                                      onChange={(e) =>
+                                        updateVariantGhiChu(
+                                          sv.chiTietSanPhamId,
+                                          e.target.value,
+                                        )
+                                      }
+                                      placeholder="Ghi chú..."
+                                      className="w-full border border-subtle rounded px-2 py-0.5 bg-background text-foreground text-xs"
+                                    />
+                                  </td>
+                                  <td className="px-2 py-1.5 text-center">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        removeVariant(sv.chiTietSanPhamId)
+                                      }
+                                      className="text-red-500 hover:bg-red-50 rounded p-0.5"
+                                    >
+                                      <FiTrash2 size={13} />
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
