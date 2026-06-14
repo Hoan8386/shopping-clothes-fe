@@ -48,7 +48,6 @@ function getDisplayTotalAmount(
 export default function StaffReturnsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const hasProcessedVNPayReturnRef = useRef(false);
   const [returns, setReturns] = useState<TraHang[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -87,47 +86,6 @@ export default function StaffReturnsPage() {
   useEffect(() => {
     fetchReturns();
   }, [fetchReturns]);
-
-  useEffect(() => {
-    if (hasProcessedVNPayReturnRef.current) return;
-
-    const txnRef = searchParams.get("vnp_TxnRef");
-    if (!txnRef || !txnRef.startsWith("TRH_")) {
-      return;
-    }
-
-    hasProcessedVNPayReturnRef.current = true;
-
-    const queryObject = Object.fromEntries(Array.from(searchParams.entries()));
-
-    const processVNPayReturn = async () => {
-      try {
-        const data = await traHangService.confirmVNPayReturn(queryObject);
-        const success = data?.success === "true";
-
-        if (success) {
-          toast.success(
-            "Thanh toán VNPAY thành công, phiếu trả hàng đã được duyệt",
-          );
-          await fetchReturns();
-        } else {
-          toast.error(
-            "Thanh toán VNPAY chưa thành công, phiếu trả hàng chưa được duyệt",
-          );
-        }
-      } catch (err: unknown) {
-        const msg =
-          err instanceof Error
-            ? err.message
-            : "Không thể đồng bộ kết quả thanh toán VNPAY";
-        toast.error(msg);
-      } finally {
-        router.replace("/staff/returns");
-      }
-    };
-
-    processVNPayReturn();
-  }, [searchParams, router, fetchReturns]);
 
   const handleViewDetail = async (id: number) => {
     try {
@@ -172,7 +130,13 @@ export default function StaffReturnsPage() {
       const paymentUrl = await traHangService.createVNPayPaymentUrl(
         actionItem.id,
       );
-      window.open(paymentUrl, "_blank", "noopener,noreferrer");
+      if (!paymentUrl) {
+        toast.error("Không thể tạo đường dẫn thanh toán VNPAY");
+        return;
+      }
+
+      toast.success("Đang chuyển đến cổng thanh toán VNPAY...");
+      window.location.href = paymentUrl;
     } catch {
       toast.error("Không thể tạo URL thanh toán VNPAY");
     } finally {

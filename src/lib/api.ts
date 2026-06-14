@@ -82,9 +82,9 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     error.message = toErrorMessage(error);
-    const originalRequest = error.config;
+    const originalRequest = error.config as any;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });

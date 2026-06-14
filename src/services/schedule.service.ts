@@ -43,6 +43,13 @@ export const caLamViecService = {
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/ca-lam-viec/${id}`);
   },
+
+  exportExcel: async (): Promise<Blob> => {
+    const res = await apiClient.get("/ca-lam-viec/export", {
+      responseType: "blob",
+    });
+    return res.data;
+  },
 };
 
 // ============ LICH LAM VIEC ============
@@ -128,6 +135,14 @@ export const lichLamViecService = {
 
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/lich-lam-viec/${id}`);
+  },
+
+  exportLichLamViec: async (cuaHangId: number, year: number, month: number): Promise<Blob> => {
+    const res = await apiClient.get(
+      `/lich-lam-viec/cua-hang/${cuaHangId}/export`,
+      { params: { year, month }, responseType: "blob" }
+    );
+    return res.data;
   },
 };
 

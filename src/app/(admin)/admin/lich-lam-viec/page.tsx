@@ -53,6 +53,7 @@ export default function AdminLichLamViecPage() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [addEmployeeId, setAddEmployeeId] = useState<number | "">("");
   const [addShiftId, setAddShiftId] = useState<number | "">("");
+  const [exportingShifts, setExportingShifts] = useState(false);
 
   const handleUpdateDayStatus = async (status: number) => {
     if (!selectedStoreId || !selectedDay) return;
@@ -134,20 +135,22 @@ export default function AdminLichLamViecPage() {
       );
 
       const monthData: LichLamViecThangResponse | null = data ?? null;
-      const flattenedSchedules: LichLamViec[] = [];
+      const flattenedSchedules: (LichLamViec & { _compositeKey?: string })[] = [];
       const allDetails: ChiTietLichLam[] = [];
       const nextDayStatusByDate: Record<string, number> = {};
-      const lichLamMap = new Map<string, LichLamViec>();
+      // Map key: "ngayLamViec-lichLamViecId" để tránh trùng khi cùng lichLamViecId xuất hiện ở nhiều ngày
+      const lichLamMap = new Map<string, LichLamViec & { _compositeKey: string }>();
 
       (monthData?.ngayLichLams ?? []).forEach((dayItem) => {
         nextDayStatusByDate[dayItem.ngayLamViec] = dayItem.trangThaiNgay;
 
         (dayItem.chiTietNhanViens ?? []).forEach((nvItem) => {
-          const key = `${dayItem.ngayLamViec}-${nvItem.lichLamViecId}`;
+          // Key composite: ngày + lichLamViecId để phân biệt cùng lichLamViecId trên nhiều ngày
+          const compositeKey = `${dayItem.ngayLamViec}-${nvItem.lichLamViecId}`;
 
           // Chỉ tạo 1 LichLamViec duy nhất cho mỗi ngày + lichLamViecId
-          if (!lichLamMap.has(key)) {
-            const lichLam: LichLamViec = {
+          if (!lichLamMap.has(compositeKey)) {
+            const lichLam = {
               id: nvItem.lichLamViecId,
               ngayLamViec: dayItem.ngayLamViec,
               trangThai: nvItem.trangThaiLich,
@@ -157,18 +160,23 @@ export default function AdminLichLamViecPage() {
                     tenNhanVien: nvItem.nhanVien.tenNhanVien,
                     email: nvItem.nhanVien.email ?? "",
                     soDienThoai: nvItem.nhanVien.soDienThoai ?? "",
-                    trangThai: 1,
+                    trangThai: 1 as const,
                   }
                 : undefined,
+              _compositeKey: compositeKey,
             };
-            lichLamMap.set(key, lichLam);
+            lichLamMap.set(compositeKey, lichLam);
           }
 
           (nvItem.chiTietCaLams ?? []).forEach((caItem) => {
             allDetails.push({
               id: caItem.id,
               trangThai: caItem.trangThai,
-              lichLamViec: { id: nvItem.lichLamViecId } as LichLamViec,
+              // Lưu compositeKey vào lichLamViec._compositeKey để lookup đúng theo ngày
+              lichLamViec: {
+                id: nvItem.lichLamViecId,
+                ngayLamViec: dayItem.ngayLamViec,
+              } as LichLamViec,
               caLamViec: caItem.caLamViec
                 ? {
                     id: caItem.caLamViec.id,
@@ -185,9 +193,12 @@ export default function AdminLichLamViecPage() {
 
       flattenedSchedules.push(...lichLamMap.values());
 
-      // Dedup lần cuối dựa vào id để loại bỏ trùng lặp hoàn toàn
+      // Dedup dùng composite key "ngayLamViec-id" để tránh ghi đè schedule của ngày khác
+      // có cùng lichLamViecId
       const finalSchedules = Array.from(
-        new Map(flattenedSchedules.map((s) => [s.id, s])).values(),
+        new Map(
+          flattenedSchedules.map((s) => [`${s.ngayLamViec}-${s.id}`, s]),
+        ).values(),
       );
       // Dedup details dựa vào id
       const finalDetails = Array.from(
@@ -258,12 +269,20 @@ export default function AdminLichLamViecPage() {
     return schedules.filter((s) => s.ngayLamViec === dateStr);
   };
 
-  const getDetailsForSchedule = (scheduleId: number) => {
-    return details.filter((d) => d.lichLamViec?.id === scheduleId);
+  // Lọc chi tiết ca theo cả scheduleId lẫn ngayLamViec để tránh nhầm lẫn
+  // khi cùng lichLamViecId xuất hiện ở nhiều ngày khác nhau
+  const getDetailsForSchedule = (scheduleId: number, ngayLamViec: string) => {
+    return details.filter(
+      (d) =>
+        d.lichLamViec?.id === scheduleId &&
+        (d.lichLamViec as LichLamViec & { ngayLamViec?: string })
+          .ngayLamViec === ngayLamViec,
+    );
   };
 
   // Get unique shift summaries for a day
   const getDayShiftSummary = (day: number) => {
+    const dateStr = `${currentYear}-${String(currentMonth).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const daySchedules = getSchedulesForDay(day);
     const shiftMap = new Map<
       number,
@@ -271,7 +290,8 @@ export default function AdminLichLamViecPage() {
     >();
 
     for (const sch of daySchedules) {
-      const schDetails = getDetailsForSchedule(sch.id);
+      // Truyền ngayLamViec vào để lọc chi tiết ca đúng ngày
+      const schDetails = getDetailsForSchedule(sch.id, dateStr);
       for (const det of schDetails) {
         if (det.caLamViec) {
           const existing = shiftMap.get(det.caLamViec.id);
@@ -331,6 +351,29 @@ export default function AdminLichLamViecPage() {
       window.URL.revokeObjectURL(url);
     } catch {
       toast.error("Không thể tải file mẫu");
+    }
+  };
+
+  const handleExportShifts = async () => {
+    if (!selectedStoreId) return;
+    try {
+      setExportingShifts(true);
+      const blob = await lichLamViecService.exportLichLamViec(
+        selectedStoreId,
+        currentYear,
+        currentMonth,
+      );
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `lich-lam-viec-thang-${String(currentMonth).padStart(2, "0")}-${currentYear}.xlsx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success("Xuất lịch làm việc thành công");
+    } catch {
+      toast.error("Xuất lịch làm việc thất bại");
+    } finally {
+      setExportingShifts(false);
     }
   };
 
@@ -477,6 +520,14 @@ export default function AdminLichLamViecPage() {
               {/* Show buttons only if a store is selected */}
               {selectedStoreId && (
                 <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={handleExportShifts}
+                    disabled={exportingShifts}
+                    className="flex items-center gap-2 px-4 py-2.5 border border-subtle text-sm font-semibold rounded-2xl hover:bg-section transition duration-200 disabled:opacity-50"
+                  >
+                    <FiDownload size={16} className="text-muted" />
+                    {exportingShifts ? "Đang xuất..." : "Xuất danh sách ca"}
+                  </button>
                   <button
                     onClick={handleDownloadTemplate}
                     className="flex items-center gap-2 px-4 py-2.5 border border-subtle text-sm font-semibold rounded-2xl hover:bg-section transition duration-200"
@@ -662,7 +713,7 @@ export default function AdminLichLamViecPage() {
                     return (
                       <div
                         key={dateStr}
-                        className={`h-24 md:h-28 rounded-2xl border border-white/60 shadow-sm flex flex-col items-center justify-start gap-1 cursor-pointer transition duration-200 p-2 ${dayBgClass} ${
+                        className={`h-24 md:h-28 rounded-2xl border border-white/60 shadow-sm flex flex-col items-center justify-center gap-1 cursor-pointer transition duration-200 p-2 ${dayBgClass} ${
                           isDayToday ? "ring-2 ring-accent/40" : ""
                         }`}
                         onClick={() => setSelectedDay(day)}
@@ -675,13 +726,41 @@ export default function AdminLichLamViecPage() {
                             NGHI
                           </span>
                         )}
-                        {dayStatusAttr === "festival" && (
+                        {dayStatusAttr === "festival" &&
+                          daySchedules.length === 0 && (
                           <span className="text-xs font-semibold text-rose-700">
                             LỄ
                           </span>
                         )}
-                        {daySchedules.length > 0 && (
-                          <div className="text-xs text-foreground/70 space-y-0.5">
+                        {dayStatusAttr === "festival" &&
+                          daySchedules.length > 0 && (
+                          <div className="text-xs text-rose-800 space-y-0.5 w-full text-center flex flex-col items-center">
+                            <span className="font-bold text-rose-700">LỄ</span>
+                            {employeeNames[0] && (
+                              <div
+                                className="max-w-[72px] truncate font-semibold"
+                                title={employeeNames[0]}
+                              >
+                                {employeeNames[0]}
+                                {employeeNames.length > 1 && (
+                                  <span className="text-[10px] font-normal opacity-70">
+                                    {" "}+{employeeNames.length - 1}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            <div className="flex items-center justify-center gap-1">
+                              <span className="font-semibold">
+                                {dayShiftSummary.length}
+                              </span>
+                              <span>ca</span>
+                            </div>
+                          </div>
+                        )}
+                        {daySchedules.length > 0 &&
+                          dayStatusAttr !== "festival" &&
+                          dayStatusAttr !== "offday" && (
+                          <div className="text-xs text-foreground/70 space-y-0.5 text-center flex flex-col items-center w-full">
                             {employeeNames.slice(0, 2).map((name) => (
                               <div
                                 key={name}
@@ -696,7 +775,7 @@ export default function AdminLichLamViecPage() {
                                 +{employeeNames.length - 2} nhân viên
                               </div>
                             )}
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center justify-center gap-1">
                               <span className="font-semibold">
                                 {dayShiftSummary.length}
                               </span>

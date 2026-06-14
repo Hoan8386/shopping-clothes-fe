@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Loading from "@/components/ui/Loading";
-import { formatDate } from "@/lib/utils";
+import { formatDate, getImageUrl } from "@/lib/utils";
 import {
   CuaHang,
   KiemKeHangHoa,
@@ -179,7 +179,7 @@ export default function AdminStockChecksPage() {
 
   // Load variants when store changes
   useEffect(() => {
-    if (!createStoreId || createStoreId === "ALL") {
+    if (!createStoreId) {
       setStoreVariants([]);
       setSelectedVariants([]);
       return;
@@ -188,9 +188,9 @@ export default function AdminStockChecksPage() {
     const loadVariants = async () => {
       try {
         setLoadingVariants(true);
-        const variants = await productVariantService.getAll({
-          maCuaHang: Number(createStoreId),
-        });
+        const variants = await productVariantService.getAll(
+          createStoreId === "ALL" ? {} : { maCuaHang: Number(createStoreId) },
+        );
         setStoreVariants(variants ?? []);
       } catch {
         toast.error("Không thể tải danh sách sản phẩm");
@@ -744,10 +744,6 @@ export default function AdminStockChecksPage() {
                     <select
                       value={String(createStoreId)}
                       onChange={(e) => {
-                        if (e.target.value === "ALL") {
-                          setCreateStoreId("ALL");
-                          return;
-                        }
                         setCreateStoreId(
                           e.target.value ? Number(e.target.value) : "",
                         );
@@ -755,7 +751,6 @@ export default function AdminStockChecksPage() {
                       className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm"
                     >
                       <option value="">Chọn cửa hàng</option>
-                      <option value="ALL">Tất cả cửa hàng</option>
                       {stores.map((store) => (
                         <option key={store.id} value={store.id}>
                           {store.tenCuaHang}
@@ -836,9 +831,9 @@ export default function AdminStockChecksPage() {
                       )}
                     </p>
 
-                    {!createStoreId || createStoreId === "ALL" ? (
+                    {createStoreId === "" ? (
                       <div className="border border-dashed border-subtle rounded-lg p-6 text-center text-muted text-sm">
-                        Vui lòng chọn một cửa hàng cụ thể để xem sản phẩm
+                        Vui lòng chọn cửa hàng để xem sản phẩm
                       </div>
                     ) : (
                       <>
@@ -872,25 +867,38 @@ export default function AdminStockChecksPage() {
                               </div>
                             ) : (
                               filteredVariants.map((v) => {
-                                const selected = isVariantSelected(v.id);
+                                const sel = isVariantSelected(v.id);
+                                const thumbUrl = v.hinhAnhUrls?.[0];
                                 return (
                                   <div
                                     key={v.id}
                                     onClick={() => toggleVariant(v)}
-                                    className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition ${
-                                      selected
+                                    className={`flex items-center gap-3 px-3 py-2 cursor-pointer transition ${
+                                      sel
                                         ? "bg-accent/5 border-l-2 border-accent"
                                         : "hover:bg-section"
                                     }`}
                                   >
+                                    {/* Thumbnail */}
+                                    <div className="w-10 h-10 rounded-lg overflow-hidden border border-subtle flex-shrink-0 bg-section">
+                                      {thumbUrl ? (
+                                        <img
+                                          src={getImageUrl(thumbUrl)}
+                                          alt={v.tenSanPham}
+                                          className="w-full h-full object-cover"
+                                        />
+                                      ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-muted text-xs">?</div>
+                                      )}
+                                    </div>
                                     <div
                                       className={`w-4 h-4 rounded border-2 flex-shrink-0 flex items-center justify-center transition ${
-                                        selected
+                                        sel
                                           ? "bg-accent border-accent"
                                           : "border-subtle"
                                       }`}
                                     >
-                                      {selected && (
+                                      {sel && (
                                         <FiCheck
                                           size={10}
                                           className="text-white"
@@ -904,6 +912,7 @@ export default function AdminStockChecksPage() {
                                       <p className="text-xs text-muted">
                                         {v.tenMauSac} · {v.tenKichThuoc} · Tồn:{" "}
                                         {v.soLuong ?? 0}
+                                        {v.tenCuaHang ? ` · ${v.tenCuaHang}` : ""}
                                       </p>
                                     </div>
                                   </div>

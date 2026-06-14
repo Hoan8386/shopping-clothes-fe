@@ -154,6 +154,13 @@ export default function AdminInventoryPage() {
   );
   const [creating, setCreating] = useState(false);
 
+  // Store products panel (create modal)
+  const [storeProducts, setStoreProducts] = useState<ResChiTietSanPhamDTO[]>([]);
+  const [storeProductsLoading, setStoreProductsLoading] = useState(false);
+  const [quickAddVariant, setQuickAddVariant] = useState<ResChiTietSanPhamDTO | null>(null);
+  const [quickAddForm, setQuickAddForm] = useState({ soLuong: 1, ghiTru: "" });
+
+  // Suggestion list
   const [suggestionLoading, setSuggestionLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<InventorySuggestionItem[]>([]);
   const [suggestionStatus, setSuggestionStatus] = useState<
@@ -163,6 +170,16 @@ export default function AdminInventoryPage() {
     number | undefined
   >();
   const [nearOutThreshold, setNearOutThreshold] = useState(10);
+
+  // Suggestion Create Modal (Tách biệt hoàn toàn)
+  const [showSuggestionModal, setShowSuggestionModal] = useState(false);
+  const [suggestionForm, setSuggestionForm] = useState({
+    tenPhieuNhap: "",
+    cuaHangId: 0,
+    nhaCungCapId: 0,
+  });
+  const [suggestionImportItem, setSuggestionImportItem] = useState<NhapItem | null>(null);
+  const [creatingSuggestion, setCreatingSuggestion] = useState(false);
 
   const fetchReceipts = useCallback(async () => {
     try {
@@ -572,10 +589,24 @@ export default function AdminInventoryPage() {
     }
   };
 
+  const fetchStoreProducts = async (cuaHangId: number) => {
+    if (!cuaHangId) { setStoreProducts([]); return; }
+    try {
+      setStoreProductsLoading(true);
+      const data = await productVariantService.getAll({ maCuaHang: cuaHangId });
+      setStoreProducts(Array.isArray(data) ? data : []);
+    } catch {
+      setStoreProducts([]);
+    } finally {
+      setStoreProductsLoading(false);
+    }
+  };
+
   const openCreateModal = () => {
+    const defaultStoreId = stores[0]?.id || 0;
     setCreateForm({
       tenPhieuNhap: "",
-      cuaHangId: stores[0]?.id || 0,
+      cuaHangId: defaultStoreId,
       nhaCungCapId: suppliers[0]?.id || 0,
     });
     setNhapItems([]);
@@ -583,9 +614,14 @@ export default function AdminInventoryPage() {
     setSearchResults([]);
     setSelectedProduct(null);
     setVariants([]);
+    setStoreProducts([]);
+    setQuickAddVariant(null);
+    setQuickAddForm({ soLuong: 1, ghiTru: "" });
     setShowCreateModal(true);
+    if (defaultStoreId) fetchStoreProducts(defaultStoreId);
   };
 
+  // ==================== SUGGESTION QUICK IMPORT ====================
   const handleQuickImportFromSuggestion = (item: InventorySuggestionItem) => {
     const defaultStoreId = item.maCuaHang || stores[0]?.id || 0;
     const defaultSupplierId = suppliers[0]?.id || 0;
@@ -604,28 +640,71 @@ export default function AdminInventoryPage() {
         ? Math.max(nearOutThreshold, 10)
         : Math.max(nearOutThreshold - item.soLuong + 5, 1);
 
-    setCreateForm({
+    setSuggestionForm({
       tenPhieuNhap: `Nhập hàng gợi ý - ${item.tenSanPham || "Sản phẩm"}`,
       cuaHangId: defaultStoreId,
       nhaCungCapId: defaultSupplierId,
     });
-    setNhapItems([
-      {
-        variantId: item.chiTietSanPhamId,
-        tenSanPham: item.tenSanPham || "Sản phẩm",
-        mauSac: item.tenMauSac || "--",
-        kichThuoc: item.tenKichThuoc || "--",
-        soLuong: goiYSoLuong,
-        ghiTru: "Tạo từ gợi ý nhập hàng",
-      },
-    ]);
-    setProductSearch("");
-    setSearchResults([]);
-    setSelectedProduct(null);
-    setVariants([]);
 
-    setActiveTab("receipts");
-    setShowCreateModal(true);
+    setSuggestionImportItem({
+      variantId: item.chiTietSanPhamId,
+      tenSanPham: item.tenSanPham || "Sản phẩm",
+      mauSac: item.tenMauSac || "--",
+      kichThuoc: item.tenKichThuoc || "--",
+      soLuong: goiYSoLuong,
+      ghiTru: "Tạo từ gợi ý nhập hàng",
+    });
+
+    setShowSuggestionModal(true);
+  };
+
+  const handleCreateSuggestionReceipt = async () => {
+    if (!suggestionForm.tenPhieuNhap.trim()) {
+      toast.error("Vui lòng nhập tên phiếu nhập");
+      return;
+    }
+    if (!suggestionForm.cuaHangId || !suggestionForm.nhaCungCapId) {
+      toast.error("Vui lòng chọn cửa hàng và nhà cung cấp");
+      return;
+    }
+    if (
+      !suggestionImportItem ||
+      !Number.isFinite(suggestionImportItem.soLuong) ||
+      suggestionImportItem.soLuong <= 0
+    ) {
+      toast.error("Số lượng nhập phải lớn hơn 0");
+      return;
+    }
+
+    try {
+      setCreatingSuggestion(true);
+      const receipt = await phieuNhapService.create({
+        tenPhieuNhap: suggestionForm.tenPhieuNhap,
+        cuaHangId: suggestionForm.cuaHangId,
+        nhaCungCapId: suggestionForm.nhaCungCapId,
+      });
+
+      if (receipt?.id) {
+        await chiTietPhieuNhapService.create({
+          phieuNhapId: receipt.id,
+          chiTietSanPhamId: suggestionImportItem.variantId,
+          soLuong: suggestionImportItem.soLuong,
+          ghiTru: suggestionImportItem.ghiTru || null,
+          trangThai: 0,
+        });
+      }
+
+      toast.success("Tạo phiếu nhập từ gợi ý thành công");
+      setShowSuggestionModal(false);
+      setSuggestionImportItem(null);
+      setActiveTab("receipts");
+      fetchReceipts();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Tạo phiếu nhập thất bại";
+      toast.error(msg);
+    } finally {
+      setCreatingSuggestion(false);
+    }
   };
 
   // Helper functions
@@ -1559,12 +1638,13 @@ export default function AdminInventoryPage() {
                       </label>
                       <select
                         value={createForm.cuaHangId}
-                        onChange={(e) =>
-                          setCreateForm({
-                            ...createForm,
-                            cuaHangId: Number(e.target.value),
-                          })
-                        }
+                        onChange={(e) => {
+                          const id = Number(e.target.value);
+                          setCreateForm({ ...createForm, cuaHangId: id });
+                          setQuickAddVariant(null);
+                          setQuickAddForm({ soLuong: 1, ghiTru: "" });
+                          fetchStoreProducts(id);
+                        }}
                         className="w-full border border-subtle bg-background text-foreground rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition"
                       >
                         <option value={0}>-- Chọn cửa hàng --</option>
@@ -1598,6 +1678,141 @@ export default function AdminInventoryPage() {
                       </select>
                     </div>
                   </div>
+
+                  {/* ── Store products panel ── */}
+                  {createForm.cuaHangId !== 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        Sản phẩm tại cửa hàng
+                        <span className="text-xs text-muted font-normal ml-2">
+                          (nhấn để chọn)
+                        </span>
+                      </label>
+                      {storeProductsLoading ? (
+                        <div className="flex items-center justify-center py-6 text-muted text-sm">
+                          <svg className="animate-spin w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                          </svg>
+                          Đang tải...
+                        </div>
+                      ) : storeProducts.length === 0 ? (
+                        <div className="text-center py-5 text-muted text-sm border border-dashed border-subtle rounded-xl">
+                          Không có sản phẩm tại cửa hàng này
+                        </div>
+                      ) : (
+                        <div className="border border-subtle rounded-xl overflow-hidden">
+                          <div className="max-h-52 overflow-y-auto divide-y divide-subtle">
+                            {storeProducts.map((v) => {
+                              const isSelected = quickAddVariant?.id === v.id;
+                              const alreadyAdded = nhapItems.some(i => i.variantId === v.id);
+                              return (
+                                <div key={v.id}>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (isSelected) {
+                                        setQuickAddVariant(null);
+                                      } else {
+                                        setQuickAddVariant(v);
+                                        setQuickAddForm({ soLuong: 1, ghiTru: "" });
+                                      }
+                                    }}
+                                    className={`w-full px-3 py-2.5 text-left flex items-center justify-between gap-3 transition ${
+                                      isSelected
+                                        ? "bg-accent/10 border-l-2 border-accent"
+                                        : alreadyAdded
+                                          ? "bg-green-500/5 hover:bg-section"
+                                          : "hover:bg-section"
+                                    }`}
+                                  >
+                                    <div className="shrink-0 w-10 h-10 rounded-lg overflow-hidden bg-section border border-subtle flex items-center justify-center">
+                                      {v.hinhAnhUrls && v.hinhAnhUrls.length > 0 ? (
+                                        <img
+                                          src={v.hinhAnhUrls[0]}
+                                          alt={v.tenSanPham}
+                                          className="w-full h-full object-cover"
+                                        />
+                                      ) : (
+                                        <FiPackage size={16} className="text-muted" />
+                                      )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className={`text-sm font-medium truncate ${
+                                        isSelected ? "text-accent" : "text-foreground"
+                                      }`}>
+                                        {v.tenSanPham}
+                                      </p>
+                                      <p className="text-xs text-muted">
+                                        {v.tenMauSac} / {v.tenKichThuoc}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      <span className="text-xs text-muted">Tồn: {v.soLuong}</span>
+                                      {alreadyAdded && (
+                                        <span className="text-xs bg-green-500/15 text-green-600 px-1.5 py-0.5 rounded-md font-medium">Đã thêm</span>
+                                      )}
+                                    </div>
+                                  </button>
+                                  {isSelected && (
+                                    <div className="px-3 py-2.5 bg-accent/5 border-t border-accent/20 flex gap-2 items-center flex-wrap">
+                                      <label className="text-xs text-muted shrink-0">Số lượng:</label>
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        value={quickAddForm.soLuong}
+                                        onChange={(e) => setQuickAddForm({ ...quickAddForm, soLuong: Number(e.target.value) })}
+                                        className="w-20 border border-subtle bg-background text-foreground rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none"
+                                      />
+                                      <input
+                                        value={quickAddForm.ghiTru}
+                                        onChange={(e) => setQuickAddForm({ ...quickAddForm, ghiTru: e.target.value })}
+                                        placeholder="Ghi chú (tuỳ chọn)..."
+                                        className="flex-1 min-w-24 border border-subtle bg-background text-foreground rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          if (!quickAddVariant) return;
+                                          const existing = nhapItems.findIndex(i => i.variantId === quickAddVariant.id);
+                                          if (existing !== -1) {
+                                            const updated = [...nhapItems];
+                                            updated[existing].soLuong += quickAddForm.soLuong;
+                                            setNhapItems(updated);
+                                          } else {
+                                            setNhapItems([...nhapItems, {
+                                              variantId: quickAddVariant.id,
+                                              tenSanPham: quickAddVariant.tenSanPham,
+                                              mauSac: quickAddVariant.tenMauSac,
+                                              kichThuoc: quickAddVariant.tenKichThuoc,
+                                              soLuong: quickAddForm.soLuong,
+                                              ghiTru: quickAddForm.ghiTru,
+                                            }]);
+                                          }
+                                          setQuickAddVariant(null);
+                                          setQuickAddForm({ soLuong: 1, ghiTru: "" });
+                                        }}
+                                        className="bg-accent text-white px-3 py-1.5 rounded-lg text-xs hover:bg-accent-hover transition font-medium"
+                                      >
+                                        Thêm
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setQuickAddVariant(null)}
+                                        className="text-muted hover:text-foreground text-xs px-1"
+                                      >
+                                        Hủy
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Product search */}
                   <div>
@@ -1896,6 +2111,144 @@ export default function AdminInventoryPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {/* ==================== SUGGESTION CREATE MODAL ==================== */}
+          {showSuggestionModal && suggestionImportItem && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-card border border-subtle rounded-2xl shadow-2xl w-full max-w-lg">
+                <div className="flex items-center justify-between p-4 border-b border-subtle">
+                  <h2 className="font-bold text-lg text-foreground">
+                    Tạo phiếu nhập từ gợi ý
+                  </h2>
+                  <button
+                    onClick={() => setShowSuggestionModal(false)}
+                    className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-section transition"
+                  >
+                    <FiX size={20} />
+                  </button>
+                </div>
+                <div className="p-4 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      Tên phiếu nhập *
+                    </label>
+                    <input
+                      value={suggestionForm.tenPhieuNhap}
+                      onChange={(e) =>
+                        setSuggestionForm({
+                          ...suggestionForm,
+                          tenPhieuNhap: e.target.value,
+                        })
+                      }
+                      className="w-full border border-subtle bg-background text-foreground rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">
+                        Cửa hàng *
+                      </label>
+                      <select
+                        value={suggestionForm.cuaHangId}
+                        onChange={(e) =>
+                          setSuggestionForm({ ...suggestionForm, cuaHangId: Number(e.target.value) })
+                        }
+                        className="w-full border border-subtle bg-background text-foreground rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition"
+                      >
+                        <option value={0}>-- Chọn cửa hàng --</option>
+                        {stores.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.tenCuaHang}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">
+                        Nhà cung cấp *
+                      </label>
+                      <select
+                        value={suggestionForm.nhaCungCapId}
+                        onChange={(e) =>
+                          setSuggestionForm({
+                            ...suggestionForm,
+                            nhaCungCapId: Number(e.target.value),
+                          })
+                        }
+                        className="w-full border border-subtle bg-background text-foreground rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition"
+                      >
+                        <option value={0}>-- Chọn nhà cung cấp --</option>
+                        {suppliers.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.tenNhaCungCap}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="bg-section p-3.5 rounded-xl border border-subtle">
+                    <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">
+                      Sản phẩm chọn từ gợi ý
+                    </label>
+                    <div className="flex items-center justify-between gap-4 text-sm">
+                      <div className="flex-1">
+                        <p className="font-semibold text-foreground">{suggestionImportItem.tenSanPham}</p>
+                        <p className="text-xs text-muted mt-0.5">
+                          Biến thể: {suggestionImportItem.mauSac} / {suggestionImportItem.kichThuoc}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted font-medium">SL nhập:</span>
+                        <input
+                          type="number"
+                          min={1}
+                          value={suggestionImportItem.soLuong}
+                          onChange={(e) =>
+                            setSuggestionImportItem({
+                              ...suggestionImportItem,
+                              soLuong: Number(e.target.value),
+                            })
+                          }
+                          className="w-20 border border-subtle bg-background text-foreground rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none font-medium"
+                        />
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <input
+                        value={suggestionImportItem.ghiTru}
+                        onChange={(e) =>
+                          setSuggestionImportItem({
+                            ...suggestionImportItem,
+                            ghiTru: e.target.value,
+                          })
+                        }
+                        placeholder="Ghi chú nhập hàng..."
+                        className="w-full border border-subtle bg-background text-foreground rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={() => setShowSuggestionModal(false)}
+                      className="flex-1 px-4 py-2.5 border border-subtle rounded-xl text-sm text-foreground hover:bg-section transition"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      onClick={handleCreateSuggestionReceipt}
+                      disabled={creatingSuggestion}
+                      className="flex-1 px-4 py-2.5 bg-accent text-white rounded-xl text-sm hover:bg-accent-hover disabled:opacity-50 transition font-medium"
+                    >
+                      {creatingSuggestion ? "Đang tạo..." : "Tạo từ gợi ý"}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )}

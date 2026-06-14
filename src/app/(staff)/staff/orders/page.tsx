@@ -125,7 +125,6 @@ interface PosItem {
 export default function StaffOrdersPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const hasProcessedVNPayReturnRef = useRef(false);
   const { user } = useAuthStore();
 
   // Tab navigation
@@ -220,6 +219,7 @@ export default function StaffOrdersPage() {
     useState(0);
 
   const [loadingPromoOptions, setLoadingPromoOptions] = useState(false);
+  const [localDiscount, setLocalDiscount] = useState({ hoaDon: 0, diem: 0 });
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -312,46 +312,6 @@ export default function StaffOrdersPage() {
       fetchDraftCarts();
     }
   }, [activeTab]);
-
-  useEffect(() => {
-    if (hasProcessedVNPayReturnRef.current) return;
-
-    const txnRef = searchParams.get("vnp_TxnRef");
-    if (!txnRef || !txnRef.startsWith("GHNV_")) {
-      return;
-    }
-
-    hasProcessedVNPayReturnRef.current = true;
-
-    const queryObject = Object.fromEntries(Array.from(searchParams.entries()));
-
-    const processVNPayReturn = async () => {
-      try {
-        const data = await orderService.confirmVNPayReturn(queryObject);
-        const success = data?.success === "true";
-
-        if (success) {
-          toast.success("Thanh toán VNPAY thành công, đơn hàng đã được tạo");
-          await fetchDraftCarts();
-          fetchOrders();
-        } else {
-          toast.error(
-            "Thanh toán VNPAY chưa thành công, đơn hàng chưa được tạo",
-          );
-        }
-      } catch (err: unknown) {
-        const msg =
-          err instanceof Error
-            ? err.message
-            : "Không thể đồng bộ kết quả thanh toán VNPAY";
-        toast.error(msg);
-      } finally {
-        router.replace("/staff/orders");
-      }
-    };
-
-    processVNPayReturn();
-  }, [searchParams, router, fetchOrders]);
 
   const handleSelectDraftCart = async (cartId: number) => {
     try {
@@ -924,6 +884,7 @@ export default function StaffOrdersPage() {
     setSelectedDiemPromoId(undefined);
     setHoaDonPromos([]);
     setDiemPromos([]);
+    setLocalDiscount({ hoaDon: 0, diem: 0 });
     setProductDetailCodeInput("");
     clearCapturedPreview();
     handleCloseCamera();
@@ -1972,14 +1933,86 @@ export default function StaffOrdersPage() {
                 </div>
               </div>
 
-              <div className="border-t border-subtle pt-3">
-                <div className="flex justify-between font-bold">
+              <div className="border-t border-subtle pt-3 space-y-2 text-sm">
+                {/* Tổng tiền gốc */}
+                <div className="flex justify-between text-muted">
+                  <span>Tổng tiền hàng</span>
+                  <span>{formatCurrency(selectedDraftCart.tongTienGoc || 0)}</span>
+                </div>
+
+                {/* Khuyến mãi hóa đơn */}
+                {(selectedDraftCart.tienGiamHoaDon ?? 0) > 0 && (() => {
+                  const promoHD = selectedDraftCart.maKhuyenMaiHoaDon
+                    ? selectedDraftCart.khuyenMaiHoaDonHopLe?.find(
+                        (p) => p.id === selectedDraftCart.maKhuyenMaiHoaDon,
+                      )
+                    : null;
+                  return (
+                    <div className="flex justify-between text-emerald-600">
+                      <span className="flex items-center gap-1">
+                        🎫{" "}
+                        {promoHD
+                          ? `${promoHD.tenKhuyenMai} (-${promoHD.phanTramGiam}%)`
+                          : "Khuyến mãi hóa đơn"}
+                      </span>
+                      <span className="font-medium">
+                        -{formatCurrency(selectedDraftCart.tienGiamHoaDon)}
+                      </span>
+                    </div>
+                  );
+                })()}
+
+                {/* Khuyến mãi điểm */}
+                {(selectedDraftCart.tienGiamDiem ?? 0) > 0 && (() => {
+                  const promoDiem = selectedDraftCart.maKhuyenMaiDiem
+                    ? selectedDraftCart.khuyenMaiDiemHopLe?.find(
+                        (p) => p.id === selectedDraftCart.maKhuyenMaiDiem,
+                      )
+                    : null;
+                  return (
+                    <div className="flex justify-between text-emerald-600">
+                      <span className="flex items-center gap-1">
+                        ⭐{" "}
+                        {promoDiem
+                          ? `${promoDiem.tenKhuyenMai} (-${promoDiem.phanTramGiam}%)`
+                          : "Khuyến mãi điểm"}
+                      </span>
+                      <span className="font-medium">
+                        -{formatCurrency(selectedDraftCart.tienGiamDiem)}
+                      </span>
+                    </div>
+                  );
+                })()}
+
+                {/* Tổng giảm nếu có */}
+                {(selectedDraftCart.tongTienGiam ?? 0) > 0 && (
+                  <div className="flex justify-between text-red-500 text-xs border-t border-dashed border-subtle pt-1">
+                    <span>Tổng tiền giảm</span>
+                    <span>-{formatCurrency(selectedDraftCart.tongTienGiam)}</span>
+                  </div>
+                )}
+
+                {/* Tổng thanh toán */}
+                <div className="flex justify-between font-bold text-base border-t border-subtle pt-2 mt-1">
                   <span>Tổng thanh toán</span>
                   <span className="text-accent text-lg">
                     {formatCurrency(selectedDraftCart.tongTienThanhToan || 0)}
                   </span>
                 </div>
+
+                {/* Điểm tích lũy sẽ được cộng */}
+                {selectedDraftCart.khachHangId && (
+                  <div className="mt-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between text-sm">
+                    <span className="text-amber-700 font-medium">
+                      🎁 Điểm tích lũy sau thanh toán
+                    </span>
+                    <span className="text-amber-700 font-bold">
+                      +{Math.floor((selectedDraftCart.tongTienThanhToan || 0) / 100000) * 10} điểm
+                    </span>
+                  </div>
+                )}
               </div>
+
 
               <div className="flex gap-2">
                 <button
@@ -2085,91 +2118,6 @@ export default function StaffOrdersPage() {
                 )}
               </div>
 
-              {/* Promotions */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">
-                    Khuyến mãi theo hóa đơn
-                  </label>
-                  <select
-                    disabled={loadingPromoOptions}
-                    value={selectedHoaDonPromoId ?? ""}
-                    onChange={async (e) => {
-                      const next = e.target.value
-                        ? Number(e.target.value)
-                        : undefined;
-                      setSelectedHoaDonPromoId(next);
-                      if (!editingCartId) return;
-                      try {
-                        const cart =
-                          await orderService.updateStaffCartPromotions(
-                            {
-                              maKhuyenMaiHoaDon: next,
-                              maKhuyenMaiDiem: selectedDiemPromoId,
-                            },
-                            editingCartId ?? undefined,
-                          );
-                        syncPosUIFromCart(cart);
-                      } catch (err: unknown) {
-                        const msg =
-                          err instanceof Error
-                            ? err.message
-                            : "Không thể áp dụng khuyến mãi";
-                        toast.error(msg);
-                      }
-                    }}
-                    className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm"
-                  >
-                    <option value="">Không áp dụng</option>
-                    {hoaDonPromos.map((promo) => (
-                      <option key={promo.id} value={promo.id}>
-                        {promo.tenKhuyenMai} (-{promo.phanTramGiam}%)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">
-                    Khuyến mãi theo điểm
-                  </label>
-                  <select
-                    disabled={loadingPromoOptions}
-                    value={selectedDiemPromoId ?? ""}
-                    onChange={async (e) => {
-                      const next = e.target.value
-                        ? Number(e.target.value)
-                        : undefined;
-                      setSelectedDiemPromoId(next);
-                      if (!editingCartId) return;
-                      try {
-                        const cart =
-                          await orderService.updateStaffCartPromotions(
-                            {
-                              maKhuyenMaiHoaDon: selectedHoaDonPromoId,
-                              maKhuyenMaiDiem: next,
-                            },
-                            editingCartId ?? undefined,
-                          );
-                        syncPosUIFromCart(cart);
-                      } catch (err: unknown) {
-                        const msg =
-                          err instanceof Error
-                            ? err.message
-                            : "Không thể áp dụng khuyến mãi";
-                        toast.error(msg);
-                      }
-                    }}
-                    className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm"
-                  >
-                    <option value="">Không áp dụng</option>
-                    {diemPromos.map((promo) => (
-                      <option key={promo.id} value={promo.id}>
-                        {promo.tenKhuyenMai} (-{promo.phanTramGiam}%)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
 
               {/* Product detail code and image scan */}
               <div>
@@ -2430,27 +2378,165 @@ export default function StaffOrdersPage() {
                   <div className="mt-2 text-sm space-y-1">
                     <div className="flex justify-between text-muted">
                       <span>Giảm giá theo hóa đơn</span>
-                      <span>
-                        -{formatCurrency(staffCart?.tienGiamHoaDon || 0)}
+                      <span className="text-red-500">
+                        -{formatCurrency(staffCart?.tienGiamHoaDon ?? localDiscount.hoaDon)}
                       </span>
                     </div>
                     <div className="flex justify-between text-muted">
                       <span>Giảm giá theo điểm</span>
-                      <span>
-                        -{formatCurrency(staffCart?.tienGiamDiem || 0)}
+                      <span className="text-red-500">
+                        -{formatCurrency(staffCart?.tienGiamDiem ?? localDiscount.diem)}
                       </span>
                     </div>
                     <div className="flex justify-between font-semibold text-foreground pt-1 border-t border-subtle mt-1">
                       <span>Tổng thanh toán</span>
                       <span className="text-accent">
                         {formatCurrency(
-                          staffCart?.tongTienThanhToan || posTongTien,
+                          staffCart?.tongTienThanhToan ??
+                          Math.max(0, posTongTien - localDiscount.hoaDon - localDiscount.diem),
                         )}
                       </span>
                     </div>
                   </div>
                 </div>
               )}
+
+              {/* Promotions - hiển thị sau sản phẩm */}
+              {posItems.length > 0 && (
+                <div className="border border-subtle rounded-lg p-3 space-y-3 bg-section/40">
+                  <p className="text-sm font-semibold text-foreground">
+                    Áp dụng khuyến mãi
+                  </p>
+
+                  {/* Khuyến mãi theo hóa đơn */}
+                  <div>
+                    <label className="block text-xs font-medium text-muted mb-1">
+                      Khuyến mãi theo hóa đơn
+                    </label>
+                    {loadingPromoOptions ? (
+                      <p className="text-xs text-muted">Đang tải...</p>
+                    ) : hoaDonPromos.length === 0 ? (
+                      <p className="text-xs text-muted italic">
+                        Không có khuyến mãi hóa đơn nào thỏa điều kiện
+                      </p>
+                    ) : (
+                      <select
+                        value={selectedHoaDonPromoId ?? ""}
+                        onChange={(e) => {
+                          const next = e.target.value
+                            ? Number(e.target.value)
+                            : undefined;
+                          setSelectedHoaDonPromoId(next);
+                        }}
+                        className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm"
+                      >
+                        <option value="">Không áp dụng</option>
+                        {hoaDonPromos.map((promo) => (
+                          <option key={promo.id} value={promo.id}>
+                            {promo.tenKhuyenMai} (-{promo.phanTramGiam}%,
+                            giảm tối đa {formatCurrency(promo.giamToiDa)})
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+
+                  {/* Khuyến mãi theo điểm */}
+                  <div>
+                    <label className="block text-xs font-medium text-muted mb-1">
+                      Khuyến mãi theo điểm
+                      {!selectedCustomer && (
+                        <span className="ml-1 text-amber-500">
+                          (cần tra cứu khách hàng)
+                        </span>
+                      )}
+                    </label>
+                    {loadingPromoOptions ? (
+                      <p className="text-xs text-muted">Đang tải...</p>
+                    ) : !selectedCustomer ? (
+                      <p className="text-xs text-muted italic">
+                        Vui lòng tra cứu khách hàng để xem khuyến mãi theo điểm
+                      </p>
+                    ) : diemPromos.length === 0 ? (
+                      <p className="text-xs text-muted italic">
+                        Không có khuyến mãi điểm nào thỏa điều kiện
+                      </p>
+                    ) : (
+                      <select
+                        value={selectedDiemPromoId ?? ""}
+                        onChange={(e) => {
+                          const next = e.target.value
+                            ? Number(e.target.value)
+                            : undefined;
+                          setSelectedDiemPromoId(next);
+                        }}
+                        className="w-full border border-subtle bg-background text-foreground rounded-lg px-3 py-2 text-sm"
+                      >
+                        <option value="">Không áp dụng</option>
+                        {diemPromos.map((promo) => (
+                          <option key={promo.id} value={promo.id}>
+                            {promo.tenKhuyenMai} (-{promo.phanTramGiam}%,
+                            giảm tối đa {formatCurrency(promo.giamToiDa)})
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+
+                  {/* Nút áp dụng giảm giá */}
+                  <button
+                    type="button"
+                    disabled={loadingPromoOptions}
+                    onClick={async () => {
+                      if (!editingCartId) {
+                        // Tính toán giảm giá cục bộ để hiển thị preview
+                        const calcDiscount = (phanTramGiam: number, giamToiDa: number) =>
+                          Math.min(posTongTien * phanTramGiam / 100, giamToiDa);
+
+                        const selectedHoaDon = selectedHoaDonPromoId
+                          ? hoaDonPromos.find((p) => p.id === selectedHoaDonPromoId)
+                          : null;
+                        const selectedDiem = selectedDiemPromoId
+                          ? diemPromos.find((p) => p.id === selectedDiemPromoId)
+                          : null;
+
+                        const hoaDonAmount = selectedHoaDon
+                          ? calcDiscount(selectedHoaDon.phanTramGiam, selectedHoaDon.giamToiDa)
+                          : 0;
+                        const diemAmount = selectedDiem
+                          ? calcDiscount(selectedDiem.phanTramGiam, selectedDiem.giamToiDa)
+                          : 0;
+
+                        setLocalDiscount({ hoaDon: hoaDonAmount, diem: diemAmount });
+                        toast.success("Đã áp dụng khuyến mãi");
+                        return;
+                      }
+                      try {
+                        const cart = await orderService.updateStaffCartPromotions(
+                          {
+                            maKhuyenMaiHoaDon: selectedHoaDonPromoId,
+                            maKhuyenMaiDiem: selectedDiemPromoId,
+                          },
+                          editingCartId,
+                        );
+                        syncPosUIFromCart(cart);
+                        toast.success("Đã áp dụng khuyến mãi");
+                      } catch (err: unknown) {
+                        const msg =
+                          err instanceof Error
+                            ? err.message
+                            : "Không thể áp dụng khuyến mãi";
+                        toast.error(msg);
+                      }
+                    }}
+                    className="w-full px-3 py-2 rounded-lg bg-accent text-white text-sm hover:bg-accent-hover disabled:opacity-50 font-medium"
+                  >
+                    {loadingPromoOptions ? "Đang tải..." : "Áp dụng giảm giá"}
+                  </button>
+                </div>
+              )}
+
+
 
               <div className="flex gap-2">
                 <button

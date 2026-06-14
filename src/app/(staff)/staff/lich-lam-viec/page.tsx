@@ -96,7 +96,7 @@ export default function StaffLichLamViecPage() {
           employees.find((emp) => emp.email?.toLowerCase() === myEmail);
 
         const resolvedNhanVienId = user.nhanVienId ?? me?.id ?? 0;
-        const resolvedCuaHangId = user.cuaHangId ?? me?.cuaHang?.id;
+        const resolvedCuaHangId = user.idCuaHang ?? me?.cuaHang?.id;
 
         setCurrentNhanVienId(resolvedNhanVienId);
 

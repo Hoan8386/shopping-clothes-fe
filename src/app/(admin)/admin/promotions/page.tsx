@@ -235,6 +235,9 @@ export default function AdminPromotionsPage() {
                     Giảm tối đa
                   </th>
                   <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
+                    {type === "hoaDon" ? "HĐ tối thiểu" : "Điểm tối thiểu"}
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
                     Số lượng
                   </th>
                   <th className="px-5 py-3.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
@@ -259,6 +262,11 @@ export default function AdminPromotionsPage() {
                     </td>
                     <td className="px-5 py-3.5 text-muted">
                       {formatCurrency(item.giamToiDa)}
+                    </td>
+                    <td className="px-5 py-3.5 text-muted">
+                      {type === "hoaDon"
+                        ? formatCurrency(item.hoaDonToiThieu ?? 0)
+                        : `${item.diemToiThieu ?? 0} điểm`}
                     </td>
                     <td className="px-5 py-3.5">
                       <span className="bg-section text-foreground px-2 py-0.5 rounded-md text-xs font-medium">
@@ -293,7 +301,7 @@ export default function AdminPromotionsPage() {
                 ))}
                 {items.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="text-center py-12 text-muted">
+                    <td colSpan={8} className="text-center py-12 text-muted">
                       Không có dữ liệu
                     </td>
                   </tr>
