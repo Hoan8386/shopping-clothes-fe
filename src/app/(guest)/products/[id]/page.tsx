@@ -44,9 +44,10 @@ export default function ProductDetailPage() {
     const [addingToCart, setAddingToCart] = useState(false);
     const [activeTab, setActiveTab] = useState<'description' | 'reviews'>('description');
 
-    // Unique colors/sizes
-    const uniqueColors = [...new Set(variants.map((v) => v.tenMauSac))];
-    const uniqueSizes = [...new Set(variants.map((v) => v.tenKichThuoc))];
+    // Unique colors/sizes — chỉ lấy từ variants đang hoạt động (trangThai !== 0)
+    const activeVariants = variants.filter((v) => v.trangThai !== 0);
+    const uniqueColors = [...new Set(activeVariants.map((v) => v.tenMauSac))];
+    const uniqueSizes = [...new Set(activeVariants.map((v) => v.tenKichThuoc))];
 
     const [selectedColor, setSelectedColor] = useState<string>('');
     const [selectedSize, setSelectedSize] = useState<string>('');
@@ -102,9 +103,9 @@ export default function ProductDetailPage() {
             : product.giaBan
         : 0;
 
-    // Stores for the current color+size combination
+    // Stores for the current color+size combination — ẩn cửa hàng có trangThai = 0
     const storesForVariant = variants.filter(
-        (v) => v.tenMauSac === selectedColor && v.tenKichThuoc === selectedSize,
+        (v) => v.tenMauSac === selectedColor && v.tenKichThuoc === selectedSize && v.trangThai !== 0,
     );
 
     const handleAddToCart = async () => {
@@ -322,7 +323,7 @@ export default function ProductDetailPage() {
                                 </label>
                                 <div className="flex flex-wrap gap-2">
                                     {uniqueSizes.map((size) => {
-                                        const variant = variants.find(
+                                        const variant = activeVariants.find(
                                             (v) =>
                                                 v.tenMauSac === selectedColor &&
                                                 v.tenKichThuoc === size,
